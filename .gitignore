@@ -1,0 +1,9 @@
+*.pyc
+*.json
+*.csv
+*.zip
+*.h5
+*.iml
+*.log
+test/
+__pycache__/
