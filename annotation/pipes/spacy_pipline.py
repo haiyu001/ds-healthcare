@@ -21,8 +21,3 @@ class SpacyPipeline:
     def __call__(self, doc: Doc) -> Doc:
         doc = self.nlp(doc)
         return doc
-
-
-
-
-

@@ -22,15 +22,12 @@ def download_stanza_model(lang: str, package: str = "default", processors: Union
 
 def load_blank_nlp(lang: str, package: str, exclude: List[str] =
                    ["tok2vec", "tagger", "parser", "ner", "attribute_ruler", "lemmatizer"]) -> Language:
-    """create a blank spacy nlp """
-
     spacy_model_path = get_spacy_model_path(lang, package)
     blank_nlp = spacy.load(spacy_model_path, exclude=exclude)
     return blank_nlp
 
 
 def doc_to_dict(doc: Doc) -> Dict[str, Any]:
-    """convert spacy doc to json dict"""
 
     data = {"text": doc.text, "tokens": [], "_": {}}
     

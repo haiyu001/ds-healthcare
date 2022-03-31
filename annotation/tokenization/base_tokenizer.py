@@ -1,11 +1,10 @@
-from typing import List, Tuple, Optional, Union, Dict
+from typing import List, Tuple, Union, Dict
 from annotation.annotation_utils.annotation import get_stanza_model_dir
 from abc import ABC, abstractmethod
-from spacy import Vocab
+from spacy import Language
 from spacy.tokens import Doc
 import stanza
 import warnings
-import spacy
 
 
 class BaseTokenizer(ABC):
@@ -17,9 +16,8 @@ class BaseTokenizer(ABC):
 
 class SpacyBaseTokenizer(BaseTokenizer):
 
-    def __init__(self, lang: str = "en"):
-        cls = spacy.util.get_lang_class(lang)
-        self.tokenizer = cls().tokenizer
+    def __init__(self, nlp: Language):
+        self.tokenizer = nlp.tokenizer
 
     def tokenize(self, text: str) -> Doc:
         doc = self.tokenizer(text)
@@ -31,7 +29,7 @@ class StanzaBaseTokenizer(BaseTokenizer):
     dir = get_stanza_model_dir()
 
     def __init__(self,
-                 vocab: Optional[Vocab] = None,
+                 nlp: Language,
                  lang: str = "en",
                  package: str = "default",
                  processors: Union[str, Dict[str, str]] = "tokenize"):
@@ -40,15 +38,7 @@ class StanzaBaseTokenizer(BaseTokenizer):
                                     dir=self.dir,
                                     package=package,
                                     processors=processors)
-        self._vocab = vocab
-
-    @property
-    def vocab(self) -> Vocab:
-        return self._vocab
-
-    @vocab.setter
-    def vocab(self, vocab: Vocab):
-        self._vocab = vocab
+        self.vocab = nlp.vocab
 
     def tokenize(self, text: str) -> Doc:
         if not text:

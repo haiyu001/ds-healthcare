@@ -1,14 +1,14 @@
-from typing import Optional, Dict, List
+from typing import Dict, List
 from spacy.matcher import Matcher
 from spacy.tokens import Doc, Token
 from spacy.util import filter_spans
-from spacy import Vocab
+from spacy import Language
 
 
 class Normalizer:
 
     def __init__(self,
-                 vocab: Optional[Vocab] = None,
+                 nlp: Language,
                  merge_words: Dict[str, str] = {},
                  split_words: Dict[str, str] = {},
                  replace_words: Dict[str, str] = {},
@@ -16,7 +16,7 @@ class Normalizer:
                  split_ignore_case: bool = True,
                  replace_ignore_case: bool = True):
 
-        self._vocab = vocab
+        self.vocab = nlp.vocab
         self.merge_words = merge_words
         self.split_words = split_words
         self.replace_words = replace_words
@@ -26,14 +26,6 @@ class Normalizer:
         self.merge_matcher = self._create_merge_matcher()
         Token.set_extension("norm_text", default=None, force=True)
         Token.set_extension("norm_space", default=None, force=True)
-
-    @property
-    def vocab(self) -> Vocab:
-        return self._vocab
-
-    @vocab.setter
-    def vocab(self, vocab: Vocab):
-        self._vocab = vocab
 
     def normalize(self, doc: Doc) -> Doc:
         self.normalize_replace(doc)

@@ -10,8 +10,8 @@ class SentenceDetector(object):
 
     def __call__(self, doc: Doc) -> Doc:
         seg = pysbd.Segmenter(language=self.lang, clean=False, char_span=True)
-        sents_char_spans = seg.segment(doc.text_with_ws)
-        start_token_ids = set(sent.start for sent in sents_char_spans)
+        sentences_char_spans = seg.segment(doc.text_with_ws)
+        start_token_ids = set(sent.start for sent in sentences_char_spans)
         for token in doc:
             token.is_sent_start = token.idx in start_token_ids
         return doc
