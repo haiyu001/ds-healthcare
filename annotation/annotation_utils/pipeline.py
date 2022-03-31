@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional, Any
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
 from annotation.tokenization.normalizer import Normalizer
@@ -35,6 +36,11 @@ def get_nlp_model(lang: str,
     global NLP_MODEL
 
     if NLP_MODEL is None:
+
+        if not stanza_base_tokenizer_package and stanza_pipeline_config is not None:
+            warnings.warn("Spacy base tokenizer doesn't do sentence segmentation but stanza pipeline requires "
+                          "input doc has annotation of sentences, so pysbd will be used to do sentence detection.",
+                          stacklevel=2)
 
         # create blank nlp
         nlp = load_blank_nlp(lang, spacy_package)

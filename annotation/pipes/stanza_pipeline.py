@@ -1,5 +1,6 @@
 from typing import Dict, Union, Tuple, List
 from annotation.annotation_utils.annotation import get_stanza_model_dir
+from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
 from spacy import Language
 from stanza.models.common.pretrain import Pretrain
@@ -21,13 +22,14 @@ class StanzaPipeline:
                  use_gpu: bool = False,
                  attrs: Tuple[str, str] = ("metadata", "source_text")):
 
-        self.snlp = Pipeline(lang=lang,
+        self.lang = lang
+        self.vocab = nlp.vocab
+        self.snlp = Pipeline(lang=self.lang,
                              dir=self.dir,
                              package=package,
                              processors=processors,
                              use_gpu=use_gpu,
                              tokenize_pretokenized=True)
-        self.vocab = nlp.vocab
         self.svecs = self._find_embeddings(self.snlp)
         self.doc_attrs = attrs
 
@@ -62,6 +64,9 @@ class StanzaPipeline:
     def convert_doc_to_tokens(self, doc: Doc) -> Tuple[List[List[str]], List[bool]]:
         token_texts = []
         token_spaces = []
+        if not doc.has_annotation("SENT_START"):
+            sentence_detector = SentenceDetector(self.lang)
+            doc = sentence_detector(doc)
         for token in doc:
             if token.is_sent_start:
                 token_texts.append([])
