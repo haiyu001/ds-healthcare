@@ -16,8 +16,8 @@ def get_nlp_model(lang: str,
                   preprocessor_config: Optional[Dict[str, bool]] = None,
                   stanza_base_tokenizer_package: Optional[Union[str, Dict[str, str]]] = None,
                   normalizer_config: Optional[Dict[str, Any]] = None,
-                  spacy_pipeline_config: Optional[Dict[str, Any]] = None,
                   stanza_pipeline_config: Optional[Dict[str, Any]] = None,
+                  spacy_pipeline_config: Optional[Dict[str, Any]] = None,
                   custom_pipes_config: Optional[List[Tuple[str, Dict[str, Any]]]] = None) -> Language:
     """
     This function is used to get global nlp model
@@ -27,8 +27,8 @@ def get_nlp_model(lang: str,
     :param preprocessor_config: None if don't apply preprocessor, {} if use default preprocessor config
     :param stanza_base_tokenizer_package: None if use spacy base tokenizer otherwise use stanza base tokenizer
     :param normalizer_config: None if annotation don't apply normalizer otherwise set this config for normalizer
-    :param spacy_pipeline_config: None if don't use spacy pipeline, {} if use default spacy pipeline config
     :param stanza_pipeline_config: None if don't use stanza pipeline, {} if use default stanza pipeline config
+    :param spacy_pipeline_config: None if don't use spacy pipeline, {} if use default spacy pipeline config
     :param custom_pipes_config: None if don't apply custom pipes, otherwise [(pipe_name, pipe_config), ...}]
     :return: global spacy nlp model
     """
@@ -45,15 +45,11 @@ def get_nlp_model(lang: str,
         # create blank nlp
         nlp = load_blank_nlp(lang, spacy_package)
 
-        # add nlp pipeline
-        if spacy_pipeline_config is not None and stanza_pipeline_config is not None:
-            raise Exception("Only one pipeline can be added.")
-        elif spacy_pipeline_config is None and stanza_pipeline_config is None:
-            raise Exception("One pipeline must be added.")
-        elif spacy_pipeline_config is not None:
+        # add stanza or/and spacy pipline (stanza pipeline need to run before spacy pipeline if both pipelines added)
+        if stanza_pipeline_config is not None:
+            nlp.add_pipe("stanza_pipeline", config=stanza_pipeline_config)
+        if spacy_pipeline_config is not None:
             nlp.add_pipe("spacy_pipeline", config=spacy_pipeline_config)
-        else:
-            nlp.add_pipe("stanza_test", config=stanza_pipeline_config)
 
         # add custom pipes
         if custom_pipes_config:

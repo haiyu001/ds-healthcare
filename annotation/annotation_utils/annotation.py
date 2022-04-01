@@ -55,6 +55,8 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
                       "whitespace": token.whitespace_}
         if doc.has_annotation("LEMMA"):
             token_data["lemma"] = token.lemma_
+        if doc.has_annotation("MORPH"):
+                token_data["morph"] = str(token.morph)
         if doc.has_annotation("TAG"):
             token_data["pos"] = token.pos_
             token_data["tag"] = token.tag_

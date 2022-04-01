@@ -39,16 +39,17 @@ class StanzaPipeline:
         snlp_doc = self.snlp(token_texts)
 
         tokens, heads, sent_starts, spaces = self.get_tokens_with_heads(snlp_doc, token_spaces)
-        pos, tags, deps, lemmas = [], [], [], []
+        pos, tags, deps, morphs, lemmas  = [], [], [], [], []
         for token in tokens:
             pos.append(token.upos or "")
             tags.append(token.xpos or token.upos or "")
-            deps.append(token.deprel or "")
+            morphs.append(token.feats or "")
             lemmas.append(token.lemma or "")
+            deps.append(token.deprel or "")
 
         words = [t.text for t in tokens]
         heads = [head + i for i, head in enumerate(heads)]
-        doc = Doc(self.vocab, words=words, spaces=spaces, pos=pos, tags=tags, morphs=None, lemmas=lemmas,
+        doc = Doc(self.vocab, words=words, spaces=spaces, pos=pos, tags=tags, morphs=morphs, lemmas=lemmas,
                   deps=deps, heads=heads, sent_starts=sent_starts)
         self.set_named_entities(doc, snlp_doc, token_texts, token_spaces)
 

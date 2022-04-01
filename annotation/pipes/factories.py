@@ -16,7 +16,7 @@ def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, packag
     return SpacyPipeline(lang, package, exclude, sentence_detector)
 
 
-@Language.factory("stanza_test", default_config={"lang": "en",
+@Language.factory("stanza_pipeline", default_config={"lang": "en",
                                                      "package": "default",
                                                      "processors": {},
                                                      "use_gpu": False})

@@ -8,12 +8,12 @@ nlp_model_config = dict(
     spacy_package="en_core_web_md-3.2.0",
     text_meta_config={"text_fields_in_json": ["content"]},
     preprocessor_config={},
-    stanza_base_tokenizer_package=None,
+    stanza_base_tokenizer_package="default",
     normalizer_config={"merge_words": {"battery life": {"merge": "batterylife", "type": "canonical"}},
                        "split_words": {"autonomouscars": "autonomous cars"},
                        "replace_words": {"thisr": "these"}},
-    spacy_pipeline_config={},
-    stanza_pipeline_config=None,
+    stanza_pipeline_config={"processors": "tokenize,pos,ner"},
+    spacy_pipeline_config={"exclude": ["tagger", "attribute_ruler", "ner"]},
     custom_pipes_config=[("language_detector", {}),
                          ("phrase_detector", {})]
 )
