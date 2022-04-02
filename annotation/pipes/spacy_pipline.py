@@ -1,4 +1,4 @@
-from annotation.annotation_utils.annotation import get_spacy_model_path
+from annotation.annotation_utils.annotate_util import get_spacy_model_path
 from annotation.pipes.factories import *
 from spacy.tokens import Doc
 import spacy

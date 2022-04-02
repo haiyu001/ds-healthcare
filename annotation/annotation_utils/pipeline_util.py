@@ -4,7 +4,7 @@ from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBas
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetaTokenizer
-from annotation.annotation_utils.annotation import load_blank_nlp
+from annotation.annotation_utils.annotate_util import load_blank_nlp
 from annotation.pipes.factories import *
 
 NLP_MODEL = None

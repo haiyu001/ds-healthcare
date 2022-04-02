@@ -1,5 +1,5 @@
 from typing import Dict, Union, Tuple, List
-from annotation.annotation_utils.annotation import get_stanza_model_dir
+from annotation.annotation_utils.annotate_util import get_stanza_model_dir
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
 from spacy import Language
@@ -20,7 +20,8 @@ class StanzaPipeline:
                  package: str = "default",
                  processors: Union[str, Dict[str, str]] = {},
                  use_gpu: bool = False,
-                 attrs: Tuple[str, str] = ("metadata", "source_text")):
+                 set_token_vector_hooks: bool = False,
+                 attrs: Tuple[str, str] = ("metadata", "source_text", "sentence_sentiments")):
 
         self.lang = lang
         self.vocab = nlp.vocab
@@ -30,8 +31,10 @@ class StanzaPipeline:
                              processors=processors,
                              use_gpu=use_gpu,
                              tokenize_pretokenized=True)
-        self.svecs = self._find_embeddings(self.snlp)
-        self.doc_attrs = attrs
+        self.svecs = self._find_embeddings(self.snlp) if set_token_vector_hooks else None
+        self._metadata, self._source_text, self._sentiment = attrs
+        if "sentiment" in processors:
+            Doc.set_extension(self._sentiment, default=None, force=True)
 
     def __call__(self, doc: Doc) -> Doc:
         spacy_doc = doc
@@ -57,8 +60,12 @@ class StanzaPipeline:
             doc.user_token_hooks["vector"] = self.token_vector
             doc.user_token_hooks["has_vector"] = self.token_has_vector
 
-        for custom_doc_attr in self.doc_attrs:
-            doc._.set(custom_doc_attr, spacy_doc._.get(custom_doc_attr))
+        doc._.set(self._metadata, spacy_doc._.get(self._metadata))
+        doc._.set(self._source_text, spacy_doc._.get(self._source_text))
+
+        if doc.has_extension(self._sentiment):
+            # 0: negative, 1: neutral, 2: positive
+            doc._.set(self._sentiment, [sentence.sentiment for sentence in snlp_doc.sentences])
 
         return doc
 

@@ -67,9 +67,16 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
 
     # custom pipes
     if doc.has_extension("language"):
-        data["_"]["language"] = {"lang": doc._.get("language"), "lang_score": doc._.get("language_score")}
+        data["_"]["language"] = {"lang": doc._.get("language"), "score": doc._.get("language_score")}
 
     if doc.has_extension("phrases"):
         data["_"]["phrases"] = doc._.get("phrases")
 
+    if doc.has_extension("sentence_sentiments"):
+        data["_"]["sentence_sentiments"] = doc._.get("sentence_sentiments")
+
     return data
+
+
+if __name__ == "__main__":
+    download_stanza_model("en")
