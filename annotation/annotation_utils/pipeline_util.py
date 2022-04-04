@@ -50,8 +50,8 @@ def get_nlp_model(use_gpu: bool = False,
     if NLP_MODEL is None:
 
         if not stanza_base_tokenizer_package and stanza_pipeline_config is not None:
-            warnings.warn("Spacy base tokenizer doesn't do sentence segmentation but stanza pipeline requires "
-                          "input doc has annotation of sentences, so pysbd will be used to do sentence detection.",
+            warnings.warn("Spacy base tokenizer doesn't do sentence segmentation but stanza pipeline requires input doc"
+                          " has annotation of sentences, so sentence_detector will be used to do sentence detection.",
                           stacklevel=2)
 
         # create blank nlp

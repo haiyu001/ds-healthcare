@@ -1,4 +1,4 @@
-from typing import Dict, Union, Tuple, List
+from typing import Dict, Union, Tuple, List, Optional
 from annotation.annotation_utils.annotate_util import get_stanza_model_dir
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
@@ -17,7 +17,7 @@ class StanzaPipeline:
     def __init__(self,
                  nlp: Language,
                  lang: str = "en",
-                 package: str = "default",
+                 package: Optional[str] = "default",
                  processors: Union[str, Dict[str, str]] = {},
                  use_gpu: bool = False,
                  set_token_vector_hooks: bool = False,
