@@ -1,5 +1,5 @@
-from typing import List
-from annotation.annotation_utils.annotate_util import get_spacy_model_path
+from typing import List, Optional
+from annotation.annotation_utils.annotate_util import get_spacy_model_path, DEFAULT_SPACY_PACKAGE
 from spacy.tokens import Doc
 import spacy
 
@@ -8,11 +8,12 @@ class SpacyPipeline:
 
     def __init__(self,
                  lang: str = "en",
-                 package: str = "en_core_web_md-3.2.0",
+                 package: Optional[str] = None,
                  exclude: List[str] = [],
                  sentence_detector: bool = False):
 
-        spacy_model_path = get_spacy_model_path(lang, package)
+        spacy_package = package or DEFAULT_SPACY_PACKAGE
+        spacy_model_path = get_spacy_model_path(lang, spacy_package)
         self.nlp = spacy.load(spacy_model_path, exclude=exclude)
         pipe_names = set(self.nlp.pipe_names)
         if sentence_detector:

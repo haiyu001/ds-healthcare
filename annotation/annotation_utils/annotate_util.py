@@ -5,6 +5,8 @@ from spacy import Language
 import stanza
 import spacy
 
+DEFAULT_SPACY_PACKAGE = "en_core_web_md-3.2.0"
+
 
 def get_stanza_model_dir() -> str:
     model_dir = get_model_filepath("stanza")

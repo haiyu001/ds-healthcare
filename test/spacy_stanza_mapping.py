@@ -1,5 +1,5 @@
 from annotation.tokenization.preprocessor import Preprocessor
-from annotation.annotation_utils.annotate_util import doc_to_dict
+from annotation.annotation_utils.annotate_util import doc_to_dict, DEFAULT_SPACY_PACKAGE
 from annotation.annotation_utils.pipeline_util import get_nlp_model
 import json
 import pandas as pd
@@ -21,7 +21,7 @@ print(file_df.shape)
 
 nlp_model_config = dict(
     lang="en",
-    spacy_package="en_core_web_md-3.2.0",
+    spacy_package=DEFAULT_SPACY_PACKAGE,
     text_meta_config={"text_fields_in_json": ["content"]},
     preprocessor_config={},
     stanza_base_tokenizer_package=None,

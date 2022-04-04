@@ -9,7 +9,7 @@ from spacy.language import Language
 
 
 @Language.factory("spacy_pipeline", default_config={"lang": "en",
-                                                    "package": "en_core_web_md-3.2.0",
+                                                    "package": None,
                                                     "exclude": [],
                                                     "sentence_detector": False})
 def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, package: str,

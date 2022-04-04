@@ -1,13 +1,14 @@
 import warnings
 from typing import Optional, Any
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
-from annotation.annotation_utils.annotate_util import load_blank_nlp, get_stanza_model_dir
+from annotation.annotation_utils.annotate_util import load_blank_nlp, get_stanza_model_dir, DEFAULT_SPACY_PACKAGE
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetaTokenizer
 from annotation.pipes.factories import *
 from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from utils.log_util import get_logger
+import spacy
 import json
 import os
 
@@ -16,8 +17,9 @@ NLP_MODEL = None
 logger = get_logger()
 
 
-def get_nlp_model(lang: str,
-                  spacy_package: str,
+def get_nlp_model(use_gpu: bool = False,
+                  lang: str = "en",
+                  spacy_package: Optional[str] = None,
                   text_meta_config: Optional[Dict[str, List[str]]] = None,
                   preprocessor_config: Optional[Dict[str, bool]] = None,
                   stanza_base_tokenizer_package: Optional[Union[str, Dict[str, str]]] = None,
@@ -27,6 +29,7 @@ def get_nlp_model(lang: str,
                   custom_pipes_config: Optional[List[Tuple[str, Dict[str, Any]]]] = None) -> Language:
     """
     This function is used to get global nlp model
+    :param use_gpu: run annotation on GPU
     :param lang: model language
     :param spacy_package: spacy blank nlp package name
     :param text_meta_config: None if all records are text string, otherwise set this config for json string
@@ -41,6 +44,9 @@ def get_nlp_model(lang: str,
 
     global NLP_MODEL
 
+    if use_gpu:
+        spacy.prefer_gpu()
+
     if NLP_MODEL is None:
 
         if not stanza_base_tokenizer_package and stanza_pipeline_config is not None:
@@ -49,6 +55,7 @@ def get_nlp_model(lang: str,
                           stacklevel=2)
 
         # create blank nlp
+        spacy_package = spacy_package or DEFAULT_SPACY_PACKAGE
         nlp = load_blank_nlp(lang, spacy_package)
 
         # set nlp tokenizer
@@ -66,8 +73,10 @@ def get_nlp_model(lang: str,
 
         # add stanza or/and spacy pipline (stanza pipeline need to run before spacy pipeline if both pipelines added)
         if stanza_pipeline_config is not None:
+            stanza_pipeline_config["use_gpu"] = use_gpu
             nlp.add_pipe("stanza_pipeline", config=stanza_pipeline_config)
         if spacy_pipeline_config is not None:
+            spacy_pipeline_config["package"] = spacy_package
             nlp.add_pipe("spacy_pipeline", config=spacy_pipeline_config)
 
         # add custom pipes
@@ -75,7 +84,7 @@ def get_nlp_model(lang: str,
             for pipe_name, pipe_config in custom_pipes_config:
                 nlp.add_pipe(pipe_name, config=pipe_config)
 
-        logger.info(f"nlp model config:\n{get_nlp_model_config_str(nlp)}")
+        logger.info(f"nlp model config (use_gpu = {use_gpu}):\n{get_nlp_model_config_str(nlp)}")
 
         NLP_MODEL = nlp
 
