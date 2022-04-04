@@ -14,7 +14,7 @@ class Preprocessor:
     def __init__(self,
                  to_lowercase: bool = False,
                  norm_whitespace: bool = True,
-                 norm_repeating_punctuation: bool = True,
+                 norm_punctuation: bool = True,
                  rm_accents: bool = True,
                  rm_linebreak: bool = True,
                  rm_emails: bool = False,
@@ -28,7 +28,7 @@ class Preprocessor:
 
         self.to_lowercase = to_lowercase
         self.norm_whitespace = norm_whitespace
-        self.norm_repeating_punctuation = norm_repeating_punctuation
+        self.norm_punctuation = norm_punctuation
         self.rm_accents = rm_accents
         self.rm_linebreak = rm_linebreak
         self.rm_emails = rm_emails
@@ -59,7 +59,7 @@ class Preprocessor:
         if self.rp_handles or self.rm_handles:
             text = replace_user_handles(text, repl="RP_HANDLE" if not self.rm_handles else " ")
 
-        if self.norm_repeating_punctuation:
+        if self.norm_punctuation:  # norm repeating punctuation
             for p in ",;:":
                 if p == "\\":
                     text = re.sub(r"(\\){2,}", "\\\\", text)
@@ -73,3 +73,11 @@ class Preprocessor:
             text = text.lower()
 
         return text
+
+    def get_preprocessor_config(self) -> str:
+        preprocess_list = []
+        for att in dir(self):
+            att_val = getattr(self, att)
+            if isinstance(att_val, bool) and att_val:
+                preprocess_list.append(att)
+        return ", ".join(preprocess_list)

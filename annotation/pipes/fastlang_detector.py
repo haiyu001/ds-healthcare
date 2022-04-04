@@ -1,6 +1,6 @@
 from typing import Tuple
 from fasttext.FastText import _FastText
-from utils.resources import get_model_file_path
+from utils.resource_util import get_model_filepath
 from spacy.tokens import Doc
 import fasttext
 
@@ -23,6 +23,6 @@ class FastLangDetector(object):
 
     @staticmethod
     def load_language_model(model_name: str = "lid.176.ftz") -> _FastText:
-        language_model_path = get_model_file_path("models", model_name)
+        language_model_path = get_model_filepath("models", model_name)
         language_model = fasttext.load_model(language_model_path)
         return language_model

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple
 from annotation.annotation_utils.annotate_util import get_stanza_model_dir
 from abc import ABC, abstractmethod
 from spacy import Language
@@ -31,13 +31,15 @@ class StanzaBaseTokenizer(BaseTokenizer):
     def __init__(self,
                  nlp: Language,
                  lang: str = "en",
-                 package: str = "default",
-                 processors: Union[str, Dict[str, str]] = "tokenize"):
+                 tokenize_package: str = "default"):
 
-        self.snlp = stanza.Pipeline(lang=lang,
+        self.lang = lang
+        self.tokenize_package = tokenize_package
+        self.snlp = stanza.Pipeline(lang=self.lang,
                                     dir=self.dir,
-                                    package=package,
-                                    processors=processors)
+                                    package=self.tokenize_package,
+                                    processors="tokenize",
+                                    verbose=False)
         self.vocab = nlp.vocab
 
     def tokenize(self, text: str) -> Doc:

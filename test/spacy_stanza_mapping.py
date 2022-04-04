@@ -10,8 +10,8 @@ import os
 preprocessor = Preprocessor()
 test_dir = "/Users/haiyang/Desktop/annotation"
 
-file_path = os.path.join(test_dir, "test_review.csv")
-file_df = pd.read_csv(file_path, encoding='utf-8')
+filepath = os.path.join(test_dir, "test_review.csv")
+file_df = pd.read_csv(filepath, encoding='utf-8')
 file_df["content"] = file_df["content"].apply(lambda x: preprocessor.preprocess(x))
 file_df["words_cnt"] = file_df["content"].apply(lambda x: len(x.split()))
 file_df = file_df[(file_df["words_cnt"] > 15) & (file_df["words_cnt"] < 150)]
@@ -32,10 +32,10 @@ nlp_model_config = dict(
 )
 
 nlp = get_nlp_model(**nlp_model_config)
-input_file_path = os.path.join(test_dir, "tmp.json")
-output_file_path = os.path.join(test_dir, "stanza_annotation.json")
-with open(output_file_path, "w") as output:
-    with open(input_file_path) as input:
+input_filepath = os.path.join(test_dir, "tmp.json")
+output_filepath = os.path.join(test_dir, "stanza_annotation.json")
+with open(output_filepath, "w") as output:
+    with open(input_filepath) as input:
         cnt = 0
         docs = nlp.pipe(input)
         for doc in docs:
@@ -49,10 +49,10 @@ tag_stanza_to_spacy = collections.defaultdict(collections.Counter)
 rel_stanza_to_spacy = collections.defaultdict(collections.Counter)
 rel_spacy_to_stanza = collections.defaultdict(collections.Counter)
 
-spacy_annotation_file_path = os.path.join(test_dir, "spacy_annotation.json")
-stanza_annotation_file_path = os.path.join(test_dir, "stanza_annotation.json")
-with open(spacy_annotation_file_path) as spacy_annotation:
-    with open(stanza_annotation_file_path) as stanza_annotation:
+spacy_annotation_filepath = os.path.join(test_dir, "spacy_annotation.json")
+stanza_annotation_filepath = os.path.join(test_dir, "stanza_annotation.json")
+with open(spacy_annotation_filepath) as spacy_annotation:
+    with open(stanza_annotation_filepath) as stanza_annotation:
         count = 0
         spacy_lines, stanza_lines = spacy_annotation.readlines(), stanza_annotation.readlines()
         for spacy_line, stanza_line in zip(spacy_lines, stanza_lines):

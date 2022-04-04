@@ -6,5 +6,6 @@
 *.iml
 *.log
 .idea/
+logs/
 tmp/
 __pycache__/

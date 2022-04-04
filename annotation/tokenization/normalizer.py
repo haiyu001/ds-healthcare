@@ -9,12 +9,12 @@ class Normalizer:
 
     def __init__(self,
                  nlp: Language,
+                 replace_words: Dict[str, str] = {},
                  merge_words: Dict[str, str] = {},
                  split_words: Dict[str, str] = {},
-                 replace_words: Dict[str, str] = {},
+                 replace_ignore_case: bool = True,
                  merge_ignore_case: bool = True,
-                 split_ignore_case: bool = True,
-                 replace_ignore_case: bool = True):
+                 split_ignore_case: bool = True):
 
         self.vocab = nlp.vocab
         self.merge_words = merge_words
@@ -103,3 +103,9 @@ class Normalizer:
                 sent_starts.append(token.is_sent_start)
         norm_doc = Doc(self.vocab, words=norm_words, spaces=norm_spaces, sent_starts=sent_starts)
         return norm_doc
+
+    def get_normalizer_config(self) -> str:
+        ignore_case_config = []
+        for attr in ["replace_ignore_case", "merge_ignore_case", "split_ignore_case"]:
+            ignore_case_config.append(f"{attr}={getattr(self, attr)}")
+        return ", ".join(ignore_case_config)

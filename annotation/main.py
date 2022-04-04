@@ -6,7 +6,7 @@ import json
 nlp_model_config = dict(
     lang="en",
     spacy_package="en_core_web_md-3.2.0",
-    text_meta_config={"text_fields_in_json": ["content"]},
+    text_meta_config={"text_fields_in_json": ["content"], "meta_fields_to_keep": ["record_id"]},
     preprocessor_config={},
     stanza_base_tokenizer_package="default",
     normalizer_config={"merge_words": {"battery life": {"merge": "batterylife", "type": "canonical"}},
@@ -30,5 +30,7 @@ if __name__ == "__main__":
 
     docs = nlp.pipe([content, content_meta], n_process=2)
     for doc in docs:
-        print('-' * 100)
         pprint(doc_to_dict(doc))
+        print('-' * 100)
+
+

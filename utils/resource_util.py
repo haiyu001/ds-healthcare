@@ -3,7 +3,7 @@ import os
 MODELS_HOME = os.environ['MODELS_HOME']
 
 
-def get_model_file_path(*parts: str) -> str:
+def get_model_filepath(*parts: str) -> str:
     path = MODELS_HOME
     for part in parts:
         path = os.path.join(path, part)

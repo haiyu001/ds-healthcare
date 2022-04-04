@@ -1,5 +1,5 @@
 from typing import Dict, Any, Union, List
-from utils.resources import get_model_file_path
+from utils.resource_util import get_model_filepath
 from spacy.tokens import Doc
 from spacy import Language
 import stanza
@@ -7,17 +7,17 @@ import spacy
 
 
 def get_stanza_model_dir() -> str:
-    model_dir = get_model_file_path("stanza")
+    model_dir = get_model_filepath("stanza")
     return model_dir
 
 
 def get_spacy_model_path(lang: str, package: str) -> str:
-    model_path = get_model_file_path("spacy", lang, package, package.rsplit("-", 1)[0], package)
+    model_path = get_model_filepath("spacy", lang, package, package.rsplit("-", 1)[0], package)
     return model_path
 
 
 def download_stanza_model(lang: str, package: str = "default", processors: Union[str, Dict[str, str]] = {}):
-    stanza.download(lang, get_model_file_path("stanza"), package, processors)
+    stanza.download(lang, get_model_filepath("stanza"), package, processors)
 
 
 def load_blank_nlp(lang: str, package: str, exclude: List[str] =
@@ -76,7 +76,3 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
         data["_"]["sentence_sentiments"] = doc._.get("sentence_sentiments")
 
     return data
-
-
-if __name__ == "__main__":
-    download_stanza_model("en")

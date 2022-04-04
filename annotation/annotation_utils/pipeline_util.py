@@ -1,13 +1,19 @@
 import warnings
 from typing import Optional, Any
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
+from annotation.annotation_utils.annotate_util import load_blank_nlp, get_stanza_model_dir
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetaTokenizer
-from annotation.annotation_utils.annotate_util import load_blank_nlp
 from annotation.pipes.factories import *
+from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
+from utils.log_util import get_logger
+import json
+import os
 
 NLP_MODEL = None
+
+logger = get_logger()
 
 
 def get_nlp_model(lang: str,
@@ -45,17 +51,6 @@ def get_nlp_model(lang: str,
         # create blank nlp
         nlp = load_blank_nlp(lang, spacy_package)
 
-        # add stanza or/and spacy pipline (stanza pipeline need to run before spacy pipeline if both pipelines added)
-        if stanza_pipeline_config is not None:
-            nlp.add_pipe("stanza_pipeline", config=stanza_pipeline_config)
-        if spacy_pipeline_config is not None:
-            nlp.add_pipe("spacy_pipeline", config=spacy_pipeline_config)
-
-        # add custom pipes
-        if custom_pipes_config:
-            for pipe_name, pipe_config in custom_pipes_config:
-                nlp.add_pipe(pipe_name, config=pipe_config)
-
         # set nlp tokenizer
         base_tokenizer = StanzaBaseTokenizer(nlp, lang, stanza_base_tokenizer_package) \
             if stanza_base_tokenizer_package else SpacyBaseTokenizer(nlp)
@@ -69,6 +64,80 @@ def get_nlp_model(lang: str,
         nlp.tokenizer = MetaTokenizer(base_tokenizer, preprocessor, normalizer, **text_meta_config) \
             if text_meta_config is not None else MetaTokenizer(base_tokenizer, preprocessor, normalizer)
 
+        # add stanza or/and spacy pipline (stanza pipeline need to run before spacy pipeline if both pipelines added)
+        if stanza_pipeline_config is not None:
+            nlp.add_pipe("stanza_pipeline", config=stanza_pipeline_config)
+        if spacy_pipeline_config is not None:
+            nlp.add_pipe("spacy_pipeline", config=spacy_pipeline_config)
+
+        # add custom pipes
+        if custom_pipes_config:
+            for pipe_name, pipe_config in custom_pipes_config:
+                nlp.add_pipe(pipe_name, config=pipe_config)
+
+        logger.info(f"nlp model config:\n{get_nlp_model_config_str(nlp)}")
+
         NLP_MODEL = nlp
 
     return NLP_MODEL
+
+
+def get_stanza_load_list(lang: str = "en",
+                         package: str = "default",
+                         processors: Union[str, Dict[str, str]] = {}) -> List[List[str]]:
+    stanza_dir = get_stanza_model_dir()
+    resources_filepath = os.path.join(stanza_dir, "resources.json")
+    with open(resources_filepath) as infile:
+        resources = json.load(infile)
+    lang, _, package, processors = process_pipeline_parameters(lang, stanza_dir, package, processors)
+    stanza_load_list = maintain_processor_list(resources, lang, package, processors)
+    return stanza_load_list
+
+
+def get_nlp_model_config_str(nlp: Language) -> str:
+    table = []
+    lang = nlp.lang
+    spacy_package = f"{nlp.meta['name']} ({nlp.meta['version']})"
+    meta_tokenizer = nlp.tokenizer
+    preprocessor = meta_tokenizer.preprocessor
+    base_tokenizer = meta_tokenizer.base_tokenizer
+    normalizer = meta_tokenizer.normalizer
+    pipe_names = nlp.pipe_names
+
+    table.append(["lang", lang])
+    table.append(["spacy_package", spacy_package])
+
+    meta_tokenizer_config = []
+    for attr in ["text_fields_in_json", "meta_fields_to_keep", "meta_fields_to_drop"]:
+        attr_value = getattr(meta_tokenizer, attr)
+        if attr_value:
+            meta_tokenizer_config.append(f"{attr} ({', '.join(attr_value)})")
+    table.append(["meta_tokenizer", ", ".join(meta_tokenizer_config)])
+
+    table.append(["preprocessor", f"Yes ({preprocessor.get_preprocessor_config()})"] if preprocessor else "No")
+    table.append(["base_tokenizer", base_tokenizer.__class__.__name__])
+    if isinstance(base_tokenizer, StanzaBaseTokenizer):
+        table[-1][-1] += \
+            f" ({get_stanza_load_list(base_tokenizer.lang, base_tokenizer.tokenize_package, 'tokenize')[0][1]})"
+    table.append(["normalizer", f"Yes ({normalizer.get_normalizer_config()})"] if normalizer else "No")
+
+    custom_pipes = []
+    for pipe_name in pipe_names:
+        pipe = nlp.get_pipe(pipe_name)
+        if pipe_name == "stanza_pipeline":
+            stanza_load_list = get_stanza_load_list(pipe.lang, pipe.package, pipe.processors)
+            stanza_load_list = ", ".join([f"{processor} ({pakcage})" for processor, pakcage in stanza_load_list])
+            table.append(["stanza_pipeline", stanza_load_list])
+        elif pipe_name == "spacy_pipeline":
+            table.append(["spacy_pipeline", ", ".join(pipe.nlp.pipe_names)])
+        else:
+            custom_pipes.append(pipe_name)
+    table.append(["custom_pipes", ", ".join(custom_pipes)])
+
+    field_max_len, value_max_len = max(len(field) for field, _ in table), max(len(value) for _, value in table)
+    field_format, value_format = f"<{field_max_len}", f"<{value_max_len}"
+    line_row = "=" * (7 + field_max_len + value_max_len)
+    table_rows = [line_row]
+    table_rows.extend([f"| {field:{field_format}} | {value:{value_format}} |" for field, value in table])
+    table_rows.append(line_row)
+    return "\n".join(table_rows)

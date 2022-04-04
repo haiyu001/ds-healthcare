@@ -24,13 +24,17 @@ class StanzaPipeline:
                  attrs: Tuple[str, str] = ("metadata", "source_text", "sentence_sentiments")):
 
         self.lang = lang
+        self.package = package
+        self.processors = processors
         self.vocab = nlp.vocab
+        self.use_gpu = use_gpu
         self.snlp = Pipeline(lang=self.lang,
                              dir=self.dir,
-                             package=package,
-                             processors=processors,
-                             use_gpu=use_gpu,
-                             tokenize_pretokenized=True)
+                             package=self.package,
+                             processors=self.processors,
+                             use_gpu=self.use_gpu,
+                             tokenize_pretokenized=True,
+                             verbose=False)
         self.svecs = self._find_embeddings(self.snlp) if set_token_vector_hooks else None
         self._metadata, self._source_text, self._sentiment = attrs
         if "sentiment" in processors:
@@ -133,3 +137,5 @@ class StanzaPipeline:
                 embs = proc.pretrain
                 break
         return embs
+
+
