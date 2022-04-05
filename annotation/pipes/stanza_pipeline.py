@@ -1,5 +1,5 @@
 from typing import Dict, Union, Tuple, List, Optional
-from annotation.annotation_utils.annotate_util import get_stanza_model_dir
+from annotation.annotation_utils.annotate_util import get_stanza_model_dir, get_stanza_load_list
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
 from spacy import Language
@@ -35,6 +35,8 @@ class StanzaPipeline:
                              use_gpu=self.use_gpu,
                              tokenize_pretokenized=True,
                              verbose=False)
+        self.loaded_processors = {processor for processor, _ in
+                                  get_stanza_load_list(self.lang, self.package, self.processors)}
         self.svecs = self._find_embeddings(self.snlp) if set_token_vector_hooks else None
         self._metadata, self._source_text, self._sentiment = attrs
         if "sentiment" in processors:
@@ -46,7 +48,7 @@ class StanzaPipeline:
         snlp_doc = self.snlp(token_texts)
 
         tokens, heads, sent_starts, spaces = self.get_tokens_with_heads(snlp_doc, token_spaces)
-        pos, tags, deps, morphs, lemmas  = [], [], [], [], []
+        pos, tags, morphs, lemmas, deps = [], [], [], [], []
         for token in tokens:
             pos.append(token.upos or "")
             tags.append(token.xpos or token.upos or "")
@@ -56,8 +58,14 @@ class StanzaPipeline:
 
         words = [t.text for t in tokens]
         heads = [head + i for i, head in enumerate(heads)]
-        doc = Doc(self.vocab, words=words, spaces=spaces, pos=pos, tags=tags, morphs=morphs, lemmas=lemmas,
-                  deps=deps, heads=heads, sent_starts=sent_starts)
+        doc = Doc(self.vocab, words=words, spaces=spaces, sent_starts=sent_starts,
+                  pos=pos if "pos" in self.loaded_processors else None,
+                  tags=tags if "pos" in self.loaded_processors else None,
+                  morphs=morphs if "pos" in self.loaded_processors else None,
+                  lemmas=lemmas if "lemma" in self.loaded_processors else None,
+                  deps=deps if "depparse" in self.loaded_processors else None,
+                  heads=heads if "depparse" in self.loaded_processors else None)
+
         self.set_named_entities(doc, snlp_doc, token_texts, token_spaces)
 
         if self.svecs is not None:

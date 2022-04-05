@@ -1,16 +1,13 @@
 import warnings
 from typing import Optional, Any
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
-from annotation.annotation_utils.annotate_util import load_blank_nlp, get_stanza_model_dir, DEFAULT_SPACY_PACKAGE
+from annotation.annotation_utils.annotate_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE, get_stanza_load_list
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetaTokenizer
 from annotation.pipes.factories import *
-from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from utils.log_util import get_logger
 import spacy
-import json
-import os
 
 NLP_MODEL = None
 
@@ -89,18 +86,6 @@ def get_nlp_model(use_gpu: bool = False,
         NLP_MODEL = nlp
 
     return NLP_MODEL
-
-
-def get_stanza_load_list(lang: str = "en",
-                         package: str = "default",
-                         processors: Union[str, Dict[str, str]] = {}) -> List[List[str]]:
-    stanza_dir = get_stanza_model_dir()
-    resources_filepath = os.path.join(stanza_dir, "resources.json")
-    with open(resources_filepath) as infile:
-        resources = json.load(infile)
-    lang, _, package, processors = process_pipeline_parameters(lang, stanza_dir, package, processors)
-    stanza_load_list = maintain_processor_list(resources, lang, package, processors)
-    return stanza_load_list
 
 
 def get_nlp_model_config_str(nlp: Language) -> str:

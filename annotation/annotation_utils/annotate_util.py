@@ -1,9 +1,12 @@
 from typing import Dict, Any, Union, List
 from utils.resource_util import get_model_filepath
+from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from spacy.tokens import Doc
 from spacy import Language
-import stanza
 import spacy
+import stanza
+import json
+import os
 
 DEFAULT_SPACY_PACKAGE = "en_core_web_md-3.2.0"
 
@@ -27,6 +30,18 @@ def load_blank_nlp(lang: str, package: str, exclude: List[str] =
     spacy_model_path = get_spacy_model_path(lang, package)
     blank_nlp = spacy.load(spacy_model_path, exclude=exclude)
     return blank_nlp
+
+
+def get_stanza_load_list(lang: str = "en",
+                         package: str = "default",
+                         processors: Union[str, Dict[str, str]] = {}) -> List[List[str]]:
+    stanza_dir = get_stanza_model_dir()
+    resources_filepath = os.path.join(stanza_dir, "resources.json")
+    with open(resources_filepath) as infile:
+        resources = json.load(infile)
+    lang, _, package, processors = process_pipeline_parameters(lang, stanza_dir, package, processors)
+    stanza_load_list = maintain_processor_list(resources, lang, package, processors)
+    return stanza_load_list
 
 
 def doc_to_dict(doc: Doc) -> Dict[str, Any]:
@@ -57,14 +72,14 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
                       "whitespace": token.whitespace_}
         if doc.has_annotation("LEMMA"):
             token_data["lemma"] = token.lemma_
-        if doc.has_annotation("MORPH"):
-                token_data["morph"] = str(token.morph)
         if doc.has_annotation("TAG"):
             token_data["pos"] = token.pos_
             token_data["tag"] = token.tag_
         if doc.has_annotation("DEP"):
             token_data["gov"] = token.head.i
             token_data["rel"] = token.dep_
+        if doc.has_annotation("MORPH"):
+                token_data["morph"] = str(token.morph)
         data["tokens"].append(token_data)
 
     # custom pipes
@@ -78,3 +93,9 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
         data["_"]["sentence_sentiments"] = doc._.get("sentence_sentiments")
 
     return data
+
+
+def doc_to_json_str(doc):
+    doc_dict = doc_to_dict(doc)
+    doc_json_str = json.dumps(doc_dict, ensure_ascii=False)
+    return doc_json_str

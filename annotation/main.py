@@ -17,8 +17,8 @@ nlp_model_config = dict(
     preprocessor_config={},
     stanza_base_tokenizer_package="default",
     normalizer_config=dummy_normalizer_config,
-    stanza_pipeline_config={"processors": "tokenize,ner,sentiment"},
-    spacy_pipeline_config={"exclude": ["ner"]},
+    stanza_pipeline_config={"processors": "tokenize,pos,ner,sentiment"},
+    spacy_pipeline_config={"exclude": ["tagger", "attribute_ruler", "ner"]},
     custom_pipes_config=[
         ("phrase_detector", {}),
         ("lang_detector", {}),
