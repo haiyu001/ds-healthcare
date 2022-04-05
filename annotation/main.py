@@ -36,4 +36,4 @@ if __name__ == "__main__":
     docs = nlp.pipe([content, content_meta], n_process=2)
     for doc in docs:
         pprint(doc_to_dict(doc))
-        print('-' * 100)
+        print("-" * 100)

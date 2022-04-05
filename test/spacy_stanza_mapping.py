@@ -11,11 +11,11 @@ preprocessor = Preprocessor()
 test_dir = "/Users/haiyang/Desktop/annotation"
 
 filepath = os.path.join(test_dir, "test_review.csv")
-file_df = pd.read_csv(filepath, encoding='utf-8')
+file_df = pd.read_csv(filepath, encoding="utf-8")
 file_df["content"] = file_df["content"].apply(lambda x: preprocessor.preprocess(x))
 file_df["words_cnt"] = file_df["content"].apply(lambda x: len(x.split()))
 file_df = file_df[(file_df["words_cnt"] > 15) & (file_df["words_cnt"] < 150)]
-file_df.to_json(os.path.join(test_dir, "tmp.json"), orient='records', lines=True, force_ascii=False)
+file_df.to_json(os.path.join(test_dir, "tmp.json"), orient="records", lines=True, force_ascii=False)
 print(file_df.shape)
 
 
@@ -59,10 +59,10 @@ with open(spacy_annotation_filepath) as spacy_annotation:
             spacy_record, stanza_record = json.loads(spacy_line), json.loads(stanza_line)
             if spacy_record["_"]["metadata"]["record_id"] != stanza_record["_"]["metadata"]["record_id"]:
                 break
-            for spacy_token, stanza_token in zip(spacy_record['tokens'], stanza_record['tokens']):
-                spacy_pos, stanza_pos = spacy_token['pos'], stanza_token['pos']
-                spacy_tag, stanza_tag = spacy_token['tag'], stanza_token['tag']
-                spacy_rel, stanza_rel = spacy_token['rel'], stanza_token['rel']
+            for spacy_token, stanza_token in zip(spacy_record["tokens"], stanza_record["tokens"]):
+                spacy_pos, stanza_pos = spacy_token["pos"], stanza_token["pos"]
+                spacy_tag, stanza_tag = spacy_token["tag"], stanza_token["tag"]
+                spacy_rel, stanza_rel = spacy_token["rel"], stanza_token["rel"]
                 pos_stanza_to_spacy[stanza_pos][spacy_pos] += 1
                 tag_stanza_to_spacy[stanza_tag][spacy_tag] += 1
                 rel_stanza_to_spacy[stanza_rel][spacy_rel] += 1
