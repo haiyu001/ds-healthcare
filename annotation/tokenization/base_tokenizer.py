@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from annotation.annotation_utils.annotator_util import get_stanza_model_dir
+from annotation.annotation_utils.annotation_util import get_stanza_model_dir
 from abc import ABC, abstractmethod
 from spacy import Language
 from spacy.tokens import Doc

@@ -1,5 +1,5 @@
 from typing import Dict, Union, Tuple, List, Optional
-from annotation.annotation_utils.annotator_util import get_stanza_model_dir, get_stanza_load_list
+from annotation.annotation_utils.annotation_util import get_stanza_model_dir, get_stanza_load_list
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
 from spacy import Language

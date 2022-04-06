@@ -1,5 +1,5 @@
 from annotation.tokenization.preprocessor import Preprocessor
-from annotation.annotation_utils.annotator_util import DEFAULT_SPACY_PACKAGE
+from annotation.annotation_utils.annotation_util import DEFAULT_SPACY_PACKAGE
 from annotation.components.annotator import get_nlp_model, doc_to_dict
 import json
 import pandas as pd

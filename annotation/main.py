@@ -1,5 +1,5 @@
 from pathlib import Path
-from annotation.annotation_utils.annotator_util import read_annotation_config
+from annotation.annotation_utils.annotation_util import read_annotation_config
 from annotation.components.annotator import Annotator, doc_to_dict
 from pprint import pprint
 import json

@@ -1,6 +1,6 @@
 from typing import Optional, Any, Iterator
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
-from annotation.annotation_utils.annotator_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE, get_stanza_load_list
+from annotation.annotation_utils.annotation_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE, get_stanza_load_list
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetaTokenizer

@@ -1,5 +1,5 @@
 from typing import List, Optional
-from annotation.annotation_utils.annotator_util import get_spacy_model_path, DEFAULT_SPACY_PACKAGE
+from annotation.annotation_utils.annotation_util import get_spacy_model_path, DEFAULT_SPACY_PACKAGE
 from spacy.tokens import Doc
 import spacy
 
