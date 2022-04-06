@@ -1,5 +1,5 @@
 from typing import Dict, Union, Tuple, List, Optional
-from annotation.annotation_utils.annotate_util import get_stanza_model_dir, get_stanza_load_list
+from annotation.annotation_utils.annotator_util import get_stanza_model_dir, get_stanza_load_list
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
 from spacy import Language
@@ -18,14 +18,15 @@ class StanzaPipeline:
                  nlp: Language,
                  lang: str = "en",
                  package: Optional[str] = "default",
-                 processors: Union[str, Dict[str, str]] = {},
+                 processors: Optional[str] = None,
+                 processors_packages: Optional[str] = None,
                  use_gpu: bool = False,
                  set_token_vector_hooks: bool = False,
                  attrs: Tuple[str, str] = ("metadata", "source_text", "sentence_sentiments")):
 
         self.lang = lang
         self.package = package
-        self.processors = processors
+        self.processors = self._get_stanza_processors(processors, processors_packages)
         self.vocab = nlp.vocab
         self.use_gpu = use_gpu
         self.snlp = Pipeline(lang=self.lang,
@@ -138,12 +139,26 @@ class StanzaPipeline:
     def token_has_vector(self, token: Token) -> bool:
         return self.svecs.vocab.unit2id(token.text) != UNK_ID
 
-    def _find_embeddings(self, snlp: Pipeline) -> Pretrain:
+    @staticmethod
+    def _find_embeddings(snlp: Pipeline) -> Pretrain:
         embs = None
         for proc in snlp.processors.values():
             if hasattr(proc, "pretrain") and isinstance(proc.pretrain, Pretrain):
                 embs = proc.pretrain
                 break
         return embs
+
+    @staticmethod
+    def _get_stanza_processors(processors: Optional[str], processors_packages: Optional[str]) -> Dict[str, str]:
+        if processors_packages is None:
+            return processors or {}
+        else:
+            processors = processors.split(',')
+            processors_packages = processors_packages.split(',')
+            if len(processors) != len(processors_packages):
+                raise Exception("stanza processors and packages doesn't match")
+            else:
+                return dict(zip(processors, processors_packages))
+
 
 

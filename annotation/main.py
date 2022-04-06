@@ -1,33 +1,24 @@
-from annotation.annotation_utils.annotate_util import doc_to_dict, DEFAULT_SPACY_PACKAGE
-from annotation.annotation_utils.pipeline_util import get_nlp_model
+from pathlib import Path
+from annotation.annotation_utils.annotator_util import read_annotation_config
+from annotation.components.annotator import Annotator, doc_to_dict
 from pprint import pprint
 import json
+import os
 
-dummy_normalizer_config = {
-    "merge_words": {"battery life": {"merge": "batterylife", "type": "canonical"}},
-    "split_words": {"autonomouscars": "autonomous cars"},
-    "replace_words": {"thisr": "these"},
-}
-
-nlp_model_config = dict(
-    use_gpu=False,
-    lang="en",
-    spacy_package=DEFAULT_SPACY_PACKAGE,
-    text_meta_config={"text_fields_in_json": ["content"], "meta_fields_to_keep": ["record_id"]},
-    preprocessor_config={},
-    stanza_base_tokenizer_package="default",
-    normalizer_config=dummy_normalizer_config,
-    stanza_pipeline_config={"processors": "tokenize,pos,ner,sentiment"},
-    spacy_pipeline_config={"exclude": ["tagger", "attribute_ruler", "ner"]},
-    custom_pipes_config=[
-        ("phrase_detector", {}),
-        ("lang_detector", {}),
-    ],
-)
 
 if __name__ == "__main__":
 
-    nlp = get_nlp_model(**nlp_model_config)
+    dummy_normalizer_config = {
+        "merge_words": {"battery life": {"merge": "batterylife", "type": "canonical"}},
+        "split_words": {"autonomouscars": "autonomous cars"},
+        "replace_words": {"thisr": "these"},
+    }
+
+    annotation_config_filepath = os.path.join(Path(__file__).parent, "annotation.cfg")
+    nlp_model_config = read_annotation_config(annotation_config_filepath)
+    nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
+
+    nlp = Annotator(**nlp_model_config).nlp
 
     content = "Thisr  autonomouscars have good battery life in China. I hate that laptop."
 

@@ -1,5 +1,5 @@
 from typing import List, Optional
-from annotation.annotation_utils.annotate_util import get_spacy_model_path, DEFAULT_SPACY_PACKAGE
+from annotation.annotation_utils.annotator_util import get_spacy_model_path, DEFAULT_SPACY_PACKAGE
 from spacy.tokens import Doc
 import spacy
 
@@ -9,11 +9,13 @@ class SpacyPipeline:
     def __init__(self,
                  lang: str = "en",
                  package: Optional[str] = None,
-                 exclude: List[str] = [],
+                 exclude: Optional[str] = None,
                  sentence_detector: bool = False):
 
         spacy_package = package or DEFAULT_SPACY_PACKAGE
         spacy_model_path = get_spacy_model_path(lang, spacy_package)
+        exclude = exclude.split(',') if exclude else []
+
         self.nlp = spacy.load(spacy_model_path, exclude=exclude)
         pipe_names = set(self.nlp.pipe_names)
         if sentence_detector:

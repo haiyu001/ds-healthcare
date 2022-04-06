@@ -11,17 +11,17 @@ class MetaTokenizer:
                  base_tokenizer: BaseTokenizer,
                  preprocessor: Optional[Preprocessor] = None,
                  normalizer: Optional[Normalizer] = None,
-                 text_fields_in_json: Optional[List[str]] = None,
-                 meta_fields_to_drop: Optional[List[str]] = None,
-                 meta_fields_to_keep: Optional[List[str]] = None,
+                 text_fields_in_json: Optional[str] = None,
+                 meta_fields_to_keep: Optional[str] = None,
+                 meta_fields_to_drop: Optional[str] = None,
                  attrs: Tuple[str, str] = ("metadata", "source_text")):
 
         self.base_tokenizer = base_tokenizer
         self.preprocessor = preprocessor
         self.normalizer = normalizer
-        self.text_fields_in_json = text_fields_in_json
-        self.meta_fields_to_drop = meta_fields_to_drop
-        self.meta_fields_to_keep = meta_fields_to_keep
+        self.text_fields_in_json = text_fields_in_json.split(',') if text_fields_in_json else None
+        self.meta_fields_to_drop = meta_fields_to_drop.split(',') if meta_fields_to_drop else None
+        self.meta_fields_to_keep = meta_fields_to_keep.split(',') if meta_fields_to_keep else None
         self._metadata, self._source_text = attrs
         Doc.set_extension(self._metadata, default={}, force=True)
         Doc.set_extension(self._source_text, default=None, force=True)
