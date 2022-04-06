@@ -16,9 +16,6 @@ import warnings
 import spacy
 
 
-logger = get_logger()
-
-
 class SingletonMeta(type):
 
     _instances = {}
@@ -99,6 +96,7 @@ class Annotator(metaclass=SingletonMeta):
             for pipe_name, pipe_config in custom_pipes_config:
                 nlp.add_pipe(pipe_name, config=pipe_config)
 
+        logger = get_logger()
         logger.info(f"nlp model config (use_gpu = {use_gpu}):\n{self.get_nlp_model_config_str(nlp)}")
 
         self.nlp = nlp
