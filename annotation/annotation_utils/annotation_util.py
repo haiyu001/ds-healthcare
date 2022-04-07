@@ -1,5 +1,5 @@
 from typing import Dict, Union, List, Any
-from utils.config_util import read_config, config_type_casting
+from utils.config_util import read_config, config_type_casting, clean_config_str
 from utils.resource_util import get_model_filepath
 from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from spacy import Language
@@ -25,10 +25,18 @@ def download_stanza_model(lang: str, package: str = "default", processors: Union
     stanza.download(lang, get_model_filepath("stanza"), package, processors)
 
 
-def load_blank_nlp(lang: str, package: str, exclude: List[str] =
-                   ["tok2vec", "tagger", "parser", "ner", "attribute_ruler", "lemmatizer"]) -> Language:
+def get_spacy_model_pipes(spacy_model_path: str) -> List[str]:
+    spacy_meta_filepath = os.path.join(spacy_model_path, 'meta.json')
+    with open(spacy_meta_filepath) as infile:
+        spacy_meta = json.load(infile)
+    pipes = spacy_meta['pipeline']
+    return pipes
+
+
+def load_blank_nlp(lang: str, package: str) -> Language:
     spacy_model_path = get_spacy_model_path(lang, package)
-    blank_nlp = spacy.load(spacy_model_path, exclude=exclude)
+    spacy_model_pipes = get_spacy_model_pipes(spacy_model_path)
+    blank_nlp = spacy.load(spacy_model_path, exclude=spacy_model_pipes)
     return blank_nlp
 
 
@@ -48,15 +56,13 @@ def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
     config = read_config(config_filepath)
     nlp_model_config = dict(
         use_gpu=config["Annotator"].getboolean('use_gpu'),
-        lang=config["Annotator"]["lang"],
-        spacy_package=config["Annotator"]["spacy_package"],
+        lang=clean_config_str(config["Annotator"]["lang"]),
+        spacy_package=clean_config_str(config["Annotator"]["spacy_package"]),
         meta_tokenizer_config=config_type_casting(config.items("MetaTokenizer")),
         preprocessor_config=config_type_casting(config.items("Preprocessor")),
-        stanza_base_tokenizer_package=config["BaseTokenizer"]["stanza_base_tokenizer_package"],
+        stanza_base_tokenizer_package=clean_config_str(config["BaseTokenizer"]["stanza_base_tokenizer_package"]),
         normalizer_config=config_type_casting(config.items("Normalizer")),
         stanza_pipeline_config=config_type_casting(config.items("StanzaPipeline")),
         spacy_pipeline_config=config_type_casting(config.items("SpacyPipeline")),
         custom_pipes_config=[(k, {}) for k, v in config_type_casting(config.items("CustomPipes")).items() if v])
     return nlp_model_config
-
-

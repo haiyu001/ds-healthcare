@@ -1,4 +1,4 @@
-from typing import Dict, Union, Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional
 from annotation.annotation_utils.annotation_util import get_stanza_model_dir, get_stanza_load_list
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
@@ -11,7 +11,6 @@ from numpy import ndarray
 
 
 class StanzaPipeline:
-
     dir = get_stanza_model_dir()
 
     def __init__(self,
@@ -159,6 +158,3 @@ class StanzaPipeline:
                 raise Exception("stanza processors and packages doesn't match")
             else:
                 return dict(zip(processors, processors_packages))
-
-
-

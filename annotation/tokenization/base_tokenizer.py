@@ -25,7 +25,6 @@ class SpacyBaseTokenizer(BaseTokenizer):
 
 
 class StanzaBaseTokenizer(BaseTokenizer):
-
     dir = get_stanza_model_dir()
 
     def __init__(self,

@@ -1,15 +1,15 @@
-from typing import Optional, Any, Iterator
+from typing import Any, Iterator
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
 from annotation.annotation_utils.annotation_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE, get_stanza_load_list
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetaTokenizer
+from utils.log_util import get_logger
 from annotation.pipes.factories import *
 from spacy.tokens import Doc
 from pyspark.sql.types import StringType
 from pyspark.sql import Column, functions as F
 from threading import Lock
-from utils.log_util import get_logger
 import pandas as pd
 import json
 import warnings
@@ -17,7 +17,6 @@ import spacy
 
 
 class SingletonMeta(type):
-
     _instances = {}
     _lock: Lock = Lock()
 
@@ -30,7 +29,6 @@ class SingletonMeta(type):
 
 
 class Annotator(metaclass=SingletonMeta):
-
     nlp: Language = None
 
     def __init__(self,
@@ -151,18 +149,7 @@ class Annotator(metaclass=SingletonMeta):
         return "\n".join(table_rows)
 
 
-def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column:
-    def annotate(text_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
-        nlp = Annotator(**nlp_model_config).nlp
-        for text in text_iter:
-            doc = text.apply(nlp)
-            doc_annotation_str = doc.apply(doc_to_json_str)
-            yield doc_annotation_str
-    return F.pandas_udf(annotate, StringType())(text_iter)
-
-
 def doc_to_dict(doc: Doc) -> Dict[str, Any]:
-
     data = {"text": doc.text, "tokens": [], "_": {}}
 
     # tokenization info (metadata, source_text)
@@ -196,7 +183,7 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
             token_data["gov"] = token.head.i
             token_data["rel"] = token.dep_
         if doc.has_annotation("MORPH"):
-                token_data["morph"] = str(token.morph)
+            token_data["morph"] = str(token.morph)
         data["tokens"].append(token_data)
 
     # custom pipes
@@ -216,3 +203,14 @@ def doc_to_json_str(doc: Doc) -> str:
     doc_dict = doc_to_dict(doc)
     doc_json_str = json.dumps(doc_dict, ensure_ascii=False)
     return doc_json_str
+
+
+def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column:
+    def annotate(text_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
+        nlp = Annotator(**nlp_model_config).nlp
+        for text in text_iter:
+            doc = text.apply(nlp)
+            doc_annotation_str = doc.apply(doc_to_json_str)
+            yield doc_annotation_str
+
+    return F.pandas_udf(annotate, StringType())(text_iter)

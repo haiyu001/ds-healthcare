@@ -1,6 +1,6 @@
-import distutils
-from configparser import ConfigParser, ExtendedInterpolation
 from typing import Dict, Any, List, Tuple
+from configparser import ConfigParser, ExtendedInterpolation
+import distutils
 
 
 def _get_config_parser() -> ConfigParser:
@@ -9,7 +9,7 @@ def _get_config_parser() -> ConfigParser:
     return config
 
 
-def read_config(config_filepath) -> ConfigParser:
+def read_config(config_filepath: str) -> ConfigParser:
     config = _get_config_parser()
     with open(config_filepath) as input:
         conf_content = input.read()
@@ -24,11 +24,7 @@ def copy_config(config_filepath: str, save_filepath: str):
         output.write(conf_content)
 
 
-def _is_bool(text: str) -> bool:
-    return text.lower() in {"true", "false"}
-
-
-def _is_float(text: str) -> bool:
+def is_float(text: str) -> bool:
     try:
         float(text)
     except ValueError:
@@ -37,21 +33,29 @@ def _is_float(text: str) -> bool:
         return True
 
 
+def clean_config_str(text: str) -> str:
+    if text:
+        text = text.strip(" '\"")
+        text = ",".join([i.strip(" '\"") for i in text.split(",")])
+    return text
+
+
 def config_type_casting(config_items: List[Tuple[str, str]]) -> Dict[str, Any]:
     config_dict = {}
     for key, value_str in config_items:
-        value_str = value_str.strip(" '\"")
-        if _is_bool(value_str):
+        value_str = clean_config_str(value_str)
+        if value_str == "":
+            value = None
+        elif value_str.lower() in {"true", "false"}:
             value = bool(distutils.util.strtobool(value_str))
-        elif _is_float(value_str):
+        elif is_float(value_str):
             value = float(value_str)
         elif value_str.isdigit():
             value = int(value_str)
-        elif value_str == "":
-            value = None
         else:
             value = value_str
         config_dict[key] = value
     return config_dict
+
 
 

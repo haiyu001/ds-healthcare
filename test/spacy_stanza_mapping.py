@@ -1,11 +1,10 @@
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.annotation_utils.annotation_util import DEFAULT_SPACY_PACKAGE
-from annotation.components.annotator import get_nlp_model, doc_to_dict
+from annotation.components.annotator import doc_to_dict, Annotator
 import json
 import pandas as pd
 import collections
 import os
-
 
 preprocessor = Preprocessor()
 test_dir = "/Users/haiyang/Desktop/annotation"
@@ -17,7 +16,6 @@ file_df["words_cnt"] = file_df["content"].apply(lambda x: len(x.split()))
 file_df = file_df[(file_df["words_cnt"] > 15) & (file_df["words_cnt"] < 150)]
 file_df.to_json(os.path.join(test_dir, "tmp.json"), orient="records", lines=True, force_ascii=False)
 print(file_df.shape)
-
 
 nlp_model_config = dict(
     lang="en",
@@ -31,7 +29,7 @@ nlp_model_config = dict(
     custom_pipes_config=None
 )
 
-nlp = get_nlp_model(**nlp_model_config)
+nlp = Annotator(**nlp_model_config).nlp
 input_filepath = os.path.join(test_dir, "tmp.json")
 output_filepath = os.path.join(test_dir, "stanza_annotation.json")
 with open(output_filepath, "w") as output:
@@ -77,6 +75,7 @@ def save_mapping(mapping_dict, mapping_type, most_common, save_dir):
     mapping_dict = collections.OrderedDict(sorted(mapping_dict.items()))
     with open(os.path.join(save_dir, f"{mapping_type}.json"), "w") as output:
         json.dump(mapping_dict, output, indent=2)
+
 
 save_mapping(pos_stanza_to_spacy, "pos_stanza_to_spacy", 3, test_dir)
 save_mapping(tag_stanza_to_spacy, "tag_stanza_to_spacy", 3, test_dir)

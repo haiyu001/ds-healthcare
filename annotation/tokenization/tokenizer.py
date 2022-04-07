@@ -1,4 +1,4 @@
-from typing import Optional, List, Iterable, Iterator, Dict, Tuple
+from typing import Optional, Iterable, Iterator, Dict, Tuple
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.base_tokenizer import BaseTokenizer
@@ -59,7 +59,8 @@ class MetaTokenizer:
             if self.meta_fields_to_drop and self.meta_fields_to_keep:
                 raise Exception(f"Either drop some fields or keep some fields. Cannot do both.")
             elif self.meta_fields_to_drop or self.meta_fields_to_keep:
-                drop_fields = self.meta_fields_to_drop or [i for i in record.keys() if i not in self.meta_fields_to_keep]
+                drop_fields = self.meta_fields_to_drop or [i for i in record.keys() if
+                                                           i not in self.meta_fields_to_keep]
                 for i in drop_fields:
                     if i in record.keys():
                         del record[i]

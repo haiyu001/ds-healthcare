@@ -1,10 +1,9 @@
-from pathlib import Path
 from annotation.annotation_utils.annotation_util import read_annotation_config
 from annotation.components.annotator import Annotator, doc_to_dict
+from pathlib import Path
 from pprint import pprint
 import json
 import os
-
 
 if __name__ == "__main__":
 
