@@ -38,11 +38,16 @@ class PhraseDetector(object):
                     if phrase_span[-1].is_stop:
                         phrase_span = phrase_span[:-1]
 
-                    phrases.append({"start_id": phrase_span[0].i,
-                                    "end_id": phrase_span[-1].i + 1,
-                                    "rank": p.rank,
-                                    "count": p.count,
-                                    "text": phrase_span.text,
-                                    "lemma": phrase_span.lemma_,
-                                    "tokens_dependencies": json.dumps([token.dep_ for token in phrase_span]), })
+                    phrase_words = [token.text + token.whitespace_ for token in phrase_span[:-1]] + \
+                                   [phrase_span[-1].text]
+                    phrases.append({
+                        "start_id": phrase_span[0].i,
+                        "end_id": phrase_span[-1].i + 1,
+                        "rank": p.rank,
+                        "count": p.count,
+                        "text": phrase_span.text,
+                        "phrase_words": json.dumps(phrase_words, ensure_ascii=False),
+                        "phrase_lemmas": json.dumps([token.lemma_ for token in phrase_span], ensure_ascii=False),
+                        "phrase_deps": json.dumps([token.dep_ for token in phrase_span], ensure_ascii=False),
+                    })
         return phrases

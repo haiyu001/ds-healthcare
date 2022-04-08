@@ -215,5 +215,4 @@ def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column
             doc = text.apply(nlp)
             doc_annotation_str = doc.apply(doc_to_json_str)
             yield doc_annotation_str
-
     return F.pandas_udf(annotate, StringType())(text_iter)

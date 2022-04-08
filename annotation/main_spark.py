@@ -20,11 +20,11 @@ if __name__ == "__main__":
     add_repo_pyfile(spark)
 
     annotation_dir = "/Users/haiyang/Desktop/annotation/"
-    data_filepath = os.path.join(annotation_dir, "small_test.json")
+    data_filepath = os.path.join(annotation_dir, "medium_test.json")
 
     data_df = spark.read.text(data_filepath)
     data_df = data_df.repartition(4)
     print(data_df.rdd.getNumPartitions())
 
     annotation_df = data_df.select(pudf_annotate(F.col("value"), nlp_model_config))
-    write_dataframe_to_dir(annotation_df, annotation_dir, "small_test_annotation", file_format="txt")
+    write_dataframe_to_dir(annotation_df, annotation_dir, "medium_test_annotation", file_format="txt")

@@ -1,8 +1,9 @@
 from typing import Optional, Dict
+from utils.general_util import split_filepath
 from utils.resource_util import zip_repo
 from utils.log_util import get_logger
 from pyspark import SparkConf
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Window
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 from pathlib import Path
@@ -34,8 +35,8 @@ def get_spark_session(app_name: str = "spark_app",
 
 
 def convert_to_pdf_and_save(spark_df: DataFrame,
-                            rename_columns: Optional[Dict] = None,
                             save_filepath: Optional[str] = None,
+                            rename_columns: Optional[Dict] = None,
                             csv_index: bool = False,
                             csv_index_label: Optional[bool] = None,
                             csv_quoting: int = csv.QUOTE_MINIMAL) -> pd.DataFrame:
@@ -72,6 +73,17 @@ def write_dataframe_to_dir(dataframe: DataFrame,
         raise ValueError(f"Unsupported file format of {file_format}")
 
 
+def write_dataframe_to_file(dataframe: DataFrame, save_filepath: str):
+    file_dir, file_name, file_format = split_filepath(save_filepath)
+    write_dataframe_to_dir(dataframe, file_dir, file_name, file_format, num_partitions=1)
+    spark_data_dir = os.path.join(file_dir, file_name)
+    spark_filename = [i for i in os.listdir(spark_data_dir) if i.startswith("part-")][0]
+    spark_datat_dir = os.path.join(file_dir, file_name)
+    spark_filepath = os.path.join(spark_datat_dir, spark_filename)
+    shutil.move(spark_filepath, save_filepath)
+    shutil.rmtree(spark_datat_dir)
+
+
 def convert_to_orc(spark: DataFrame,
                    input_filepath: str,
                    output_filepath: str,
@@ -90,15 +102,26 @@ def convert_to_orc(spark: DataFrame,
             data_df = data_df.withColumn(col, F.col(col).cast(cast_type))
     logger = get_logger()
     logger.info(f"data types of orc file:\n{pformat(data_df.dtypes)}")
-
-    orc_folder_dir, orc_folder_name = str(Path(output_filepath).parent), Path(output_filepath).stem
-    write_dataframe_to_dir(data_df, orc_folder_dir, orc_folder_name, "orc", num_partitions=1)
-    orc_data_dir = os.path.join(orc_folder_dir, orc_folder_name)
-    part_filepath = str(next(Path(orc_data_dir).glob("*.orc")))
-    shutil.move(part_filepath, output_filepath)
-    shutil.rmtree(orc_data_dir)
+    write_dataframe_to_file(data_df, output_filepath)
 
 
 def add_repo_pyfile(spark: SparkSession, repo_zip_dir: str = "/tmp"):
     repo_zip_filepath = zip_repo(repo_zip_dir)
     spark.sparkContext.addPyFile(repo_zip_filepath)
+
+
+def extract_topn_common(data_df: DataFrame,
+                        partition_by: str,
+                        key_by: str,
+                        value_by: str,
+                        top_n: int = 3,
+                        save_filepath: Optional[str] = None) -> DataFrame:
+    w = Window.partitionBy(partition_by).orderBy(F.col(value_by).desc())
+    data_df = data_df.select(partition_by, key_by, value_by)
+    data_df = data_df.withColumn("rank", F.row_number().over(w))
+    data_df = data_df.filter(F.col("rank") <= top_n).drop("rank")
+    data_df = data_df.groupby(partition_by) \
+        .agg(F.to_json(F.map_from_entries(F.collect_list(F.struct(key_by, value_by)))).alias(key_by))
+    if save_filepath:
+        convert_to_pdf_and_save(data_df, save_filepath)
+    return data_df
