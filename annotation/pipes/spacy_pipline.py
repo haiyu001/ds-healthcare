@@ -4,7 +4,7 @@ from spacy.tokens import Doc
 import spacy
 
 
-class SpacyPipeline:
+class SpacyPipeline(object):
 
     def __init__(self,
                  lang: str = "en",

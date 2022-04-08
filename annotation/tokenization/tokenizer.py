@@ -6,7 +6,7 @@ from spacy.tokens import Doc
 import json
 
 
-class MetaTokenizer:
+class MetaTokenizer(object):
     def __init__(self,
                  base_tokenizer: BaseTokenizer,
                  preprocessor: Optional[Preprocessor] = None,
@@ -42,22 +42,22 @@ class MetaTokenizer:
         """record could be text str or json str, if record is json str, text_fields_in_json is required"""
         try:
             record = json.loads(record)
-        except ValueError as e:
+        except ValueError:
             return record, {}
         else:
             if not self.text_fields_in_json:
-                raise Exception("Need to specify text field for the source json input.")
+                raise ValueError("Need to specify text field for the source json input.")
 
             common_text_fields = list(set(record.keys()) & set(self.text_fields_in_json))
             if len(common_text_fields) == 0:
-                raise Exception(f"None of text fields {common_text_fields} exit in the source input.")
+                raise ValueError(f"None of text fields {common_text_fields} exit in the source input.")
             elif len(common_text_fields) > 1:
-                raise Exception(f"More than one text fields {common_text_fields} exit in the source input.")
+                raise ValueError(f"More than one text fields {common_text_fields} exit in the source input.")
             else:
                 text = record.pop(common_text_fields[0])
 
             if self.meta_fields_to_drop and self.meta_fields_to_keep:
-                raise Exception(f"Either drop some fields or keep some fields. Cannot do both.")
+                raise ValueError(f"Either drop some fields or keep some fields. Cannot do both.")
             elif self.meta_fields_to_drop or self.meta_fields_to_keep:
                 drop_fields = self.meta_fields_to_drop or [i for i in record.keys() if
                                                            i not in self.meta_fields_to_keep]

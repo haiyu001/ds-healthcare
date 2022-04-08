@@ -25,7 +25,6 @@ class SpacyBaseTokenizer(BaseTokenizer):
 
 
 class StanzaBaseTokenizer(BaseTokenizer):
-    dir = get_stanza_model_dir()
 
     def __init__(self,
                  nlp: Language,
@@ -35,7 +34,7 @@ class StanzaBaseTokenizer(BaseTokenizer):
         self.lang = lang
         self.tokenize_package = tokenize_package
         self.snlp = stanza.Pipeline(lang=self.lang,
-                                    dir=self.dir,
+                                    dir=get_stanza_model_dir(),
                                     package=self.tokenize_package,
                                     processors="tokenize",
                                     verbose=False)

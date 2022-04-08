@@ -9,7 +9,7 @@ from textacy.preprocessing.resources import RE_LINEBREAK
 import re
 
 
-class Preprocessor:
+class Preprocessor(object):
 
     def __init__(self,
                  to_lowercase: bool = False,

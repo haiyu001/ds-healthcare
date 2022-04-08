@@ -48,7 +48,7 @@ def convert_to_pdf_and_save(spark_df: DataFrame,
     elif file_format == "json":
         pandas_df.to_json(save_filepath, orient="records", lines=True, force_ascii=False)
     elif file_format is not None:
-        raise Exception(f"Unsupported file format of {file_format}")
+        raise ValueError(f"Unsupported file format of {file_format}")
     return pandas_df
 
 
@@ -69,7 +69,7 @@ def write_dataframe_to_dir(dataframe: DataFrame,
     elif file_format == "txt" or file_format == "text":
         dataframe.write.text(save_directory)
     else:
-        raise Exception(f"Unsupported file format of {file_format}")
+        raise ValueError(f"Unsupported file format of {file_format}")
 
 
 def convert_to_orc(spark: DataFrame,

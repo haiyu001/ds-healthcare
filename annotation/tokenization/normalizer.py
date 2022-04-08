@@ -5,7 +5,7 @@ from spacy.util import filter_spans
 from spacy import Language
 
 
-class Normalizer:
+class Normalizer(object):
 
     def __init__(self,
                  nlp: Language,

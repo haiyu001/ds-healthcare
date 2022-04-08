@@ -44,5 +44,5 @@ class PhraseDetector(object):
                                     "count": p.count,
                                     "text": phrase_span.text,
                                     "lemma": phrase_span.lemma_,
-                                    "tokens_dependencies": json.dumps([token.dep_ for token in phrase_span])})
+                                    "tokens_dependencies": json.dumps([token.dep_ for token in phrase_span]), })
         return phrases

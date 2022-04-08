@@ -11,7 +11,7 @@ from spacy.language import Language
 @Language.factory("spacy_pipeline", default_config={"lang": "en",
                                                     "package": None,
                                                     "exclude": None,
-                                                    "sentence_detector": False})
+                                                    "sentence_detector": False, })
 def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, package: str,
                                      exclude: Optional[str], sentence_detector: bool) -> SpacyPipeline:
     return SpacyPipeline(lang, package, exclude, sentence_detector)
@@ -23,7 +23,7 @@ def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, packag
                                                      "processors_packages": None,
                                                      "use_gpu": False,
                                                      "set_token_vector_hooks": False,
-                                                     "attrs": ("metadata", "source_text", "sentence_sentiments")})
+                                                     "attrs": ("metadata", "source_text", "sentence_sentiments"), })
 def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, package: str,
                                      processors: Optional[str], processors_packages: Optional[str], use_gpu: bool,
                                      set_token_vector_hooks: bool, attrs: Tuple[str, str, str]) -> StanzaPipeline:
@@ -31,7 +31,7 @@ def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, packag
 
 
 @Language.factory("fastlang_detector", default_config={"attrs": ("language", "language_score"),
-                                                       "model_name": "lid.176.ftz"})
+                                                       "model_name": "lid.176.ftz", })
 def create_lang_detector_component(nlp: Language, name: str, attrs: Tuple[str, str], model_name: str) -> FastLangDetector:
     return FastLangDetector(attrs, model_name)
 

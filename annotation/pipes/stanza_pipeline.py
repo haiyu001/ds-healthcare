@@ -10,8 +10,7 @@ from stanza import Pipeline
 from numpy import ndarray
 
 
-class StanzaPipeline:
-    dir = get_stanza_model_dir()
+class StanzaPipeline(object):
 
     def __init__(self,
                  nlp: Language,
@@ -29,7 +28,7 @@ class StanzaPipeline:
         self.vocab = nlp.vocab
         self.use_gpu = use_gpu
         self.snlp = Pipeline(lang=self.lang,
-                             dir=self.dir,
+                             dir=get_stanza_model_dir(),
                              package=self.package,
                              processors=self.processors,
                              use_gpu=self.use_gpu,
@@ -138,8 +137,7 @@ class StanzaPipeline:
     def token_has_vector(self, token: Token) -> bool:
         return self.svecs.vocab.unit2id(token.text) != UNK_ID
 
-    @staticmethod
-    def _find_embeddings(snlp: Pipeline) -> Pretrain:
+    def _find_embeddings(self, snlp: Pipeline) -> Pretrain:
         embs = None
         for proc in snlp.processors.values():
             if hasattr(proc, "pretrain") and isinstance(proc.pretrain, Pretrain):
@@ -147,14 +145,13 @@ class StanzaPipeline:
                 break
         return embs
 
-    @staticmethod
-    def _get_stanza_processors(processors: Optional[str], processors_packages: Optional[str]) -> Dict[str, str]:
+    def _get_stanza_processors(self, processors: Optional[str], processors_packages: Optional[str]) -> Dict[str, str]:
         if processors_packages is None:
             return processors or {}
+        elif processors is None:
+            raise ValueError("Need to set processors when processors_packages is not None")
         else:
             processors = processors.split(',')
             processors_packages = processors_packages.split(',')
-            if len(processors) != len(processors_packages):
-                raise Exception("stanza processors and packages doesn't match")
-            else:
-                return dict(zip(processors, processors_packages))
+            assert(len(processors) == len(processors_packages), "stanza processors and packages doesn't match")
+            return dict(zip(processors, processors_packages))

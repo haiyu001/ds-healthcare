@@ -21,8 +21,8 @@ class FastLangDetector(object):
             doc._.set(self._language_score, language_score)
         return doc
 
-    @staticmethod
-    def load_language_model(model_name: str = "lid.176.ftz") -> _FastText:
-        language_model_path = get_model_filepath("models", model_name)
-        language_model = fasttext.load_model(language_model_path)
-        return language_model
+
+def load_language_model(model_name: str = "lid.176.ftz") -> _FastText:
+    language_model_path = get_model_filepath("models", model_name)
+    language_model = fasttext.load_model(language_model_path)
+    return language_model
