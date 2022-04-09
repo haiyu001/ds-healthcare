@@ -14,10 +14,12 @@ if __name__ == "__main__":
 
     annotation_config_filepath = os.path.join(Path(__file__).parent, "annotation.cfg")
     nlp_model_config = read_annotation_config(annotation_config_filepath)
-    nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
+    if nlp_model_config["normalizer_config"]:
+        nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
 
     spark = get_spark_session("small_test", master_config="local[4]", log_level="INFO")
     add_repo_pyfile(spark)
+
 
     annotation_dir = "/Users/haiyang/Desktop/annotation/"
     data_filepath = os.path.join(annotation_dir, "medium_test.json")

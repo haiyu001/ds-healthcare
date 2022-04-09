@@ -20,7 +20,8 @@ class StanzaPipeline(object):
                  processors_packages: Optional[str] = None,
                  use_gpu: bool = False,
                  set_token_vector_hooks: bool = False,
-                 attrs: Tuple[str, str] = ("metadata", "source_text", "sentence_sentiments")):
+                 attrs: Tuple[str, str, str, str] =
+                 ("metadata", "source_text", "preprocessed_text", "sentence_sentiments")):
 
         self.lang = lang
         self.package = package
@@ -37,7 +38,7 @@ class StanzaPipeline(object):
         self.loaded_processors = {processor for processor, _ in
                                   get_stanza_load_list(self.lang, self.package, self.processors)}
         self.svecs = self._find_embeddings(self.snlp) if set_token_vector_hooks else None
-        self._metadata, self._source_text, self._sentiment = attrs
+        self._metadata, self._source_text, self._preprocessed_text, self._sentiment = attrs
         if "sentiment" in processors:
             Doc.set_extension(self._sentiment, default=None, force=True)
 
@@ -63,7 +64,8 @@ class StanzaPipeline(object):
                   morphs=morphs if "pos" in self.loaded_processors else None,
                   lemmas=lemmas if "lemma" in self.loaded_processors else None,
                   deps=deps if "depparse" in self.loaded_processors else None,
-                  heads=heads if "depparse" in self.loaded_processors else None)
+                  heads=heads if "depparse" in self.loaded_processors else None,
+                  user_data=spacy_doc.user_data)
 
         self.set_named_entities(doc, snlp_doc, token_texts, token_spaces)
 
@@ -73,7 +75,7 @@ class StanzaPipeline(object):
 
         doc._.set(self._metadata, spacy_doc._.get(self._metadata))
         doc._.set(self._source_text, spacy_doc._.get(self._source_text))
-
+        doc._.set(self._preprocessed_text, spacy_doc._.get(self._preprocessed_text))
         if doc.has_extension(self._sentiment):
             # 0: negative, 1: neutral, 2: positive
             doc._.set(self._sentiment, [sentence.sentiment for sentence in snlp_doc.sentences])
@@ -151,7 +153,7 @@ class StanzaPipeline(object):
         elif processors is None:
             raise ValueError("Need to set processors when processors_packages is not None")
         else:
-            processors = processors.split(',')
-            processors_packages = processors_packages.split(',')
-            assert(len(processors) == len(processors_packages), "stanza processors and packages doesn't match")
+            processors = processors.split(",")
+            processors_packages = processors_packages.split(",")
+            assert len(processors) == len(processors_packages), "stanza processors and packages doesn't match"
             return dict(zip(processors, processors_packages))

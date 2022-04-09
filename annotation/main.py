@@ -15,7 +15,8 @@ if __name__ == "__main__":
 
     annotation_config_filepath = os.path.join(Path(__file__).parent, "annotation.cfg")
     nlp_model_config = read_annotation_config(annotation_config_filepath)
-    nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
+    if nlp_model_config["normalizer_config"]:
+        nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
 
     nlp = Annotator(**nlp_model_config).nlp
 

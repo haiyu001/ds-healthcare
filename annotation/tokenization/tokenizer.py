@@ -14,28 +14,34 @@ class MetaTokenizer(object):
                  text_fields_in_json: Optional[str] = None,
                  meta_fields_to_keep: Optional[str] = None,
                  meta_fields_to_drop: Optional[str] = None,
-                 attrs: Tuple[str, str] = ("metadata", "source_text")):
+                 attrs: Tuple[str, str, str] = ("metadata", "source_text", "preprocessed_text")):
 
         self.base_tokenizer = base_tokenizer
         self.preprocessor = preprocessor
         self.normalizer = normalizer
-        self.text_fields_in_json = text_fields_in_json.split(',') if text_fields_in_json else None
-        self.meta_fields_to_drop = meta_fields_to_drop.split(',') if meta_fields_to_drop else None
-        self.meta_fields_to_keep = meta_fields_to_keep.split(',') if meta_fields_to_keep else None
-        self._metadata, self._source_text = attrs
+        self.text_fields_in_json = text_fields_in_json.split(",") if text_fields_in_json else None
+        self.meta_fields_to_drop = meta_fields_to_drop.split(",") if meta_fields_to_drop else None
+        self.meta_fields_to_keep = meta_fields_to_keep.split(",") if meta_fields_to_keep else None
+        self._metadata, self._source_text, self._preprocessed_text = attrs
         Doc.set_extension(self._metadata, default={}, force=True)
         Doc.set_extension(self._source_text, default=None, force=True)
+        Doc.set_extension(self._preprocessed_text, default=None, force=True)
 
     def __call__(self, record: str) -> Doc:
         source_text, metadata = self.read_record(record)
         text = source_text
+
+        preprocessed_text = None
         if self.preprocessor:
-            text = self.preprocessor.preprocess(text)
+            preprocessed_text = self.preprocessor.preprocess(text)
+            text = preprocessed_text
+
         doc = self.base_tokenizer.tokenize(text)
         if self.normalizer:
             doc = self.normalizer.normalize(doc)
         doc._.set(self._metadata, metadata)
         doc._.set(self._source_text, source_text)
+        doc._.set(self._preprocessed_text, preprocessed_text)
         return doc
 
     def read_record(self, record: str) -> Tuple[str, Dict]:

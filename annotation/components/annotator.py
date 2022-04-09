@@ -120,12 +120,12 @@ def get_nlp_model_config_str(nlp: Language) -> str:
             meta_tokenizer_config.append(f"{attr} ({', '.join(attr_value)})")
     table.append(["meta_tokenizer", ", ".join(meta_tokenizer_config)])
 
-    table.append(["preprocessor", f"Yes ({preprocessor.get_preprocessor_config()})"] if preprocessor else "No")
+    table.append(["preprocessor", f"Yes ({preprocessor.get_preprocessor_config()})" if preprocessor else "No"])
     table.append(["base_tokenizer", base_tokenizer.__class__.__name__])
     if isinstance(base_tokenizer, StanzaBaseTokenizer):
         table[-1][-1] += \
             f" ({get_stanza_load_list(base_tokenizer.lang, base_tokenizer.tokenize_package, 'tokenize')[0][1]})"
-    table.append(["normalizer", f"Yes ({normalizer.get_normalizer_config()})"] if normalizer else "No")
+    table.append(["normalizer", f"Yes ({normalizer.get_normalizer_config()})" if normalizer else "No"])
 
     custom_pipes = []
     for pipe_name in pipe_names:
@@ -154,10 +154,14 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
             "tokens": [],
             "_": {}, }
 
-    # tokenization info (metadata, source_text)
-    for extension in ["metadata", "source_text"]:
+    # tokenization info (metadata, source_text, preprocessed_text)
+    org_texts_with_ws = doc.user_data.get("org_texts_with_ws")
+    for extension in ["metadata", "source_text", "preprocessed_text"]:
         if doc.has_extension(extension):
             data["_"][extension] = doc._.get(extension)
+    if org_texts_with_ws:
+        assert data["_"]["preprocessed_text"] == "".join(org_texts_with_ws), \
+            "preprocessed_text and joined org_texts_with_ws doesn't match"
 
     # spacy/stanza pipline (sentence, NER and tokens)
     if doc.has_annotation("SENT_START"):
@@ -170,12 +174,16 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
                          "entity": ent.label_,
                          "text": ent.text, } for ent in doc.ents]
 
-    for token in doc:
-        token_data = {"id": token.i,
-                      "start_char": token.idx,
-                      "end_char": token.idx + len(token),
-                      "text": token.text,
-                      "whitespace": token.whitespace_, }
+    for i, token in enumerate(doc):
+        token_data = {
+            "id": token.i,
+            "start_char": token.idx,
+            "end_char": token.idx + len(token),
+            "text": token.text,
+            "whitespace": token.whitespace_,
+        }
+        if org_texts_with_ws:
+            token_data["org_text_with_ws"] = org_texts_with_ws[i]
         if doc.has_annotation("LEMMA"):
             token_data["lemma"] = token.lemma_
         if doc.has_annotation("TAG"):

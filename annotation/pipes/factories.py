@@ -23,16 +23,18 @@ def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, packag
                                                      "processors_packages": None,
                                                      "use_gpu": False,
                                                      "set_token_vector_hooks": False,
-                                                     "attrs": ("metadata", "source_text", "sentence_sentiments"), })
+                                                     "attrs": ("metadata", "source_text", "preprocessed_text",
+                                                               "sentence_sentiments"), })
 def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, package: str,
                                      processors: Optional[str], processors_packages: Optional[str], use_gpu: bool,
-                                     set_token_vector_hooks: bool, attrs: Tuple[str, str, str]) -> StanzaPipeline:
+                                     set_token_vector_hooks: bool, attrs: Tuple[str, str, str, str]) -> StanzaPipeline:
     return StanzaPipeline(nlp, lang, package, processors, processors_packages, use_gpu, set_token_vector_hooks, attrs)
 
 
 @Language.factory("fastlang_detector", default_config={"attrs": ("language", "language_score"),
                                                        "model_name": "lid.176.ftz", })
-def create_lang_detector_component(nlp: Language, name: str, attrs: Tuple[str, str], model_name: str) -> FastLangDetector:
+def create_lang_detector_component(nlp: Language, name: str, attrs: Tuple[str, str],
+                                   model_name: str) -> FastLangDetector:
     return FastLangDetector(attrs, model_name)
 
 

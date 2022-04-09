@@ -21,6 +21,3 @@ def split_filepath(filepath: str) -> Tuple[str]:
     file_name = filepath.stem
     file_format = filepath.suffix[1:]
     return file_dir, file_name, file_format
-
-
-

@@ -46,7 +46,7 @@ class PhraseDetector(object):
                         "rank": p.rank,
                         "count": p.count,
                         "text": phrase_span.text,
-                        "phrase_words": json.dumps(phrase_words, ensure_ascii=False),
+                        "phrase_texts_with_ws": json.dumps(phrase_words, ensure_ascii=False),
                         "phrase_lemmas": json.dumps([token.lemma_ for token in phrase_span], ensure_ascii=False),
                         "phrase_deps": json.dumps([token.dep_ for token in phrase_span], ensure_ascii=False),
                     })

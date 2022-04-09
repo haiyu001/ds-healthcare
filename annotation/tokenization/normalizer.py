@@ -97,11 +97,14 @@ class Normalizer(object):
 
     def create_norm_doc(self, doc: Doc, norm_spaces: List[bool]) -> Doc:
         norm_words, sent_starts = [], [] if doc.has_annotation("SENT_START") else None
+        org_texts_with_ws = []
         for token in doc:
+            org_texts_with_ws.append(token.text + token.whitespace_)
             norm_words.append(token._.get("norm_text") or token.text)
             if sent_starts is not None:
                 sent_starts.append(token.is_sent_start)
-        norm_doc = Doc(self.vocab, words=norm_words, spaces=norm_spaces, sent_starts=sent_starts)
+        norm_doc = Doc(self.vocab, words=norm_words, spaces=norm_spaces, sent_starts=sent_starts,
+                       user_data={"org_texts_with_ws": org_texts_with_ws})
         return norm_doc
 
     def get_normalizer_config(self) -> str:

@@ -1,6 +1,5 @@
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 from configparser import ConfigParser, ExtendedInterpolation
-import distutils
 
 
 def _get_config_parser() -> ConfigParser:
@@ -33,6 +32,16 @@ def is_float(text: str) -> bool:
         return True
 
 
+def str_to_bool(text: str) -> Optional[bool]:
+    text = text.lower()
+    if text in {"true", "yes", "y", "on"}:
+        return True
+    elif text in {"false", "no", "n", "off"}:
+        return False
+    else:
+        return None
+
+
 def clean_config_str(text: str) -> str:
     if text:
         text = text.strip(" '\"")
@@ -46,8 +55,8 @@ def config_type_casting(config_items: List[Tuple[str, str]]) -> Dict[str, Any]:
         value_str = clean_config_str(value_str)
         if value_str == "":
             value = None
-        elif value_str.lower() in {"true", "false"}:
-            value = bool(distutils.util.strtobool(value_str))
+        elif str_to_bool(value_str) is not None:
+            value = str_to_bool(value_str)
         elif is_float(value_str):
             value = float(value_str)
         elif value_str.isdigit():
@@ -56,6 +65,3 @@ def config_type_casting(config_items: List[Tuple[str, str]]) -> Dict[str, Any]:
             value = value_str
         config_dict[key] = value
     return config_dict
-
-
-
