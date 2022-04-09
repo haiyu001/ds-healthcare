@@ -169,10 +169,10 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
                               "end_id": sent.end, } for sent in doc.sents]
 
     if doc.has_annotation("ENT_IOB"):
-        data["ents"] = [{"start_id": ent.start,
-                         "end_id": ent.end,
-                         "entity": ent.label_,
-                         "text": ent.text, } for ent in doc.ents]
+        data["entities"] = [{"start_id": ent.start,
+                             "end_id": ent.end,
+                             "entity": ent.label_,
+                             "text": ent.text, } for ent in doc.ents]
 
     for i, token in enumerate(doc):
         token_data = {
@@ -198,8 +198,7 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
 
     # custom pipes
     if doc.has_extension("language"):
-        data["_"]["language"] = {"lang": doc._.get("language"),
-                                 "score": doc._.get("language_score"), }
+        data["_"]["language"] = {"lang": doc._.get("language"), "score": doc._.get("language_score")}
 
     if doc.has_extension("phrases"):
         data["_"]["phrases"] = doc._.get("phrases")
@@ -223,4 +222,5 @@ def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column
             doc = text.apply(nlp)
             doc_annotation_str = doc.apply(doc_to_json_str)
             yield doc_annotation_str
+
     return F.pandas_udf(annotate, StringType())(text_iter)

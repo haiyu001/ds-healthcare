@@ -1,16 +1,17 @@
 from typing import Optional, Dict
-from utils.general_util import split_filepath
+from utils.general_util import split_filepath, save_pandas_dataframe
 from utils.resource_util import zip_repo
 from utils.log_util import get_logger
+from pyspark.sql.types import StringType
 from pyspark import SparkConf
-from pyspark.sql import SparkSession, Window
+from pyspark.sql import SparkSession, Window, Column
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
+from collections import Counter
 from pathlib import Path
 from pprint import pformat
 import pandas as pd
 import shutil
-import csv
 import os
 
 
@@ -34,25 +35,6 @@ def get_spark_session(app_name: str = "spark_app",
     return spark_session
 
 
-def convert_to_pdf_and_save(spark_df: DataFrame,
-                            save_filepath: Optional[str] = None,
-                            rename_columns: Optional[Dict] = None,
-                            csv_index: bool = False,
-                            csv_index_label: Optional[bool] = None,
-                            csv_quoting: int = csv.QUOTE_MINIMAL) -> pd.DataFrame:
-    pandas_df = spark_df.toPandas()
-    if rename_columns is not None:
-        pandas_df.columns = [rename_columns.get(i, i) for i in pandas_df.columns]
-    file_format = Path(save_filepath).suffix[1:] if save_filepath else None
-    if file_format == "csv":
-        pandas_df.to_csv(save_filepath, index=csv_index, index_label=csv_index_label, quoting=csv_quoting)
-    elif file_format == "json":
-        pandas_df.to_json(save_filepath, orient="records", lines=True, force_ascii=False)
-    elif file_format is not None:
-        raise ValueError(f"Unsupported file format of {file_format}")
-    return pandas_df
-
-
 def write_dataframe_to_dir(dataframe: DataFrame,
                            save_folder_dir: str,
                            save_folder_name: str,
@@ -73,15 +55,25 @@ def write_dataframe_to_dir(dataframe: DataFrame,
         raise ValueError(f"Unsupported file format of {file_format}")
 
 
-def write_dataframe_to_file(dataframe: DataFrame, save_filepath: str):
+def write_dataframe_to_file(dataframe: DataFrame, save_filepath: str, num_partitions: int = 1):
     file_dir, file_name, file_format = split_filepath(save_filepath)
-    write_dataframe_to_dir(dataframe, file_dir, file_name, file_format, num_partitions=1)
+    if file_format not in ("csv", "json"):
+        raise ValueError(f"Unsupported file format of {file_format}")
+    write_dataframe_to_dir(dataframe, file_dir, file_name, file_format, num_partitions=num_partitions)
     spark_data_dir = os.path.join(file_dir, file_name)
-    spark_filename = [i for i in os.listdir(spark_data_dir) if i.startswith("part-")][0]
-    spark_datat_dir = os.path.join(file_dir, file_name)
-    spark_filepath = os.path.join(spark_datat_dir, spark_filename)
-    shutil.move(spark_filepath, save_filepath)
-    shutil.rmtree(spark_datat_dir)
+    part_filepaths = [os.path.join(spark_data_dir, part_filename)
+                      for part_filename in os.listdir(spark_data_dir) if part_filename.startswith("part-")]
+    if num_partitions > 1:
+        pandas_df_list = []
+        for part_filepath in part_filepaths:
+            pandas_df = pd.read_csv(part_filepath, encoding="utf-8") if file_format == "csv" \
+                else pd.read_json(part_filepath, orient="records", lines=True, encoding="utf-8")
+            pandas_df_list.append(pandas_df)
+        pandas_df = pd.concat(pandas_df_list, ignore_index=True)
+        save_pandas_dataframe(pandas_df, save_filepath)
+    else:
+        shutil.move(part_filepaths[0], save_filepath)
+    shutil.rmtree(spark_data_dir)
 
 
 def convert_to_orc(spark: DataFrame,
@@ -123,5 +115,13 @@ def extract_topn_common(data_df: DataFrame,
     data_df = data_df.groupby(partition_by) \
         .agg(F.to_json(F.map_from_entries(F.collect_list(F.struct(key_by, value_by)))).alias(key_by))
     if save_filepath:
-        convert_to_pdf_and_save(data_df, save_filepath)
+        write_dataframe_to_file(data_df, save_filepath)
     return data_df
+
+
+def pudf_get_most_common_text(texts: Column):
+    def pudf_get_most_common_text(texts: pd.Series) -> pd.Series:
+        most_common_text = texts.apply(lambda x: Counter(x).most_common(1)[0][0])
+        return most_common_text
+
+    return F.pandas_udf(pudf_get_most_common_text, StringType())(texts)

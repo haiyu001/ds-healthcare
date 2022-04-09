@@ -2,29 +2,14 @@ from typing import Dict, Union, List, Any, Optional
 from pyspark.sql import SparkSession, DataFrame
 from utils.config_util import read_config, config_type_casting, clean_config_str
 from utils.general_util import get_filepaths_recursively
-from utils.resource_util import get_model_filepath
+from utils.resource_util import get_stanza_model_dir, get_spacy_model_path
 from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from spacy import Language
 import spacy
-import stanza
 import json
 import os
 
 DEFAULT_SPACY_PACKAGE = "en_core_web_md-3.2.0"
-
-
-def get_stanza_model_dir() -> str:
-    model_dir = get_model_filepath("stanza")
-    return model_dir
-
-
-def get_spacy_model_path(lang: str, package: str) -> str:
-    model_path = get_model_filepath("spacy", lang, package, package.rsplit("-", 1)[0], package)
-    return model_path
-
-
-def download_stanza_model(lang: str, package: str = "default", processors: Union[str, Dict[str, str]] = {}):
-    stanza.download(lang, get_model_filepath("stanza"), package, processors)
 
 
 def get_spacy_model_pipes(spacy_model_path: str) -> List[str]:

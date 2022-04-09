@@ -17,7 +17,7 @@ if __name__ == "__main__":
     if nlp_model_config["normalizer_config"]:
         nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
 
-    spark = get_spark_session("small_test", master_config="local[4]", log_level="INFO")
+    spark = get_spark_session("small_test", master_config="local[6]", log_level="INFO")
     add_repo_pyfile(spark)
 
 
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     data_filepath = os.path.join(annotation_dir, "medium_test.json")
 
     data_df = spark.read.text(data_filepath)
-    data_df = data_df.repartition(4)
+    data_df = data_df.repartition(6)
     print(data_df.rdd.getNumPartitions())
 
     annotation_df = data_df.select(pudf_annotate(F.col("value"), nlp_model_config))

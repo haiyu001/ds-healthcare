@@ -30,12 +30,12 @@ class PhraseDetector(object):
             if phrase_text in spacy_phrases and len(phrase_text.split()) > 1:
                 phrase_span = spacy_phrases[phrase_text]
                 # ent_iob: 2 means it is outside an entity and 0 means no entity tag is set.
-                if len([token for token in phrase_span if not token.is_stop]) > 1 and \
+                if len([token for token in phrase_span if (not token.is_stop and not token.is_punct)]) > 1 and \
                         all([token.ent_iob == 2 or token.ent_iob == 0 for token in phrase_span]):
 
-                    if phrase_span[0].is_stop:
+                    if phrase_span[0].is_stop or phrase_span[0].is_punct:
                         phrase_span = phrase_span[1:]
-                    if phrase_span[-1].is_stop:
+                    if phrase_span[-1].is_stop or phrase_span[-1].is_punct:
                         phrase_span = phrase_span[:-1]
 
                     phrase_words = [token.text + token.whitespace_ for token in phrase_span[:-1]] + \

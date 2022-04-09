@@ -1,5 +1,7 @@
+from typing import Union, Dict
 from pathlib import Path
 from subprocess import call
+import stanza
 import os
 
 MODELS_HOME = os.environ["MODELS_HOME"]
@@ -27,3 +29,17 @@ def zip_repo(repo_zip_dir: str) -> str:
     call(zip_command + repo_ignore)
     os.chdir(cwd)
     return repo_zip_filepath
+
+
+def get_stanza_model_dir() -> str:
+    model_dir = get_model_filepath("stanza")
+    return model_dir
+
+
+def get_spacy_model_path(lang: str, package: str) -> str:
+    model_path = get_model_filepath("spacy", lang, package, package.rsplit("-", 1)[0], package)
+    return model_path
+
+
+def download_stanza_model(lang: str, package: str = "default", processors: Union[str, Dict[str, str]] = {}):
+    stanza.download(lang, get_model_filepath("stanza"), package, processors)
