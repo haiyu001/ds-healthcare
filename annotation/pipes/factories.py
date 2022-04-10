@@ -25,7 +25,7 @@ def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, packag
                                                      "set_token_vector_hooks": False,
                                                      "attrs": ("metadata", "source_text", "preprocessed_text",
                                                                "sentence_sentiments"), })
-def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, package: str,
+def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, package: Optional[str],
                                      processors: Optional[str], processors_packages: Optional[str], use_gpu: bool,
                                      set_token_vector_hooks: bool, attrs: Tuple[str, str, str, str]) -> StanzaPipeline:
     return StanzaPipeline(nlp, lang, package, processors, processors_packages, use_gpu, set_token_vector_hooks, attrs)

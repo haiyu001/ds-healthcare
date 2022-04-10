@@ -56,9 +56,9 @@ class MetaTokenizer(object):
 
             common_text_fields = list(set(record.keys()) & set(self.text_fields_in_json))
             if len(common_text_fields) == 0:
-                raise ValueError(f"None of text fields {common_text_fields} exit in the source input.")
+                raise ValueError(f"None of text fields {self.text_fields_in_json} exist in the source input.")
             elif len(common_text_fields) > 1:
-                raise ValueError(f"More than one text fields {common_text_fields} exit in the source input.")
+                raise ValueError(f"More than one text fields {common_text_fields} exist in the source input.")
             else:
                 text = record.pop(common_text_fields[0])
 

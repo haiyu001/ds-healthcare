@@ -1,4 +1,4 @@
-from typing import Dict, Union, List, Any, Optional
+from typing import Dict, Union, List, Any, Optional, Tuple
 from pyspark.sql import SparkSession, DataFrame
 from utils.config_util import read_config, config_type_casting, clean_config_str
 from utils.general_util import get_filepaths_recursively
@@ -39,20 +39,15 @@ def get_stanza_load_list(lang: str = "en",
     return stanza_load_list
 
 
-def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
+def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
     config = read_config(config_filepath)
-    optional_section_configs = {
-        "Preprocessor": None,
-        "Normalizer": None,
-        "StanzaPipeline": None,
-        "SpacyPipeline": None,
-    }
-    for section in optional_section_configs:
+    optional_sections = ["Preprocessor", "Normalizer", "StanzaPipeline", "SpacyPipeline"]
+    optional_section_configs = {}
+    for section in optional_sections:
         section_config = config_type_casting(config.items(section))
         if not section_config.pop(section):
             section_config = None
         optional_section_configs[section] = section_config
-
     nlp_model_config = dict(
         use_gpu=config["Annotator"].getboolean("use_gpu"),
         lang=clean_config_str(config["Annotator"]["lang"]),
@@ -65,6 +60,14 @@ def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
         spacy_pipeline_config=optional_section_configs["SpacyPipeline"],
         custom_pipes_config=[(k, {}) for k, v in config_type_casting(config.items("CustomPipes")).items() if v])
     return nlp_model_config
+
+
+def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
+    config = read_config(config_filepath)
+    annotation_config = {}
+    annotation_config.update(config_type_casting(config.items("Annotation")))
+    annotation_config.update(config_type_casting(config.items("Naming")))
+    return annotation_config
 
 
 def load_annotation(spark: SparkSession,

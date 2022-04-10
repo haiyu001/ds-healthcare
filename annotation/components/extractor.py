@@ -1,4 +1,5 @@
 from typing import List, Optional
+from utils.resource_util import get_data_filepath
 from utils.spark_util import extract_topn_common, write_dataframe_to_file, pudf_get_most_common_text
 from pyspark.sql.types import ArrayType, StringType, Row
 from pyspark.sql import DataFrame, Column
@@ -93,26 +94,33 @@ def extract_entity(annotation_df: DataFrame,
 
 if __name__ == "__main__":
     from utils.spark_util import get_spark_session
-    from annotation.annotation_utils.annotation_util import load_annotation
+    from annotation.annotation_utils.annotation_util import load_annotation, read_annotation_config
+    from pathlib import Path
     import os
 
+    annotation_config_filepath = os.path.join(Path(__file__).parent, "conf/annotation_template.cfg")
+    annotation_config = read_annotation_config(annotation_config_filepath)
+
+    domain_dir = get_data_filepath(annotation_config["domain"])
+    extraction_folder = annotation_config["extraction_folder"]
+
     spark = get_spark_session("test", master_config="local[4]", log_level="WARN")
-    test_dir = "/Users/haiyang/Desktop/annotation"
 
-    annotation_dir = os.path.join(test_dir, "medium_test_annotation")
+    # load annotation
+    annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
     annotation_df = load_annotation(spark, annotation_dir, drop_non_english=True)
-
-    vocab_filepath = os.path.join(test_dir, "extraction", "vocab.csv")
+    # extract vocab
+    vocab_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["vocab_filename"])
     extract_vocab(annotation_df, vocab_filepath)
-
-    ngram_filepath = os.path.join(test_dir, "extraction", "bigram.csv")
+    # extract bigram
+    ngram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["bigram_filename"])
     extract_ngram(annotation_df, ngram_filepath, n=2, filter_min_count=3)
-
-    ngram_filepath = os.path.join(test_dir, "extraction", "trigram.csv")
+    # extract trigram
+    ngram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["trigram_filename"])
     extract_ngram(annotation_df, ngram_filepath, n=3, filter_min_count=3)
-
-    phrase_filepath = os.path.join(test_dir, "extraction", "phrase.csv")
+    # extract phrase
+    phrase_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["phrase_filename"])
     extract_phrase(annotation_df, phrase_filepath, filter_min_count=3, num_partitions=3)
-
-    entity_filepath = os.path.join(test_dir, "extraction", "entity.csv")
+    # extract entity
+    entity_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["entity_filename"])
     extract_entity(annotation_df, entity_filepath, filter_min_count=3)

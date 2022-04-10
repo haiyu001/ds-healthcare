@@ -6,9 +6,18 @@ import os
 
 MODELS_HOME = os.environ["MODELS_HOME"]
 
+DATA_HOME = os.environ["DATA_HOME"]
+
 
 def get_model_filepath(*parts: str) -> str:
     path = MODELS_HOME
+    for part in parts:
+        path = os.path.join(path, part)
+    return path
+
+
+def get_data_filepath(*parts: str) -> str:
+    path = DATA_HOME
     for part in parts:
         path = os.path.join(path, part)
     return path
@@ -31,14 +40,14 @@ def zip_repo(repo_zip_dir: str) -> str:
     return repo_zip_filepath
 
 
-def get_stanza_model_dir() -> str:
-    model_dir = get_model_filepath("stanza")
-    return model_dir
-
-
 def get_spacy_model_path(lang: str, package: str) -> str:
     model_path = get_model_filepath("spacy", lang, package, package.rsplit("-", 1)[0], package)
     return model_path
+
+
+def get_stanza_model_dir() -> str:
+    model_dir = get_model_filepath("stanza")
+    return model_dir
 
 
 def download_stanza_model(lang: str, package: str = "default", processors: Union[str, Dict[str, str]] = {}):

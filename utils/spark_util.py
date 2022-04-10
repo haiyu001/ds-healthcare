@@ -66,8 +66,8 @@ def write_dataframe_to_file(dataframe: DataFrame, save_filepath: str, num_partit
     if num_partitions > 1:
         pandas_df_list = []
         for part_filepath in part_filepaths:
-            pandas_df = pd.read_csv(part_filepath, encoding="utf-8") if file_format == "csv" \
-                else pd.read_json(part_filepath, orient="records", lines=True, encoding="utf-8")
+            pandas_df = pd.read_csv(part_filepath, keep_default_na=False, na_values="", encoding="utf-8") \
+                if file_format == "csv" else pd.read_json(part_filepath, orient="records", lines=True, encoding="utf-8")
             pandas_df_list.append(pandas_df)
         pandas_df = pd.concat(pandas_df_list, ignore_index=True)
         save_pandas_dataframe(pandas_df, save_filepath)

@@ -1,4 +1,4 @@
-from annotation.annotation_utils.annotation_util import read_annotation_config
+from annotation.annotation_utils.annotation_util import read_nlp_model_config
 from annotation.components.annotator import Annotator, doc_to_dict
 from pathlib import Path
 from pprint import pprint
@@ -13,18 +13,16 @@ if __name__ == "__main__":
         "replace_words": {"thisr": "these"},
     }
 
-    annotation_config_filepath = os.path.join(Path(__file__).parent, "annotation.cfg")
-    nlp_model_config = read_annotation_config(annotation_config_filepath)
-    if nlp_model_config["normalizer_config"]:
-        nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
+    nlp_model_config_filepath = os.path.join(Path(__file__).parent, "conf/nlp_model_template.cfg")
+    nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
+    nlp_model_config["normalizer_config"] = dummy_normalizer_config
 
     nlp = Annotator(**nlp_model_config).nlp
 
-    content = "Thisr  autonomouscars have good battery life in China. I hate that laptop."
+    sample_1 = "Thisr  autonomouscars have good battery life in China. I hate that laptop."
+    sample_2 = json.dumps({"record_id": "001", "source": "dummy", "content": sample_1})
 
-    content_meta = json.dumps({"record_id": "001", "source": "dummy", "content": content})
-
-    docs = nlp.pipe([content, content_meta], n_process=2)
+    docs = nlp.pipe([sample_1, sample_2], n_process=2)
     for doc in docs:
         pprint(doc_to_dict(doc))
         print("-" * 100)

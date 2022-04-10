@@ -44,8 +44,8 @@ def str_to_bool(text: str) -> Optional[bool]:
 
 def clean_config_str(text: str) -> str:
     if text:
-        text = text.strip(" '\"")
-        text = ",".join([i.strip(" '\"") for i in text.split(",")])
+        text = text.strip("\t '\"")
+        text = ",".join([i.strip("\t '\"") for i in text.split(",")])
     return text
 
 
@@ -53,7 +53,7 @@ def config_type_casting(config_items: List[Tuple[str, str]]) -> Dict[str, Any]:
     config_dict = {}
     for key, value_str in config_items:
         value_str = clean_config_str(value_str)
-        if value_str == "":
+        if value_str == "" or value_str.lower() == "none":
             value = None
         elif str_to_bool(value_str) is not None:
             value = str_to_bool(value_str)

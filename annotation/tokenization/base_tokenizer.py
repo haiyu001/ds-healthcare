@@ -35,8 +35,8 @@ class StanzaBaseTokenizer(BaseTokenizer):
         self.tokenize_package = tokenize_package
         self.snlp = stanza.Pipeline(lang=self.lang,
                                     dir=get_stanza_model_dir(),
-                                    package=self.tokenize_package,
-                                    processors="tokenize",
+                                    package=None,
+                                    processors={"tokenize": tokenize_package},
                                     verbose=False)
         self.vocab = nlp.vocab
 
