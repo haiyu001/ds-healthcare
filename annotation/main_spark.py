@@ -1,16 +1,15 @@
 from annotation.annotation_utils.annotation_util import read_nlp_model_config, read_annotation_config
 from annotation.components.annotator import pudf_annotate
-from utils.resource_util import get_data_filepath
+from utils.resource_util import get_data_filepath, get_repo_dir
 from utils.spark_util import get_spark_session, write_dataframe_to_dir, add_repo_pyfile
 import pyspark.sql.functions as F
-from pathlib import Path
 import os
 
 if __name__ == "__main__":
-    nlp_model_config_filepath = os.path.join(Path(__file__).parent, "conf/nlp_model_template.cfg")
+    nlp_model_config_filepath = os.path.join(get_repo_dir(), "conf", "nlp_model_template.cfg")
     nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
 
-    annotation_config_filepath = os.path.join(Path(__file__).parent, "conf/annotation_template.cfg")
+    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
     annotation_config = read_annotation_config(annotation_config_filepath)
 
     domain_dir = get_data_filepath(annotation_config["domain"])

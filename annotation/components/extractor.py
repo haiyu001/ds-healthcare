@@ -1,5 +1,4 @@
 from typing import List, Optional
-from utils.resource_util import get_data_filepath
 from utils.spark_util import extract_topn_common, write_dataframe_to_file, pudf_get_most_common_text
 from pyspark.sql.types import ArrayType, StringType, Row
 from pyspark.sql import DataFrame, Column
@@ -94,11 +93,11 @@ def extract_entity(annotation_df: DataFrame,
 
 if __name__ == "__main__":
     from utils.spark_util import get_spark_session
+    from utils.resource_util import get_data_filepath, get_repo_dir
     from annotation.annotation_utils.annotation_util import load_annotation, read_annotation_config
-    from pathlib import Path
     import os
 
-    annotation_config_filepath = os.path.join(Path(__file__).parent, "conf/annotation_template.cfg")
+    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
     annotation_config = read_annotation_config(annotation_config_filepath)
 
     domain_dir = get_data_filepath(annotation_config["domain"])

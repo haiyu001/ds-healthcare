@@ -21,8 +21,8 @@ def get_logger(logger_name: Optional[str] = None, log_filename: Optional[str] = 
         logger.addHandler(handler)
 
         # file logging
-        log_dir = os.path.join(get_repo_dir(), "log")
-        log_filepath = os.path.join(log_dir, f"{log_filename}.log")
+        logs_dir = os.path.join(get_repo_dir(), "logs")
+        log_filepath = os.path.join(logs_dir, f"{log_filename}.log")
         handler = logging.FileHandler(log_filepath, "w")
         handler.setLevel(logging.INFO)
         handler.setFormatter(handler_formatter)

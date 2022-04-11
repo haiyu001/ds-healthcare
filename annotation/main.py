@@ -1,6 +1,6 @@
 from annotation.annotation_utils.annotation_util import read_nlp_model_config
 from annotation.components.annotator import Annotator, doc_to_dict
-from pathlib import Path
+from utils.resource_util import get_repo_dir
 from pprint import pprint
 import json
 import os
@@ -13,7 +13,7 @@ if __name__ == "__main__":
         "replace_words": {"thisr": "these"},
     }
 
-    nlp_model_config_filepath = os.path.join(Path(__file__).parent, "conf/nlp_model_template.cfg")
+    nlp_model_config_filepath = os.path.join(get_repo_dir(), "conf", "nlp_model_template.cfg")
     nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
     nlp_model_config["normalizer_config"] = dummy_normalizer_config
 
