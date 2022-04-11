@@ -1,7 +1,4 @@
-import sys
 import os.path
-import logging
-
 import sqlite3
 
 
@@ -30,7 +27,7 @@ class UMLSLookup (object):
 	
 	sqlite = None
 	did_check_dbs = False
-	preferred_sources = ['"SNOMEDCT"', '"MTH"']	
+	preferred_sources = ['"SNOMEDCT"', '"MTH"']
 	
 	def __init__(self):
 		umls_db_filepath = "/Users/haiyang/ds_models/UMLS/2021AB/umls.db"
@@ -58,20 +55,20 @@ class UMLSLookup (object):
 			UMLSLookup.did_check_dbs = True
 		
 		# take care of negations
-		negated = '-' == cui[0]
+		negated = "-" == cui[0]
 		if negated:
 			cui = cui[1:]
 		
-		parts = cui.split('@', 1)
+		parts = cui.split("@", 1)
 		lookup_cui = parts[0]
 		
 		# STR: Name
 		# SAB: Abbreviated Source Name
 		# STY: Semantic Type
 		if preferred:
-			sql = 'SELECT STR, SAB, STY FROM descriptions WHERE CUI = ? AND SAB IN ({})'.format(", ".join(UMLSLookup.preferred_sources))
+			sql = "SELECT STR, SAB, STY FROM descriptions WHERE CUI = ? AND SAB IN ({})".format(", ".join(UMLSLookup.preferred_sources))
 		else:
-			sql = 'SELECT STR, SAB, STY FROM descriptions WHERE CUI = ?'
+			sql = "SELECT STR, SAB, STY FROM descriptions WHERE CUI = ?"
 		
 		# return as list
 		arr = []
@@ -100,7 +97,7 @@ class UMLSLookup (object):
 				names.append("{} (<span style=\"color:#090;\">{}</span>: {})".format(res[0], res[1], res[2]))
 		
 		comp = ", " if no_html else "<br/>\n"
-		return comp.join(names) if len(names) > 0 else ''
+		return comp.join(names) if len(names) > 0 else ""
 	
 	
 	def lookup_code_for_name(self, name, preferred=True):
@@ -123,30 +120,30 @@ class UMLSLookup (object):
 		# SAB: Abbreviated Source Name
 		# STY: Semantic Type
 		if preferred:
-			sql = 'SELECT CUI, SAB, STY FROM descriptions WHERE STR LIKE ? AND SAB IN ({})'.format(", ".join(UMLSLookup.preferred_sources))
+			sql = "SELECT CUI, SAB, STY FROM descriptions WHERE STR LIKE ? AND SAB IN ({})".format(", ".join(UMLSLookup.preferred_sources))
 		else:
-			sql = 'SELECT CUI, SAB, STY FROM descriptions WHERE STR LIKE ?'
+			sql = "SELECT CUI, SAB, STY FROM descriptions WHERE STR LIKE ?"
 		
 		# return as list
 		arr = []
-		for res in self.sqlite.execute(sql, ('%' + name + '%',)):
+		for res in self.sqlite.execute(sql, ("%" + name + "%",)):
 			arr.append(res)
 		
 		return arr
 
 
-if '__main__' == __name__:
+if "__main__" == __name__:
 
 	UMLS.check_database()
 	
 	# examples
 	look = UMLSLookup()
-	code = 'C0002962'
+	code = "C0002962"
 	meaning = look.lookup_code_meaning(code)
-	print('UMLS code "{0}":  {1}'.format(code, meaning))
+	print(f'UMLS code "{code}":  {meaning}')
 	
-	name = 'Pulmonary Arterial Hypertension'
-	print('Search for "{}" returns:'.format(name))
+	name = "Pulmonary Arterial Hypertension"
+	print(f'Search for "{name}" returns:')
 	codes = look.lookup_code_for_name(name)
 	for cd in codes:
-		print('{}:  {}'.format(cd, look.lookup_code_meaning(cd[0])))
+		print("{}:  {}".format(cd, look.lookup_code_meaning(cd[0])))

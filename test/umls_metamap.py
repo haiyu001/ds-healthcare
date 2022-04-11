@@ -1,7 +1,7 @@
 # from tmp.umls_metamap.MetaMapLite import MetaMapLite
 from pymetamap import MetaMapLite
 
-sents = ['Heart Attack', 'John had a huge heart attack']
+sents = ["Heart Attack", "John had a huge heart attack"]
 
 # run ./bin/skrmedpostctl start for MetaMap
 # mm = MetaMap.get_instance("/Users/haiyang/ds_models/UMLS/MetaMap/public_mm/bin/metamap18")
