@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from pytextrank import BaseTextRank
 from pytextrank.util import default_scrubber
 from collections import defaultdict
@@ -8,7 +8,7 @@ import json
 
 class PhraseDetector(object):
 
-    def __init__(self, attrs=("phrases",)):
+    def __init__(self, attrs: Tuple[str] = ("phrases",)):
         self._phrases, = attrs
         Doc.set_extension(self._phrases, getter=self.get_phrases, force=True)
 

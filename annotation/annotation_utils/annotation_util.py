@@ -75,9 +75,9 @@ def load_annotation(spark: SparkSession,
                     drop_non_english: bool = True,
                     num_partitions: Optional[int] = None) -> DataFrame:
     annotation_filepaths = get_filepaths_recursively(annotation_dir, ["json", "txt"])
-    annotation_df = spark.read.json(annotation_filepaths)
+    annotation_sdf = spark.read.json(annotation_filepaths)
     if drop_non_english:
-        annotation_df = annotation_df.filter(annotation_df["_"]["language"]["lang"] == "en")
+        annotation_sdf = annotation_sdf.filter(annotation_sdf["_"]["language"]["lang"] == "en")
     if num_partitions is not None:
-        annotation_df = annotation_df.repartion(num_partitions)
-    return annotation_df
+        annotation_sdf = annotation_sdf.repartion(num_partitions)
+    return annotation_sdf
