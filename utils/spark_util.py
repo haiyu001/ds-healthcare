@@ -16,7 +16,7 @@ import os
 
 
 def get_spark_session(app_name: str = "spark_app",
-                      config_overrides: Dict = {},
+                      config_updates: Dict = {},
                       master_config: Optional[str] = None,
                       log_level: str = "WARN") -> SparkSession:
     default_config = {
@@ -25,7 +25,7 @@ def get_spark_session(app_name: str = "spark_app",
         "spark.kryoserializer.buffer": "512k",
         "spark.kryoserializer.buffer.max": "1024m",
     }
-    default_config.update(config_overrides)
+    default_config.update(config_updates)
     config = SparkConf().setAll(default_config.items())
     spark_session_builder = SparkSession.builder.appName(app_name).config(conf=config)
     if master_config:

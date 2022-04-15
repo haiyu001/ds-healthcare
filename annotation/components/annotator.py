@@ -1,4 +1,4 @@
-from typing import Any, Iterator
+from typing import Any, Iterator, Dict, List, Union
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
 from annotation.annotation_utils.annotation_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE, get_stanza_load_list
 from annotation.tokenization.normalizer import Normalizer
@@ -206,6 +206,12 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
     if doc.has_extension("sentence_sentiments"):
         data["_"]["sentence_sentiments"] = doc._.get("sentence_sentiments")
 
+    if doc.has_extension("misspellings"):
+        data["_"]["misspellings"] = doc._.get("misspellings")
+
+    if doc.has_extension("umls_concepts"):
+        data["_"]["umls_concepts"] = doc._.get("umls_concepts")
+
     return data
 
 
@@ -220,7 +226,7 @@ def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column
         nlp = Annotator(**nlp_model_config).nlp
         for text in text_iter:
             doc = text.apply(nlp)
-            doc_annotation_str = doc.apply(doc_to_json_str)
-            yield doc_annotation_str
+            doc_json_str = doc.apply(doc_to_json_str)
+            yield doc_json_str
 
     return F.pandas_udf(annotate, StringType())(text_iter)

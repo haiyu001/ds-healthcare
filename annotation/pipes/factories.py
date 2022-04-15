@@ -1,11 +1,14 @@
-from typing import Union, Dict, Tuple, List, Optional
+from typing import Tuple, Optional, List
 from annotation.pipes.fastlang_detector import FastLangDetector
 from annotation.pipes.lang_detector import LangDetector
 from annotation.pipes.phrase_detector import PhraseDetector
 from annotation.pipes.sentence_detector import SentenceDetector
 from annotation.pipes.spacy_pipline import SpacyPipeline
 from annotation.pipes.stanza_pipeline import StanzaPipeline
+from annotation.pipes.spell_checker import SpellChecker
 from spacy.language import Language
+
+from annotation.pipes.umls_detector import UMLSDetector
 
 
 @Language.factory("spacy_pipeline", default_config={"lang": "en",
@@ -38,16 +41,38 @@ def create_lang_detector_component(nlp: Language, name: str, attrs: Tuple[str, s
     return FastLangDetector(attrs, model_name)
 
 
-@Language.factory("lang_detector", default_config={"attrs": ("language", "language_score")})
-def create_lang_detector_component(nlp: Language, name: str, attrs: Tuple[str, str]) -> LangDetector:
-    return LangDetector(attrs)
-
-
 @Language.factory("sentence_detector", default_config={"lang": "en"})
 def create_sentence_detector_component(nlp: Language, name: str, lang: str) -> SentenceDetector:
     return SentenceDetector(lang)
 
 
+@Language.factory("lang_detector", default_config={"attrs": ("language", "language_score")})
+def create_lang_detector_component(nlp: Language, name: str, attrs: Tuple[str, str]) -> LangDetector:
+    return LangDetector(attrs)
+
+
 @Language.factory("phrase_detector", default_config={"attrs": ("phrases",)})
 def create_phrase_chunker_component(nlp, name, attrs: Tuple[str]) -> PhraseDetector:
     return PhraseDetector(attrs)
+
+
+@Language.factory("spell_checker", default_config={"attrs": ("spell_is_correct", "suggest_spellings", "misspellings")})
+def create_spell_checker_component(nlp: Language, name: str, attrs: Tuple[str, str, str]) -> SpellChecker:
+    return SpellChecker(attrs)
+
+
+@Language.factory("umls_detector", default_config={"quickumls_filepath": None,
+                                                   "overlapping_criteria": "score",
+                                                   "similarity_name": "jaccard",
+                                                   "threshold": 0.7,
+                                                   "window": 5,
+                                                   "accepted_semtypes": None,
+                                                   "best_match": True,
+                                                   "keep_uppercase": False,
+                                                   "attrs": ("umls_concepts",), })
+def create_umls_detector_component(nlp: Language, name: str, quickumls_filepath: Optional[str],
+                                   overlapping_criteria: str, similarity_name: str, threshold: float, window: int,
+                                   accepted_semtypes: Optional[List[str]], best_match: bool, keep_uppercase: bool,
+                                   attrs: Tuple[str]) -> UMLSDetector:
+    return UMLSDetector(nlp, quickumls_filepath, overlapping_criteria, similarity_name, threshold, window,
+                        accepted_semtypes, best_match, keep_uppercase, attrs)

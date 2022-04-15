@@ -23,6 +23,6 @@ class FastLangDetector(object):
 
 
 def load_language_model(model_name: str = "lid.176.ftz") -> _FastText:
-    language_model_path = get_model_filepath("models", model_name)
+    language_model_path = get_model_filepath("model", "fastlang", model_name)
     language_model = fasttext.load_model(language_model_path)
     return language_model

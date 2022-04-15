@@ -59,13 +59,11 @@ def extract_phrase(annotation_sdf: DataFrame,
     phrase_sdf = phrase_sdf.select(F.lower(F.col("phrase").text).alias("phrase"),
                                  F.col("phrase").count.alias("count"),
                                  F.col("phrase").rank.alias("rank"),
-                                 F.col("phrase").phrase_texts_with_ws.alias("phrase_texts_with_ws"),
                                  F.col("phrase").phrase_lemmas.alias("phrase_lemmas"),
                                  F.col("phrase").phrase_deps.alias("phrase_deps"))
     phrase_sdf = phrase_sdf.groupby(["phrase"]) \
         .agg(F.sum("count").alias("count"),
              F.mean("rank").alias("rank"),
-             pudf_get_most_common_text(F.collect_list("phrase_texts_with_ws")).alias("phrase_texts_with_ws"),
              pudf_get_most_common_text(F.collect_list("phrase_lemmas")).alias("phrase_lemmas"),
              pudf_get_most_common_text(F.collect_list("phrase_deps")).alias("phrase_deps")) \
         .orderBy(F.desc("count"))
@@ -105,7 +103,8 @@ if __name__ == "__main__":
     domain_dir = get_data_filepath(annotation_config["domain"])
     extraction_folder = annotation_config["extraction_folder"]
 
-    spark = get_spark_session("test", master_config="local[4]", log_level="WARN")
+    # config_updates = {"spark.archives": "/Users/haiyang/github/datascience.tar.gz"}
+    spark = get_spark_session("test", config_updates={}, master_config="local[4]", log_level="WARN")
 
     # load annotation
     annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
