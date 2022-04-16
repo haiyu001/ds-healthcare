@@ -20,6 +20,7 @@ if __name__ == "__main__":
     nlp = Annotator(**nlp_model_config).nlp
 
     sample_1 = "Thesr  autonomouscars have good battery life in China. I hatte that laptop."
+    sample_1 = "I struggle with depression, anxiety and panic attacks and more depression in 3 month."
     sample_2 = json.dumps({"record_id": "001", "source": "dummy", "content": "He had a huge heart attack."})
 
     docs = nlp.pipe([sample_1, sample_2], n_process=1)

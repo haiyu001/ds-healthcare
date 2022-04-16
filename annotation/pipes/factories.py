@@ -64,7 +64,7 @@ def create_spell_checker_component(nlp: Language, name: str, attrs: Tuple[str, s
 @Language.factory("umls_detector", default_config={"quickumls_filepath": None,
                                                    "overlapping_criteria": "score",
                                                    "similarity_name": "jaccard",
-                                                   "threshold": 0.7,
+                                                   "threshold": 0.85,
                                                    "window": 5,
                                                    "accepted_semtypes": None,
                                                    "best_match": True,

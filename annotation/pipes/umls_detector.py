@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Optional, List, Tuple, Dict, Any
 from utils.general_util import load_json_file
 from utils.resource_util import get_model_filepath
@@ -14,7 +15,7 @@ class UMLSDetector(object):
                  quickumls_filepath: Optional[str] = None,
                  overlapping_criteria: str = "score",
                  similarity_name: str = "jaccard",
-                 threshold: float = 0.7,
+                 threshold: float = 0.85,
                  window: int = 5,
                  accepted_semtypes: Optional[List[str]] = None,
                  best_match: bool = True,
@@ -40,28 +41,26 @@ class UMLSDetector(object):
 
     def get_umls_concepts(self, doc: Doc) -> List[Dict[str, Any]]:
         matches = self.quickumls._match(doc, best_match=self.best_match, ignore_syntax=False)
-        umls_concepts = []
+        umls_concepts_dict = defaultdict(list)
         for match in matches:
-            # each match may match multiple ngrams
             for ngram_match_dict in match:
                 start_char_idx = int(ngram_match_dict["start"])
                 end_char_idx = int(ngram_match_dict["end"])
                 cui = ngram_match_dict["cui"]
-                self.nlp.vocab.strings.add(cui)
-                cui_label_value = self.nlp.vocab.strings[cui]
-                concept_span = doc.char_span(start_char_idx, end_char_idx, label=cui_label_value)
-
-                umls_concepts.append({
-                    "start_id": concept_span.start,
-                    "end_id": concept_span.end,
-                    "text": concept_span.text,
+                concept_span = doc.char_span(start_char_idx, end_char_idx, label=cui)
+                concept_key = (concept_span.start, concept_span.end, concept_span.text)
+                umls_concepts_dict[concept_key].append({
                     "concept_id": cui,
                     "concept_term": ngram_match_dict["term"],
-                    "concept_similarity": ngram_match_dict["similarity"],
-                    "concept_semtype_ids": list(ngram_match_dict["semtypes"]),
-                    "concept_poses": json.dumps([token.pos_ for token in concept_span], ensure_ascii=False),
-                    "concept_lemmas": json.dumps([token.lemma_ for token in concept_span], ensure_ascii=False),
-                    "concept_deps": json.dumps([token.dep_ for token in concept_span], ensure_ascii=False),
+                    "concept_similarity": round(ngram_match_dict["similarity"], 4),
+                    "concept_semtype_ids": ",".join(list(ngram_match_dict["semtypes"])),
                 })
-
+        umls_concepts = []
+        for concept_key, concept_val in umls_concepts_dict.items():
+            umls_concepts.append({
+                "start_id": concept_key[0],
+                "end_id": concept_key[1],
+                "text": concept_key[2],
+                "concepts": concept_val,
+            })
         return umls_concepts

@@ -9,7 +9,7 @@ class FastLangDetector(object):
 
     def __init__(self, attrs: Tuple[str, str] = ("language", "language_score"), model_name: str = "id.176.ftz"):
         self._language, self._language_score = attrs
-        self.model = self.load_language_model(model_name)
+        self.model = load_language_model(model_name)
         Doc.set_extension(self._language, default=None, force=True)
         Doc.set_extension(self._language_score, default=0., force=True)
 

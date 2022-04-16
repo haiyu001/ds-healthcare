@@ -13,11 +13,9 @@ nlp = spacy.load(get_spacy_model_path("en", DEFAULT_SPACY_PACKAGE))
 
 text = "He had a huge Heart attack"
 
-# doc = nlp(text)
-# matches = matcher._match(doc, best_match=True)
-# for match in matches:
-#     for ngram_match_dict in match:
-#         pprint(ngram_match_dict)
-#         print(type(ngram_match_dict["semtypes"]))
+doc = nlp(text)
+matches = matcher._match(doc, best_match=True)
+for match in matches:
+    for ngram_match_dict in match:
+        pprint(ngram_match_dict)
 
-nlp.add_pipe()
