@@ -1,5 +1,6 @@
+from pymetamap import MetaMapLite, MetaMap
 from utils.resource_util import get_model_filepath
-from tmp.umls_metamap.MetaMapLite import MetaMapLite
+
 from tmp.umls_metamap.MetaMap import MetaMap
 
 if __name__ == "__main__":
