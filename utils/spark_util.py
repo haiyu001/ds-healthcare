@@ -2,12 +2,10 @@ from typing import Optional, Dict
 from utils.general_util import split_filepath, save_pdf
 from utils.resource_util import zip_repo
 from utils.log_util import get_logger
-from pyspark.sql.types import StringType
 from pyspark import SparkConf
-from pyspark.sql import SparkSession, Window, Column
+from pyspark.sql import SparkSession, Window
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
-from collections import Counter
 from pathlib import Path
 from pprint import pformat
 import pandas as pd
@@ -118,11 +116,4 @@ def extract_topn_common(sdf: DataFrame,
         write_sdf_to_file(sdf, save_filepath)
     return sdf
 
-
-def pudf_get_most_common_text(texts: Column):
-    def pudf_get_most_common_text(texts: pd.Series) -> pd.Series:
-        most_common_text = texts.apply(lambda x: Counter(x).most_common(1)[0][0])
-        return most_common_text
-
-    return F.pandas_udf(pudf_get_most_common_text, StringType())(texts)
 

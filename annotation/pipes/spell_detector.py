@@ -8,8 +8,8 @@ from spacy.tokens import Token, Doc
 import re
 
 
-class SpellChecker(object):
-    word_regex = "^[A-Za-z0-9-]{3,}$"
+class SpellDetector(object):
+    word_regex = "^[A-Za-z]{3,}$"
 
     def __init__(self, attrs: Tuple[str, str, str] = ("spell_is_correct", "suggest_spellings", "misspellings")):
         self._spell_is_correct, self._suggest_spellings, self._misspellings = attrs

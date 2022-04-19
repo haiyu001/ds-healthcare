@@ -5,7 +5,7 @@ from annotation.pipes.phrase_detector import PhraseDetector
 from annotation.pipes.sentence_detector import SentenceDetector
 from annotation.pipes.spacy_pipline import SpacyPipeline
 from annotation.pipes.stanza_pipeline import StanzaPipeline
-from annotation.pipes.spell_checker import SpellChecker
+from annotation.pipes.spell_detector import SpellDetector
 from spacy.language import Language
 
 from annotation.pipes.umls_detector import UMLSDetector
@@ -56,9 +56,9 @@ def create_phrase_chunker_component(nlp, name, attrs: Tuple[str]) -> PhraseDetec
     return PhraseDetector(attrs)
 
 
-@Language.factory("spell_checker", default_config={"attrs": ("spell_is_correct", "suggest_spellings", "misspellings")})
-def create_spell_checker_component(nlp: Language, name: str, attrs: Tuple[str, str, str]) -> SpellChecker:
-    return SpellChecker(attrs)
+@Language.factory("spell_detector", default_config={"attrs": ("spell_is_correct", "suggest_spellings", "misspellings")})
+def create_spell_checker_component(nlp: Language, name: str, attrs: Tuple[str, str, str]) -> SpellDetector:
+    return SpellDetector(attrs)
 
 
 @Language.factory("umls_detector", default_config={"quickumls_filepath": None,

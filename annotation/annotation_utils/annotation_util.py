@@ -41,6 +41,7 @@ def get_stanza_load_list(lang: str = "en",
 
 def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
     config = read_config(config_filepath)
+
     optional_sections = ["Preprocessor", "Normalizer", "StanzaPipeline", "SpacyPipeline"]
     optional_section_configs = {}
     for section in optional_sections:
@@ -48,6 +49,13 @@ def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
         if not section_config.pop(section):
             section_config = None
         optional_section_configs[section] = section_config
+
+    custom_pipes_params = {}
+    for section in config.sections():
+        if section.startswith("CustomPipes:"):
+            custom_pipe_name = section.split(":")[-1].strip()
+            custom_pipes_params[custom_pipe_name] = config_type_casting(config.items(section))
+
     nlp_model_config = dict(
         use_gpu=config["Annotator"].getboolean("use_gpu"),
         lang=clean_config_str(config["Annotator"]["lang"]),
@@ -58,7 +66,8 @@ def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
         normalizer_config=optional_section_configs["Normalizer"],
         stanza_pipeline_config=optional_section_configs["StanzaPipeline"],
         spacy_pipeline_config=optional_section_configs["SpacyPipeline"],
-        custom_pipes_config=[(k, {}) for k, v in config_type_casting(config.items("CustomPipes")).items() if v])
+        custom_pipes_config=[(k, custom_pipes_params.get(k, {})) for k, v in
+                             config_type_casting(config.items("CustomPipes")).items() if v])
     return nlp_model_config
 
 

@@ -3,7 +3,6 @@ from pytextrank import BaseTextRank
 from pytextrank.util import default_scrubber
 from collections import defaultdict
 from spacy.tokens import Doc, Token
-import json
 
 
 class PhraseDetector(object):

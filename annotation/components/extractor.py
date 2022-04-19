@@ -1,12 +1,22 @@
 from typing import List, Optional
-from utils.spark_util import extract_topn_common, write_sdf_to_file, pudf_get_most_common_text
+from utils.spark_util import extract_topn_common, write_sdf_to_file
 from pyspark.sql.types import ArrayType, StringType, Row
 from pyspark.sql import DataFrame, Column
-from pyspark.ml.feature import NGram
 import pyspark.sql.functions as F
+from pyspark.ml.feature import NGram
+from collections import Counter
+import pandas as pd
 
 
-def _udf_get_words(tokens: Column) -> Column:
+def pudf_get_most_common_text(texts: Column) -> Column:
+    def get_most_common_text(texts: pd.Series) -> pd.Series:
+        most_common_text = texts.apply(lambda x: Counter(x).most_common(1)[0][0])
+        return most_common_text
+
+    return F.pandas_udf(get_most_common_text, StringType())(texts)
+
+
+def udf_get_words(tokens: Column) -> Column:
     def get_words(tokens: List[Row]) -> List[str]:
         return [token.text.lower() for token in tokens]
 
@@ -40,7 +50,7 @@ def extract_ngram(annotation_sdf: DataFrame,
                   filter_min_count: Optional[int] = None,
                   num_partitions: int = 1):
     tokens_sdf = annotation_sdf.select(F.col("tokens"))
-    words_sdf = tokens_sdf.withColumn("words", _udf_get_words(F.col("tokens")))
+    words_sdf = tokens_sdf.withColumn("words", udf_get_words(F.col("tokens")))
     ngram = NGram(n=n, inputCol="words", outputCol="ngrams")
     ngram_sdf = ngram.transform(words_sdf).select("ngrams")
     ngram_sdf = ngram_sdf.select(F.explode(F.col("ngrams")).alias("ngram"))
@@ -86,7 +96,7 @@ def extract_entity(annotation_sdf: DataFrame,
         .agg(pudf_get_most_common_text(F.collect_list("entity")).alias("entity"),
              pudf_get_most_common_text(F.collect_list("text")).alias("text"),
              F.count(F.col("text")).alias("count")) \
-        .orderBy(F.desc("count"))
+        .orderBy(F.asc("entity"), F.desc("count"))
     if filter_min_count:
         entity_sdf = entity_sdf.filter(F.col("count") >= filter_min_count)
     entity_sdf = entity_sdf.select("text", "entity", "count")
@@ -124,32 +134,31 @@ if __name__ == "__main__":
     domain_dir = get_data_filepath(annotation_config["domain"])
     extraction_folder = annotation_config["extraction_folder"]
 
-    # config_updates = {"spark.archives": "/Users/haiyang/github/datascience.tar.gz"}
     spark = get_spark_session("test", config_updates={}, master_config="local[4]", log_level="WARN")
 
     # load annotation
     annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
     annotation_sdf = load_annotation(spark, annotation_dir, annotation_config["drop_non_english"])
 
-    # # extract vocab
-    # vocab_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["vocab_filename"])
-    # extract_vocab(annotation_sdf, vocab_filepath)
+    # extract vocab
+    vocab_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["vocab_filename"])
+    extract_vocab(annotation_sdf, vocab_filepath)
 
-    # # extract bigram
-    # bigram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["bigram_filename"])
-    # extract_ngram(annotation_sdf, bigram_filepath, n=2, filter_min_count=3)
+    # extract bigram
+    bigram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["bigram_filename"])
+    extract_ngram(annotation_sdf, bigram_filepath, n=2, filter_min_count=3)
 
-    # # extract trigram
-    # trigram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["trigram_filename"])
-    # extract_ngram(annotation_sdf, trigram_filepath, n=3, filter_min_count=3)
+    # extract trigram
+    trigram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["trigram_filename"])
+    extract_ngram(annotation_sdf, trigram_filepath, n=3, filter_min_count=3)
 
-    # # extract phrase
-    # phrase_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["phrase_filename"])
-    # extract_phrase(annotation_sdf, phrase_filepath, filter_min_count=3, num_partitions=3)
+    # extract phrase
+    phrase_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["phrase_filename"])
+    extract_phrase(annotation_sdf, phrase_filepath, filter_min_count=3, num_partitions=3)
 
-    # # extract entity
-    # entity_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["entity_filename"])
-    # extract_entity(annotation_sdf, entity_filepath, filter_min_count=1)
+    # extract entity
+    entity_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["entity_filename"])
+    extract_entity(annotation_sdf, entity_filepath, filter_min_count=1)
 
     # extract umls_concept
     umls_concept_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["umls_concept_filename"])
