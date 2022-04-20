@@ -1,4 +1,4 @@
-from typing import Set
+from typing import Set, Dict
 from pyspark.sql.types import BooleanType, ArrayType, StringType
 from pyspark.sql import DataFrame, Column
 import pyspark.sql.functions as F
@@ -19,6 +19,13 @@ def pudf_get_valid_suggestions(suggestions: Column, vocab: Set[str]) -> Column:
         return valid_suggestions
 
     return F.pandas_udf(get_valid_suggestions, ArrayType(StringType()))(suggestions)
+
+
+def get_bigram_match_dict(bigram_norm_candidates_filepath: str) -> Dict[str, str]:
+    bigram_norms_pdf = pd.read_csv(bigram_norm_candidates_filepath, encoding="utf-8", keep_default_na=False, na_values="")
+    bigrams = bigram_norms_pdf["bigram"].tolist()
+    bigram_match_dict = {bigram.lower(): "_".join(bigram.strip().lower().split()) for bigram in bigrams}
+    return bigram_match_dict
 
 
 def get_bigram_norm_candidates(vocab_sdf: DataFrame,

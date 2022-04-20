@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from utils.general_util import split_filepath, save_pdf
 from utils.resource_util import zip_repo
 from utils.log_util import get_logger
@@ -53,22 +53,35 @@ def write_sdf_to_dir(sdf: DataFrame,
         raise ValueError(f"Unsupported file format of {file_format}")
 
 
+def _merge_spark_text_files(save_filepath: str, part_filepaths: List[str]):
+    with open(save_filepath, "w", encoding="utf-8") as output_file:
+        for part_filepath in part_filepaths:
+            with open(part_filepath, "r", encoding="utf-8") as input_file:
+                for line in input_file:
+                    output_file.write(line)
+
+
 def write_sdf_to_file(sdf: DataFrame, save_filepath: str, num_partitions: int = 1):
     file_dir, file_name, file_format = split_filepath(save_filepath)
-    if file_format not in ("csv", "json"):
-        raise ValueError(f"Unsupported file format of {file_format}")
     write_sdf_to_dir(sdf, file_dir, file_name, file_format, num_partitions=num_partitions)
     spark_data_dir = os.path.join(file_dir, file_name)
     part_filepaths = [os.path.join(spark_data_dir, part_filename)
                       for part_filename in os.listdir(spark_data_dir) if part_filename.startswith("part-")]
     if num_partitions > 1:
-        pdf_list = []
-        for part_filepath in part_filepaths:
-            pdf = pd.read_csv(part_filepath, keep_default_na=False, na_values="", encoding="utf-8") \
-                if file_format == "csv" else pd.read_json(part_filepath, orient="records", lines=True, encoding="utf-8")
-            pdf_list.append(pdf)
-        pdf = pd.concat(pdf_list, ignore_index=True)
-        save_pdf(pdf, save_filepath)
+        if file_format == "txt" or file_format == "text":
+            _merge_spark_text_files(save_filepath, part_filepaths)
+        else:
+            pdf_list = []
+            for part_filepath in part_filepaths:
+                if file_format == "csv":
+                    pdf = pd.read_csv(part_filepath, keep_default_na=False, na_values="", encoding="utf-8")
+                elif file_format == "json":
+                    pdf = pd.read_json(part_filepath, orient="records", lines=True, encoding="utf-8")
+                else:
+                    ValueError(f"Unsupported file format of {file_format} when num_partitions > 1")
+                pdf_list.append(pdf)
+            pdf = pd.concat(pdf_list, ignore_index=True)
+            save_pdf(pdf, save_filepath)
     else:
         shutil.move(part_filepaths[0], save_filepath)
     shutil.rmtree(spark_data_dir)

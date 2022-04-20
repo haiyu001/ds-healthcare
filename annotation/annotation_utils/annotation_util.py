@@ -4,10 +4,12 @@ from utils.config_util import read_config, config_type_casting, clean_config_str
 from utils.general_util import get_filepaths_recursively
 from utils.resource_util import get_stanza_model_dir, get_spacy_model_path
 from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
+from spacy.tokenizer import Tokenizer
 from spacy import Language
 import spacy
 import json
 import os
+import re
 
 DEFAULT_SPACY_PACKAGE = "en_core_web_md-3.2.0"
 
@@ -20,10 +22,12 @@ def get_spacy_model_pipes(spacy_model_path: str) -> List[str]:
     return pipes
 
 
-def load_blank_nlp(lang: str, package: str) -> Language:
+def load_blank_nlp(lang: str, package: str, whitespace_tokenizer: bool = False) -> Language:
     spacy_model_path = get_spacy_model_path(lang, package)
     spacy_model_pipes = get_spacy_model_pipes(spacy_model_path)
     blank_nlp = spacy.load(spacy_model_path, exclude=spacy_model_pipes)
+    if whitespace_tokenizer:
+        blank_nlp.tokenizer = Tokenizer(blank_nlp.vocab, token_match=re.compile(r'\S+').match)
     return blank_nlp
 
 

@@ -6,6 +6,12 @@ import csv
 import os
 
 
+def make_dir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    return dir
+
+
 def get_filepaths_recursively(input_dir: str, file_formats: List[str], sort: bool = True) -> List[str]:
     filepaths = []
     for root, dirs, files in os.walk(input_dir):

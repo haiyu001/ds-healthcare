@@ -86,7 +86,7 @@ if "__main__" == __name__:
 
     lookup = UMLSLookup()
 
-    concept_id = "C1737642" # "C0008115" # "C0027051"
+    concept_id = "C0019080" # "C0008115" # "C0027051"
     concept_info = lookup.lookup_code(concept_id, preferred=False)
     print(f'\nSearch for "{concept_id}" returns:')
     for concept_name, concept_source, semantic_type_id in concept_info:

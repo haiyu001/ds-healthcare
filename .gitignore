@@ -6,6 +6,7 @@
 *.iml
 *.log
 .idea/
+.ipynb_checkpoints
 logs/
 tmp/
 __pycache__/
