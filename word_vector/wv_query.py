@@ -46,11 +46,3 @@ def query_words(words: List[str],
         result_df = query_word(word, word_vector, topn=topn, min_count=min_count)
         display(result_df)
         print()
-
-
-if __name__ == "__main__":
-    from gensim.models import FastText
-
-    model_path = "/Users/haiyang/data/drug_test/canonicalization/canonicalizer_wv/model/fastText"
-    word2vec_model = FastText.load(model_path).wv
-    query_words(["gynocologist"], word2vec_model)

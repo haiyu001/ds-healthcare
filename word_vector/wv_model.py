@@ -80,16 +80,16 @@ if __name__ == "__main__":
     wv_model_filepath = os.path.join(domain_dir, canonicalization_folder, canonicalization_wv_folder,
                                       annotation_config["canonicalization_wv_model_filename"])
 
-    # build_word2vec(
-    #     vector_size=100,
-    #     use_char_ngram=False,
-    #     wv_corpus_filepath=wv_corpus_filepath,
-    #     wv_model_filepath=wv_model_filepath,
-    #     min_count=3,
-    #     workers=1,
-    #     epochs=8,
-    #     max_final_vocab=100000,
-    # )
+    build_word2vec(
+        vector_size=100,
+        use_char_ngram=False,
+        wv_corpus_filepath=wv_corpus_filepath,
+        wv_model_filepath=wv_model_filepath,
+        min_count=3,
+        workers=1,
+        epochs=8,
+        max_final_vocab=100000,
+    )
 
     # model_path = "/Users/haiyang/data/drug_test/canonicalization/canonicalizer_wv/model/fastText"
     # print(FastText.load(model_path).wv)
