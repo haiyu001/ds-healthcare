@@ -57,10 +57,10 @@ def config_type_casting(config_items: List[Tuple[str, str]]) -> Dict[str, Any]:
             value = None
         elif str_to_bool(value_str) is not None:
             value = str_to_bool(value_str)
-        elif is_float(value_str):
-            value = float(value_str)
         elif value_str.isdigit():
             value = int(value_str)
+        elif is_float(value_str):
+            value = float(value_str)
         else:
             value = value_str
         config_dict[key] = value

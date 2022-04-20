@@ -5,9 +5,9 @@ import pyspark.sql.functions as F
 import pandas as pd
 
 
-def pudf_is_valid_bigram(bigram: Column) -> Column:
+def pudf_is_valid_bigram(bigram: Column, min_word_char_count: int = 2) -> Column:
     def is_valid_bigram(bigram: pd.Series) -> pd.Series:
-        valid_candidate = bigram.apply(lambda x: all([len(word) >= 2 for word in x.split()]))
+        valid_candidate = bigram.apply(lambda x: all([len(word) >= min_word_char_count for word in x.split()]))
         return valid_candidate
 
     return F.pandas_udf(is_valid_bigram, BooleanType())(bigram)
@@ -31,6 +31,7 @@ def get_bigram_match_dict(bigram_norm_candidates_filepath: str) -> Dict[str, str
 def get_bigram_norm_candidates(vocab_sdf: DataFrame,
                                bigram_sdf: DataFrame,
                                bigram_norm_candidates_filepath: str,
+                               bigram_norm_min_word_char_count: int = 2,
                                num_partitions: int = 1):
     vocab_sdf = vocab_sdf.select(F.col("word"),
                                  F.col("count").alias("word_count"),
@@ -42,7 +43,8 @@ def get_bigram_norm_candidates(vocab_sdf: DataFrame,
     bigram_norm_candidates_sdf = bigram_norm_candidates_sdf \
         .select("word", "bigram", "word_count", "bigram_count", "word_top_three_pos")
     bigram_norm_candidates_sdf = bigram_norm_candidates_sdf
-    bigram_norm_candidates_sdf = bigram_norm_candidates_sdf.filter(pudf_is_valid_bigram(F.col("bigram")))
+    bigram_norm_candidates_sdf = bigram_norm_candidates_sdf.filter(pudf_is_valid_bigram(F.col("bigram"),
+                                                                                        bigram_norm_min_word_char_count))
     write_sdf_to_file(bigram_norm_candidates_sdf, bigram_norm_candidates_filepath, num_partitions)
 
 
@@ -97,7 +99,8 @@ if __name__ == "__main__":
 
     vocab_sdf = spark.read.csv(vocab_filepath, header=True, quote='"', escape='"', inferSchema=True)
     bigram_sdf = spark.read.csv(bigram_filepath, header=True, quote='"', escape='"', inferSchema=True)
-    get_bigram_norm_candidates(vocab_sdf, bigram_sdf, bigram_norm_candidates_filepath)
+    bigram_norm_min_word_char_count = annotation_config["bigram_norm_min_word_char_count"]
+    get_bigram_norm_candidates(vocab_sdf, bigram_sdf, bigram_norm_candidates_filepath, bigram_norm_min_word_char_count)
 
     annotation_sdf = load_annotation(spark, annotation_dir, annotation_config["drop_non_english"])
     get_spell_check_candidates(vocab_sdf, annotation_sdf, spell_check_candidates_filepath)

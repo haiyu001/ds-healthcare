@@ -81,11 +81,11 @@ if __name__ == "__main__":
                                       annotation_config["canonicalization_wv_model_filename"])
 
     build_word2vec(
-        vector_size=100,
+        vector_size=annotation_config["word_vector_size"],
         use_char_ngram=False,
         wv_corpus_filepath=wv_corpus_filepath,
         wv_model_filepath=wv_model_filepath,
-        min_count=3,
+        min_count=5,
         workers=1,
         epochs=8,
         max_final_vocab=100000,
