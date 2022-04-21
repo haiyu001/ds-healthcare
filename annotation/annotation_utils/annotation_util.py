@@ -78,8 +78,8 @@ def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
 def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
     config = read_config(config_filepath)
     annotation_config = {}
-    annotation_config.update(config_type_casting(config.items("Annotation")))
-    annotation_config.update(config_type_casting(config.items("Default")))
+    for section in config.sections():
+        annotation_config.update(config_type_casting(config.items(section)))
     return annotation_config
 
 

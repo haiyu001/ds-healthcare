@@ -82,21 +82,17 @@ if __name__ == "__main__":
 
     build_word2vec(
         vector_size=annotation_config["word_vector_size"],
-        use_char_ngram=False,
+        use_char_ngram=True,
         wv_corpus_filepath=wv_corpus_filepath,
         wv_model_filepath=wv_model_filepath,
         min_count=5,
         workers=1,
-        epochs=8,
+        epochs=10,
         max_final_vocab=100000,
     )
 
-    # model_path = "/Users/haiyang/data/drug_test/canonicalization/canonicalizer_wv/model/fastText"
+    # model_path = os.path.join(os.path.splitext(wv_model_filepath)[0], "fasttext")
     # print(FastText.load(model_path).wv)
-
-    # model_path = "/Users/haiyang/data/drug_test/canonicalization/canonicalizer_wv/model2/word2vec"
-    # print(Word2Vec.load(model_path).wv)
-
 
 
 

@@ -23,12 +23,12 @@ def pudf_get_wv_corpus_line(text_iter: Column,
                             lang: str,
                             spacy_package: str,
                             ngram_match_dict: Optional[Dict[str, str]] = None,
-                            ngram_match_lowercase: bool = True) -> Column:
+                            match_lowercase: bool = True) -> Column:
     def get_wv_corpus_line(text_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
         nlp = load_blank_nlp(lang, spacy_package, whitespace_tokenizer=True)
         ngram_matcher = None
         if ngram_match_dict is not None:
-            ngram_matcher = get_ngram_matcher(nlp, list(ngram_match_dict.keys()), ngram_match_lowercase)
+            ngram_matcher = get_ngram_matcher(nlp, list(ngram_match_dict.keys()), match_lowercase)
         for text in text_iter:
             doc = text.apply(nlp)
             if ngram_matcher is not None:
@@ -81,14 +81,14 @@ def extact_wv_corpus_from_annotation(annotation_sdf: DataFrame,
                                      spacy_package: str,
                                      wv_corpus_filepath: str,
                                      ngram_match_dict: Optional[Dict[str, str]] = None,
-                                     ngram_match_lowercase: bool = True,
+                                     match_lowercase: bool = True,
                                      num_partitions: int = 1):
-    text_sdf = annotation_sdf.select(udf_get_text(F.col("tokens"), ngram_match_lowercase).alias("text"))
+    text_sdf = annotation_sdf.select(udf_get_text(F.col("tokens"), match_lowercase).alias("text"))
     wv_corpus_sdf = text_sdf.select(pudf_get_wv_corpus_line(F.col("text"),
                                                             lang,
                                                             spacy_package,
                                                             ngram_match_dict,
-                                                            ngram_match_lowercase))
+                                                            match_lowercase))
     write_sdf_to_file(wv_corpus_sdf, wv_corpus_filepath, num_partitions)
 
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     from annotation.annotation_utils.annotation_util import read_nlp_model_config, read_annotation_config
     from utils.resource_util import get_repo_dir, get_data_filepath
     from annotation.annotation_utils.annotation_util import load_annotation
-    from annotation.components.canonicalizer import get_bigram_match_dict
+    from annotation.components.canonicalizer import get_bigram_norm_candidates_match_dict
     from utils.spark_util import get_spark_session
     import os
 
@@ -116,12 +116,16 @@ if __name__ == "__main__":
 
     spark = get_spark_session("test", config_updates={}, master_config="local[4]", log_level="WARN")
 
+    match_lowercase = annotation_config["wv_corpus_match_lowercase"]
+    ngram_match_dict = get_bigram_norm_candidates_match_dict(bigram_norm_candidates_filepath, match_lowercase)
+    annotation_sdf = load_annotation(spark, annotation_dir, annotation_config["drop_non_english"])
+
     extact_wv_corpus_from_annotation(
-        annotation_sdf=load_annotation(spark, annotation_dir, annotation_config["drop_non_english"]),
+        annotation_sdf=annotation_sdf,
         lang=nlp_model_config["lang"],
         spacy_package=nlp_model_config["spacy_package"],
         wv_corpus_filepath=wv_corpus_filepath,
-        ngram_match_dict=get_bigram_match_dict(bigram_norm_candidates_filepath),
-        ngram_match_lowercase=True,
+        ngram_match_dict=ngram_match_dict,
+        match_lowercase=match_lowercase,
         num_partitions=4
     )

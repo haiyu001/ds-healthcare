@@ -17,17 +17,17 @@ def get_result_pdf(tuple_list: List[Tuple[str, float, int]]) -> pd.DataFrame:
 
 
 def query_word(word: str,
-               word_vector: Union[FastTextKeyedVectors, KeyedVectors],
+               wv_model: Union[FastTextKeyedVectors, KeyedVectors],
                topn: int = 50,
                min_count: int = 5,
                save_filepath: Optional[str] = None) -> Optional[pd.DataFrame]:
     wv_word = "_".join(word.strip().lower().split())
-    if wv_word not in word_vector.key_to_index:
+    if wv_word not in wv_model.key_to_index:
         print(f"word {word} not in vocabulary")
     else:
-        neighbours = word_vector.similar_by_word(wv_word, 100)
-        neighbours = [[word, similarity, word_vector.get_vecattr(word, "count")]
-                      for word, similarity in neighbours if word_vector.get_vecattr(word, "count") >= min_count]
+        neighbours = wv_model.similar_by_word(wv_word, 100)
+        neighbours = [[word, similarity, wv_model.get_vecattr(word, "count")]
+                      for word, similarity in neighbours if wv_model.get_vecattr(word, "count") >= min_count]
         neighbours = neighbours[:topn]
         result_pdf = get_result_pdf(neighbours)
         if save_filepath is not None:
@@ -36,10 +36,10 @@ def query_word(word: str,
 
 
 def query_words(words: List[str],
-                word_vector: Union[FastTextKeyedVectors, KeyedVectors],
+                wv_model: Union[FastTextKeyedVectors, KeyedVectors],
                 topn: int = 50,
                 min_count: int = 5):
     for word in words:
         print(f"{'=' * 10} {word} {'=' * 10}")
-        result_df = query_word(word, word_vector, topn=topn, min_count=min_count)
+        result_df = query_word(word, wv_model, topn=topn, min_count=min_count)
         display(result_df)
