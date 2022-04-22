@@ -7,7 +7,7 @@ from spacy import Language
 from spacy.tokens import Doc
 
 
-class UMLSDetector(object):
+class UMLSConceptDetector(object):
 
     def __init__(self,
                  nlp: Language,

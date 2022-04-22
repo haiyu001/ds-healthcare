@@ -117,12 +117,12 @@ def extract_topn_common(sdf: DataFrame,
                         partition_by: str,
                         key_by: str,
                         value_by: str,
-                        top_n: int = 3,
+                        topn: int = 3,
                         save_filepath: Optional[str] = None) -> DataFrame:
     w = Window.partitionBy(partition_by).orderBy(F.col(value_by).desc())
     sdf = sdf.select(partition_by, key_by, value_by)
     sdf = sdf.withColumn("rank", F.row_number().over(w))
-    sdf = sdf.filter(F.col("rank") <= top_n).drop("rank")
+    sdf = sdf.filter(F.col("rank") <= topn).drop("rank")
     sdf = sdf.groupby(partition_by) \
         .agg(F.to_json(F.map_from_entries(F.collect_list(F.struct(key_by, value_by)))).alias(key_by))
     if save_filepath:

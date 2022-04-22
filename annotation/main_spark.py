@@ -21,16 +21,16 @@ if __name__ == "__main__":
     spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
     add_repo_pyfile(spark)
 
-    # canonicalization annotation
-    input_sdf = spark.read.text(input_filepath).repartition(spark_cores)
-    canonicalization_nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
-    pprint(canonicalization_nlp_model_config)
-    canonicalization_annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), canonicalization_nlp_model_config))
-    write_sdf_to_dir(canonicalization_annotation_sdf, canonicalization_dir,
-                     annotation_config["canonicalization_annotation_folder"], file_format="txt")
-
-    # # full annotation
+    # # canonicalization annotation
     # input_sdf = spark.read.text(input_filepath).repartition(spark_cores)
-    # full_nlp_model_config = get_full_nlp_model_config(nlp_model_config_filepath, normalization_filepath)
-    # full_annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), full_nlp_model_config))
-    # write_sdf_to_dir(full_annotation_sdf, domain_dir, annotation_config["full_annotation_folder"], file_format="txt")
+    # canonicalization_nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
+    # pprint(canonicalization_nlp_model_config)
+    # canonicalization_annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), canonicalization_nlp_model_config))
+    # write_sdf_to_dir(canonicalization_annotation_sdf, canonicalization_dir,
+    #                  annotation_config["canonicalization_annotation_folder"], file_format="txt")
+
+    # full annotation
+    input_sdf = spark.read.text(input_filepath).repartition(spark_cores)
+    full_nlp_model_config = get_full_nlp_model_config(nlp_model_config_filepath, normalization_filepath)
+    full_annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), full_nlp_model_config))
+    write_sdf_to_dir(full_annotation_sdf, domain_dir, annotation_config["full_annotation_folder"], file_format="txt")

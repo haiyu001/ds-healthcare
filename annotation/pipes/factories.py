@@ -8,7 +8,7 @@ from annotation.pipes.stanza_pipeline import StanzaPipeline
 from annotation.pipes.spell_detector import SpellDetector
 from spacy.language import Language
 
-from annotation.pipes.umls_detector import UMLSDetector
+from annotation.pipes.umls_concept_detector import UMLSConceptDetector
 
 
 @Language.factory("spacy_pipeline", default_config={"lang": "en",
@@ -61,18 +61,20 @@ def create_spell_checker_component(nlp: Language, name: str, attrs: Tuple[str, s
     return SpellDetector(attrs)
 
 
-@Language.factory("umls_detector", default_config={"quickumls_filepath": None,
-                                                   "overlapping_criteria": "score",
-                                                   "similarity_name": "jaccard",
-                                                   "threshold": 0.85,
-                                                   "window": 5,
-                                                   "accepted_semtypes": None,
-                                                   "best_match": True,
-                                                   "keep_uppercase": False,
-                                                   "attrs": ("umls_concepts",), })
-def create_umls_detector_component(nlp: Language, name: str, quickumls_filepath: Optional[str],
-                                   overlapping_criteria: str, similarity_name: str, threshold: float, window: int,
-                                   accepted_semtypes: Optional[List[str]], best_match: bool, keep_uppercase: bool,
-                                   attrs: Tuple[str]) -> UMLSDetector:
-    return UMLSDetector(nlp, quickumls_filepath, overlapping_criteria, similarity_name, threshold, window,
-                        accepted_semtypes, best_match, keep_uppercase, attrs)
+@Language.factory("umls_concept_detector", default_config={"quickumls_filepath": None,
+                                                           "overlapping_criteria": "score",
+                                                           "similarity_name": "jaccard",
+                                                           "threshold": 0.85,
+                                                           "window": 5,
+                                                           "accepted_semtypes": None,
+                                                           "best_match": True,
+                                                           "keep_uppercase": False,
+                                                           "attrs": ("umls_concepts",), })
+def create_umls_concept_detector_component(nlp: Language, name: str, quickumls_filepath: Optional[str],
+                                           overlapping_criteria: str, similarity_name: str, threshold: float,
+                                           window: int,
+                                           accepted_semtypes: Optional[List[str]], best_match: bool,
+                                           keep_uppercase: bool,
+                                           attrs: Tuple[str]) -> UMLSConceptDetector:
+    return UMLSConceptDetector(nlp, quickumls_filepath, overlapping_criteria, similarity_name, threshold, window,
+                               accepted_semtypes, best_match, keep_uppercase, attrs)

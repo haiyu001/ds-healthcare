@@ -25,7 +25,6 @@ def udf_get_words(tokens: Column) -> Column:
 
 def extract_vocab(annotation_sdf: DataFrame,
                   vocab_filepath: str,
-                  filter_min_count: Optional[int] = None,
                   num_partitions: int = 1):
     tokens_sdf = annotation_sdf.select(F.explode(annotation_sdf.tokens).alias("token")).cache()
     tokens_sdf = tokens_sdf.select(F.lower(F.col("token").text).alias("word"),
@@ -33,21 +32,19 @@ def extract_vocab(annotation_sdf: DataFrame,
                                    F.col("token").pos.alias("pos"))
     count_sdf = tokens_sdf.groupby("word").agg(F.count("*").alias("count"))
     pos_sdf = tokens_sdf.groupby(["word", "pos"]).agg(F.count("*").alias("pos_count"))
-    pos_sdf = extract_topn_common(pos_sdf, partition_by="word", key_by="pos", value_by="pos_count", top_n=3)
+    pos_sdf = extract_topn_common(pos_sdf, partition_by="word", key_by="pos", value_by="pos_count", topn=3)
     pos_sdf = pos_sdf.withColumnRenamed("pos", "top_three_pos")
     lemma_sdf = tokens_sdf.groupby(["word", "lemma"]).agg(F.count("*").alias("lemma_count"))
-    lemma_sdf = extract_topn_common(lemma_sdf, partition_by="word", key_by="lemma", value_by="lemma_count", top_n=3)
+    lemma_sdf = extract_topn_common(lemma_sdf, partition_by="word", key_by="lemma", value_by="lemma_count", topn=3)
     lemma_sdf = lemma_sdf.withColumnRenamed("lemma", "top_three_lemma")
     vocab_sdf = count_sdf.join(pos_sdf, on="word", how="inner").join(lemma_sdf, on="word", how="inner")
     vocab_sdf = vocab_sdf.orderBy(F.asc("word"))
-    if filter_min_count:
-        vocab_sdf = vocab_sdf.filter(F.col("count") >= filter_min_count)
     write_sdf_to_file(vocab_sdf, vocab_filepath, num_partitions)
 
 
 def extract_ngram(annotation_sdf: DataFrame,
                   ngram_filepath: str, n: int,
-                  filter_min_count: Optional[int] = None,
+                  ngram_filter_min_count: Optional[int] = None,
                   num_partitions: int = 1):
     tokens_sdf = annotation_sdf.select(F.col("tokens"))
     words_sdf = tokens_sdf.withColumn("words", udf_get_words(F.col("tokens")))
@@ -56,14 +53,14 @@ def extract_ngram(annotation_sdf: DataFrame,
     ngram_sdf = ngram_sdf.select(F.explode(F.col("ngrams")).alias("ngram"))
     ngram_sdf = ngram_sdf.groupby(["ngram"]).agg(F.count("*").alias("count"))
     ngram_sdf = ngram_sdf.orderBy(F.desc("count"))
-    if filter_min_count:
-        ngram_sdf = ngram_sdf.filter(F.col("count") >= filter_min_count)
+    if ngram_filter_min_count:
+        ngram_sdf = ngram_sdf.filter(F.col("count") >= ngram_filter_min_count)
     write_sdf_to_file(ngram_sdf, ngram_filepath, num_partitions)
 
 
 def extract_phrase(annotation_sdf: DataFrame,
                    phrase_filepath: str,
-                   filter_min_count: Optional[int] = None,
+                   phrase_filter_min_count: Optional[int] = None,
                    num_partitions: int = 1):
     phrase_sdf = annotation_sdf.select(F.explode(annotation_sdf._.phrases).alias("phrase"))
     phrase_sdf = phrase_sdf.select(F.lower(F.col("phrase").text).alias("phrase"),
@@ -79,14 +76,14 @@ def extract_phrase(annotation_sdf: DataFrame,
              pudf_get_most_common_text(F.collect_list("phrase_lemmas")).alias("phrase_lemmas"),
              pudf_get_most_common_text(F.collect_list("phrase_deps")).alias("phrase_deps")) \
         .orderBy(F.desc("count"))
-    if filter_min_count:
-        phrase_sdf = phrase_sdf.filter(F.col("count") >= filter_min_count)
+    if phrase_filter_min_count:
+        phrase_sdf = phrase_sdf.filter(F.col("count") >= phrase_filter_min_count)
     write_sdf_to_file(phrase_sdf, phrase_filepath, num_partitions)
 
 
 def extract_entity(annotation_sdf: DataFrame,
                    entity_filepath: str,
-                   filter_min_count: Optional[int] = None,
+                   entity_filter_min_count: Optional[int] = None,
                    num_partitions: int = 1):
     entity_sdf = annotation_sdf.select(F.explode(annotation_sdf.entities).alias("entity"))
     entity_sdf = entity_sdf.select(F.lower(F.col("entity").text).alias("text_lower"),
@@ -97,15 +94,15 @@ def extract_entity(annotation_sdf: DataFrame,
              pudf_get_most_common_text(F.collect_list("text")).alias("text"),
              F.count(F.col("text")).alias("count")) \
         .orderBy(F.asc("entity"), F.desc("count"))
-    if filter_min_count:
-        entity_sdf = entity_sdf.filter(F.col("count") >= filter_min_count)
+    if entity_filter_min_count:
+        entity_sdf = entity_sdf.filter(F.col("count") >= entity_filter_min_count)
     entity_sdf = entity_sdf.select("text", "entity", "count")
     write_sdf_to_file(entity_sdf, entity_filepath, num_partitions)
 
 
 def extract_umls_concept(annotation_sdf: DataFrame,
                          umls_concept_filepath: str,
-                         filter_min_count: Optional[int] = None,
+                         umls_concept_filter_min_count: Optional[int] = None,
                          num_partitions: int = 1):
     umls_concept_sdf = annotation_sdf.select(F.explode(annotation_sdf._.umls_concepts).alias("umls_concept"))
     umls_concept_sdf = umls_concept_sdf.select(F.lower(F.col("umls_concept").text).alias("text_lower"),
@@ -116,8 +113,8 @@ def extract_umls_concept(annotation_sdf: DataFrame,
              F.to_json(F.first(F.col("concepts"))).alias("concepts"),
              F.count(F.col("text")).alias("count")) \
         .orderBy(F.desc("count"))
-    if filter_min_count:
-        umls_concept_sdf = umls_concept_sdf.filter(F.col("count") >= filter_min_count)
+    if umls_concept_filter_min_count:
+        umls_concept_sdf = umls_concept_sdf.filter(F.col("count") >= umls_concept_filter_min_count)
     umls_concept_sdf = umls_concept_sdf.select("text", "count", "concepts")
     write_sdf_to_file(umls_concept_sdf, umls_concept_filepath, num_partitions)
 
@@ -137,40 +134,45 @@ if __name__ == "__main__":
 
     spark = get_spark_session("test", config_updates={}, master_config="local[4]", log_level="WARN")
 
-    # ==========================================================================================================
-
-    # load canonicalization annotation
-    canonicalization_annotation_dir = os.path.join(canonicalization_dir,
-                                                   annotation_config["canonicalization_annotation_folder"])
-    canonicalization_annotation_sdf = load_annotation(spark, canonicalization_annotation_dir,
-                                                      annotation_config["drop_non_english"])
-
-    # extract vocab
-    vocab_filepath = os.path.join(extraction_dir, annotation_config["vocab_filename"])
-    extract_vocab(canonicalization_annotation_sdf, vocab_filepath)
-
-    # extract bigram
-    bigram_filepath = os.path.join(extraction_dir, annotation_config["bigram_filename"])
-    extract_ngram(canonicalization_annotation_sdf, bigram_filepath, n=2, filter_min_count=3)
-
-    # extract trigram
-    trigram_filepath = os.path.join(extraction_dir, annotation_config["trigram_filename"])
-    extract_ngram(canonicalization_annotation_sdf, trigram_filepath, n=3, filter_min_count=3)
-
     # # ==========================================================================================================
     #
-    # # load full annotation
-    # full_annotation_dir = os.path.join(domain_dir, annotation_config["full_annotation_folder"])
-    # full_annotation_sdf = load_annotation(spark, full_annotation_dir, annotation_config["drop_non_english"])
+    # # load canonicalization annotation
+    # canonicalization_annotation_dir = os.path.join(canonicalization_dir,
+    #                                                annotation_config["canonicalization_annotation_folder"])
+    # canonicalization_annotation_sdf = load_annotation(spark, canonicalization_annotation_dir,
+    #                                                   annotation_config["drop_non_english"])
     #
-    # # extract phrase
-    # phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
-    # extract_phrase(full_annotation_sdf, phrase_filepath, filter_min_count=3, num_partitions=3)
+    # # extract vocab
+    # vocab_filepath = os.path.join(extraction_dir, annotation_config["vocab_filename"])
+    # extract_vocab(canonicalization_annotation_sdf, vocab_filepath)
     #
-    # # extract entity
-    # entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
-    # extract_entity(full_annotation_sdf, entity_filepath, filter_min_count=1)
+    # # extract bigram
+    # bigram_filepath = os.path.join(extraction_dir, annotation_config["bigram_filename"])
+    # extract_ngram(canonicalization_annotation_sdf, bigram_filepath, n=2,
+    #               ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
     #
-    # # extract umls_concept
-    # umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
-    # extract_umls_concept(full_annotation_sdf, umls_concept_filepath, filter_min_count=1)
+    # # extract trigram
+    # trigram_filepath = os.path.join(extraction_dir, annotation_config["trigram_filename"])
+    # extract_ngram(canonicalization_annotation_sdf, trigram_filepath, n=3,
+    #               ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
+
+    # ==========================================================================================================
+
+    # load full annotation
+    full_annotation_dir = os.path.join(domain_dir, annotation_config["full_annotation_folder"])
+    full_annotation_sdf = load_annotation(spark, full_annotation_dir, annotation_config["drop_non_english"])
+
+    # extract phrase
+    phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
+    extract_phrase(full_annotation_sdf, phrase_filepath,
+                   phrase_filter_min_count=annotation_config["phrase_filter_min_count"])
+
+    # extract entity
+    entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
+    extract_entity(full_annotation_sdf, entity_filepath,
+                   entity_filter_min_count=annotation_config["entity_filter_min_count"])
+
+    # extract umls_concept
+    umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
+    extract_umls_concept(full_annotation_sdf, umls_concept_filepath,
+                         umls_concept_filter_min_count=annotation_config["umls_concept_filter_min_count"])
