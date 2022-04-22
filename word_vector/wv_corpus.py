@@ -104,21 +104,24 @@ if __name__ == "__main__":
     nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
     annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
     annotation_config = read_annotation_config(annotation_config_filepath)
-    canonicalization_folder = annotation_config["canonicalization_folder"]
-    canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
 
     domain_dir = get_data_filepath(annotation_config["domain"])
-    annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
-    bigram_norm_candidates_filepath = os.path.join(domain_dir, canonicalization_folder,
+    extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
+    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
+    canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
+
+    canonicalization_annotation_dir = os.path.join(canonicalization_dir,
+                                                   annotation_config["canonicalization_annotation_folder"])
+    bigram_norm_candidates_filepath = os.path.join(canonicalization_dir,
                                                    annotation_config["bigram_norm_candidates_filename"])
-    wv_corpus_filepath = os.path.join(domain_dir, canonicalization_folder, canonicalization_wv_folder,
+    wv_corpus_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
                                       annotation_config["canonicalization_wv_corpus_filename"])
 
     spark = get_spark_session("test", config_updates={}, master_config="local[4]", log_level="WARN")
 
     match_lowercase = annotation_config["wv_corpus_match_lowercase"]
     ngram_match_dict = get_bigram_norm_candidates_match_dict(bigram_norm_candidates_filepath, match_lowercase)
-    annotation_sdf = load_annotation(spark, annotation_dir, annotation_config["drop_non_english"])
+    annotation_sdf = load_annotation(spark, canonicalization_annotation_dir, annotation_config["drop_non_english"])
 
     extact_wv_corpus_from_annotation(
         annotation_sdf=annotation_sdf,

@@ -72,12 +72,12 @@ if __name__ == "__main__":
     canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
 
     domain_dir = get_data_filepath(annotation_config["domain"])
-    annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
-    bigram_norm_candidates_filepath = os.path.join(domain_dir, canonicalization_folder,
+    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
+    bigram_norm_candidates_filepath = os.path.join(canonicalization_dir,
                                                    annotation_config["bigram_norm_candidates_filename"])
-    wv_corpus_filepath = os.path.join(domain_dir, canonicalization_folder, canonicalization_wv_folder,
+    wv_corpus_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
                                       annotation_config["canonicalization_wv_corpus_filename"])
-    wv_model_filepath = os.path.join(domain_dir, canonicalization_folder, canonicalization_wv_folder,
+    wv_model_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
                                       annotation_config["canonicalization_wv_model_filename"])
 
     build_word2vec(

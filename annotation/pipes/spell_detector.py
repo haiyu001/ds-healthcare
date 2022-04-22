@@ -9,7 +9,7 @@ import re
 
 
 class SpellDetector(object):
-    word_regex = "^[A-Za-z]{3,}$"
+    word_regex = "^[A-Za-z]{4,}$"
 
     def __init__(self, attrs: Tuple[str, str, str] = ("spell_is_correct", "suggest_spellings", "misspellings")):
         self._spell_is_correct, self._suggest_spellings, self._misspellings = attrs

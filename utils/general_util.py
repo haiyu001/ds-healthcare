@@ -50,12 +50,12 @@ def save_pdf(pdf: pd.DataFrame,
 
 
 def load_json_file(input_filepath: str) -> Dict[Any, Any]:
-    with open(input_filepath, 'r', encoding='utf-8') as input:
+    with open(input_filepath, "r", encoding="utf-8") as input:
         json_dict = json.load(input)
         return json_dict
 
 
 def dump_json_file(json_dict: Dict[Any, Any], ouput_filepath: str):
-    with open(ouput_filepath, 'w', encoding='utf-8') as output:
+    with open(ouput_filepath, "w", encoding="utf-8") as output:
         json.dump(json_dict, output, ensure_ascii=False, indent=4)
 

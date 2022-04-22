@@ -13,11 +13,11 @@ from annotation.pipes.umls_detector import UMLSDetector
 
 @Language.factory("spacy_pipeline", default_config={"lang": "en",
                                                     "package": None,
-                                                    "exclude": None,
+                                                    "pipes": None,
                                                     "sentence_detector": False, })
 def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, package: str,
-                                     exclude: Optional[str], sentence_detector: bool) -> SpacyPipeline:
-    return SpacyPipeline(lang, package, exclude, sentence_detector)
+                                     pipes: Optional[str], sentence_detector: bool) -> SpacyPipeline:
+    return SpacyPipeline(lang, package, pipes, sentence_detector)
 
 
 @Language.factory("stanza_pipeline", default_config={"lang": "en",

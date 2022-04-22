@@ -77,8 +77,8 @@ class UMLSLookup(object):
         sementic_type_name_and_group_list = []
         semantic_type_ids = semantic_type_ids.split("|")
         for semantic_type_id in semantic_type_ids:
-            sementic_type_name_and_group_list.append(f'{lookup.semantic_types[semantic_type_id]["type_name"]} -> '
-                                                     f'{lookup.semantic_types[semantic_type_id]["group_name"]}')
+            sementic_type_name_and_group_list.append(f"{lookup.semantic_types[semantic_type_id]['type_name']} -> "
+                                                     f"{lookup.semantic_types[semantic_type_id]['group_name']}")
         return sementic_type_name_and_group_list
 
 

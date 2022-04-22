@@ -132,34 +132,45 @@ if __name__ == "__main__":
     annotation_config = read_annotation_config(annotation_config_filepath)
 
     domain_dir = get_data_filepath(annotation_config["domain"])
-    extraction_folder = annotation_config["extraction_folder"]
+    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
+    extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
 
     spark = get_spark_session("test", config_updates={}, master_config="local[4]", log_level="WARN")
 
-    # load annotation
-    annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
-    annotation_sdf = load_annotation(spark, annotation_dir, annotation_config["drop_non_english"])
+    # ==========================================================================================================
+
+    # load canonicalization annotation
+    canonicalization_annotation_dir = os.path.join(canonicalization_dir,
+                                                   annotation_config["canonicalization_annotation_folder"])
+    canonicalization_annotation_sdf = load_annotation(spark, canonicalization_annotation_dir,
+                                                      annotation_config["drop_non_english"])
 
     # extract vocab
-    vocab_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["vocab_filename"])
-    extract_vocab(annotation_sdf, vocab_filepath)
+    vocab_filepath = os.path.join(extraction_dir, annotation_config["vocab_filename"])
+    extract_vocab(canonicalization_annotation_sdf, vocab_filepath)
 
     # extract bigram
-    bigram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["bigram_filename"])
-    extract_ngram(annotation_sdf, bigram_filepath, n=2, filter_min_count=3)
+    bigram_filepath = os.path.join(extraction_dir, annotation_config["bigram_filename"])
+    extract_ngram(canonicalization_annotation_sdf, bigram_filepath, n=2, filter_min_count=3)
 
     # extract trigram
-    trigram_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["trigram_filename"])
-    extract_ngram(annotation_sdf, trigram_filepath, n=3, filter_min_count=3)
+    trigram_filepath = os.path.join(extraction_dir, annotation_config["trigram_filename"])
+    extract_ngram(canonicalization_annotation_sdf, trigram_filepath, n=3, filter_min_count=3)
 
-    # extract phrase
-    phrase_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["phrase_filename"])
-    extract_phrase(annotation_sdf, phrase_filepath, filter_min_count=3, num_partitions=3)
-
-    # extract entity
-    entity_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["entity_filename"])
-    extract_entity(annotation_sdf, entity_filepath, filter_min_count=1)
-
-    # extract umls_concept
-    umls_concept_filepath = os.path.join(domain_dir, extraction_folder, annotation_config["umls_concept_filename"])
-    extract_umls_concept(annotation_sdf, umls_concept_filepath, filter_min_count=1)
+    # # ==========================================================================================================
+    #
+    # # load full annotation
+    # full_annotation_dir = os.path.join(domain_dir, annotation_config["full_annotation_folder"])
+    # full_annotation_sdf = load_annotation(spark, full_annotation_dir, annotation_config["drop_non_english"])
+    #
+    # # extract phrase
+    # phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
+    # extract_phrase(full_annotation_sdf, phrase_filepath, filter_min_count=3, num_partitions=3)
+    #
+    # # extract entity
+    # entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
+    # extract_entity(full_annotation_sdf, entity_filepath, filter_min_count=1)
+    #
+    # # extract umls_concept
+    # umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
+    # extract_umls_concept(full_annotation_sdf, umls_concept_filepath, filter_min_count=1)

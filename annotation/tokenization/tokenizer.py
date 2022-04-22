@@ -6,22 +6,24 @@ from spacy.tokens import Doc
 import json
 
 
-class MetaTokenizer(object):
+class MetadataTokenizer(object):
     def __init__(self,
                  base_tokenizer: BaseTokenizer,
                  preprocessor: Optional[Preprocessor] = None,
                  normalizer: Optional[Normalizer] = None,
                  text_fields_in_json: Optional[str] = None,
-                 meta_fields_to_keep: Optional[str] = None,
-                 meta_fields_to_drop: Optional[str] = None,
+                 metadata_fields_to_keep: Optional[str] = None,
+                 metadata_fields_to_drop: Optional[str] = None,
+                 ignore_metadata: bool = False,
                  attrs: Tuple[str, str, str] = ("metadata", "source_text", "preprocessed_text")):
 
         self.base_tokenizer = base_tokenizer
         self.preprocessor = preprocessor
         self.normalizer = normalizer
         self.text_fields_in_json = text_fields_in_json.split(",") if text_fields_in_json else None
-        self.meta_fields_to_drop = meta_fields_to_drop.split(",") if meta_fields_to_drop else None
-        self.meta_fields_to_keep = meta_fields_to_keep.split(",") if meta_fields_to_keep else None
+        self.meta_fields_to_drop = metadata_fields_to_drop.split(",") if metadata_fields_to_drop else None
+        self.meta_fields_to_keep = metadata_fields_to_keep.split(",") if metadata_fields_to_keep else None
+        self.ignore_metadata = ignore_metadata
         self._metadata, self._source_text, self._preprocessed_text = attrs
         Doc.set_extension(self._metadata, default={}, force=True)
         Doc.set_extension(self._source_text, default=None, force=True)
@@ -62,15 +64,19 @@ class MetaTokenizer(object):
             else:
                 text = record.pop(common_text_fields[0])
 
+            if self.ignore_metadata:
+                return text, {}
+
+            metadata = record
             if self.meta_fields_to_drop and self.meta_fields_to_keep:
                 raise ValueError(f"Either drop some fields or keep some fields. Cannot do both.")
             elif self.meta_fields_to_drop or self.meta_fields_to_keep:
-                drop_fields = self.meta_fields_to_drop or [i for i in record.keys() if
+                drop_fields = self.meta_fields_to_drop or [i for i in metadata.keys() if
                                                            i not in self.meta_fields_to_keep]
                 for i in drop_fields:
-                    if i in record.keys():
-                        del record[i]
-            return text, record
+                    if i in metadata.keys():
+                        del metadata[i]
+            return text, metadata
 
     def pipe(self, records: Iterable[str]) -> Iterator[Doc]:
         for record in records:

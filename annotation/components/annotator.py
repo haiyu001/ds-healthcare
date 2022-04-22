@@ -1,9 +1,10 @@
 from typing import Any, Iterator, Dict, Union
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
-from annotation.annotation_utils.annotation_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE, get_stanza_load_list
+from annotation.annotation_utils.annotation_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE
+from annotation.pipes.stanza_pipeline import get_stanza_load_list
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
-from annotation.tokenization.tokenizer import MetaTokenizer
+from annotation.tokenization.tokenizer import MetadataTokenizer
 from utils.log_util import get_logger
 from annotation.pipes.factories import *
 from spacy.tokens import Doc
@@ -35,7 +36,7 @@ class Annotator(metaclass=SingletonMeta):
                  use_gpu: bool = False,
                  lang: str = "en",
                  spacy_package: Optional[str] = None,
-                 meta_tokenizer_config: Optional[Dict[str, List[str]]] = None,
+                 metadata_tokenizer_config: Optional[Dict[str, List[str]]] = None,
                  preprocessor_config: Optional[Dict[str, bool]] = None,
                  stanza_base_tokenizer_package: Optional[Union[str, Dict[str, str]]] = None,
                  normalizer_config: Optional[Dict[str, Any]] = None,
@@ -46,7 +47,7 @@ class Annotator(metaclass=SingletonMeta):
         :param use_gpu: run annotation on GPU
         :param lang: model language
         :param spacy_package: spacy blank nlp package name
-        :param meta_tokenizer_config: None if all records are text string, otherwise set this config for json string
+        :param metadata_tokenizer_config: None if all records are text string, otherwise set this config for json string
         :param preprocessor_config: None if don't apply preprocessor, {} if use default preprocessor config
         :param stanza_base_tokenizer_package: None if use spacy base tokenizer otherwise use stanza base tokenizer
         :param normalizer_config: None if annotation don't apply normalizer otherwise set this config for normalizer
@@ -78,8 +79,8 @@ class Annotator(metaclass=SingletonMeta):
         if normalizer_config is not None:
             normalizer = Normalizer(nlp, **normalizer_config)
 
-        nlp.tokenizer = MetaTokenizer(base_tokenizer, preprocessor, normalizer, **meta_tokenizer_config) \
-            if meta_tokenizer_config is not None else MetaTokenizer(base_tokenizer, preprocessor, normalizer)
+        nlp.tokenizer = MetadataTokenizer(base_tokenizer, preprocessor, normalizer, **metadata_tokenizer_config) \
+            if metadata_tokenizer_config is not None else MetadataTokenizer(base_tokenizer, preprocessor, normalizer)
 
         # add stanza or/and spacy pipline (stanza pipeline need to run before spacy pipeline if both pipelines added)
         if stanza_pipeline_config is not None:
@@ -91,7 +92,7 @@ class Annotator(metaclass=SingletonMeta):
 
         # add custom pipes
         if custom_pipes_config:
-            for pipe_name, pipe_config in custom_pipes_config:
+            for pipe_name, pipe_config in custom_pipes_config.items():
                 nlp.add_pipe(pipe_name, config=pipe_config)
 
         logger = get_logger()
@@ -104,42 +105,46 @@ def get_nlp_model_config_str(nlp: Language) -> str:
     table = []
     lang = nlp.lang
     spacy_package = f"{nlp.meta['name']} ({nlp.meta['version']})"
-    meta_tokenizer = nlp.tokenizer
-    preprocessor = meta_tokenizer.preprocessor
-    base_tokenizer = meta_tokenizer.base_tokenizer
-    normalizer = meta_tokenizer.normalizer
+    metadata_tokenizer = nlp.tokenizer
+    preprocessor = metadata_tokenizer.preprocessor
+    base_tokenizer = metadata_tokenizer.base_tokenizer
+    normalizer = metadata_tokenizer.normalizer
     pipe_names = nlp.pipe_names
-
+    # lang and spack_package
     table.append(["lang", lang])
     table.append(["spacy_package", spacy_package])
-
-    meta_tokenizer_config = []
+    # metadata_tokenizer
+    metadata_tokenizer_config = []
     for attr in ["text_fields_in_json", "meta_fields_to_keep", "meta_fields_to_drop"]:
-        attr_value = getattr(meta_tokenizer, attr)
+        attr_value = getattr(metadata_tokenizer, attr)
         if attr_value:
-            meta_tokenizer_config.append(f"{attr} ({', '.join(attr_value)})")
-    table.append(["meta_tokenizer", ", ".join(meta_tokenizer_config)])
-
+            metadata_tokenizer_config.append(f"{attr} ({', '.join(attr_value)})")
+    table.append(["metadata_tokenizer", ", ".join(metadata_tokenizer_config)])
+    # preprocessor, base_tokenizer and normalizer
     table.append(["preprocessor", f"Yes ({preprocessor.get_preprocessor_config()})" if preprocessor else "No"])
     table.append(["base_tokenizer", base_tokenizer.__class__.__name__])
     if isinstance(base_tokenizer, StanzaBaseTokenizer):
         table[-1][-1] += \
             f" ({get_stanza_load_list(base_tokenizer.lang, base_tokenizer.tokenize_package, 'tokenize')[0][1]})"
     table.append(["normalizer", f"Yes ({normalizer.get_normalizer_config()})" if normalizer else "No"])
-
-    custom_pipes = []
-    for pipe_name in pipe_names:
-        pipe = nlp.get_pipe(pipe_name)
-        if pipe_name == "stanza_pipeline":
-            stanza_load_list = get_stanza_load_list(pipe.lang, pipe.package, pipe.processors)
-            stanza_load_list = ", ".join([f"{processor} ({pkg})" for processor, pkg in stanza_load_list])
-            table.append(["stanza_pipeline", stanza_load_list])
-        elif pipe_name == "spacy_pipeline":
-            table.append(["spacy_pipeline", ", ".join(pipe.nlp.pipe_names)])
-        else:
-            custom_pipes.append(pipe_name)
+    # stanza_pipeline
+    if "stanza_pipeline" in pipe_names:
+        pipe = nlp.get_pipe("stanza_pipeline")
+        stanza_load_list = get_stanza_load_list(pipe.lang, pipe.package, pipe.processors)
+        stanza_load_list = ", ".join([f"{processor} ({pkg})" for processor, pkg in stanza_load_list])
+        table.append(["stanza_pipeline", stanza_load_list])
+    else:
+        table.append(["stanza_pipeline", "No"])
+    # spacy_pipline
+    if "spacy_pipeline" in pipe_names:
+        pipe = nlp.get_pipe("spacy_pipeline")
+        table.append(["spacy_pipeline", ", ".join(pipe.nlp.pipe_names)])
+    else:
+        table.append(["spacy_pipeline", "No"])
+    # custom_pipes
+    custom_pipes = [pipe_name for pipe_name in pipe_names if pipe_name not in {"stanza_pipeline", "spacy_pipeline"}]
     table.append(["custom_pipes", ", ".join(custom_pipes)])
-
+    # create table string
     field_max_len, value_max_len = max(len(field) for field, _ in table), max(len(value) for _, value in table)
     field_format, value_format = f"<{field_max_len}", f"<{value_max_len}"
     line_row = "=" * (7 + field_max_len + value_max_len)
@@ -192,8 +197,8 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
         if doc.has_annotation("DEP"):
             token_data["gov"] = token.head.i
             token_data["rel"] = token.dep_
-        if doc.has_annotation("MORPH"):
-            token_data["morph"] = str(token.morph)
+        # if doc.has_annotation("MORPH"):
+        #     token_data["morph"] = str(token.morph)
         data["tokens"].append(token_data)
 
     # custom pipes

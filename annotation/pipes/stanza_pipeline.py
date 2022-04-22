@@ -1,5 +1,5 @@
-from typing import Dict, Tuple, List, Optional
-from annotation.annotation_utils.annotation_util import get_stanza_load_list
+from typing import Dict, Tuple, List, Optional, Union
+from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from utils.resource_util import get_stanza_model_dir
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
@@ -9,6 +9,8 @@ from stanza.models.common.vocab import UNK_ID
 from stanza.models.common.doc import Document, Word
 from stanza import Pipeline
 from numpy import ndarray
+import json
+import os
 
 
 class StanzaPipeline(object):
@@ -26,7 +28,7 @@ class StanzaPipeline(object):
 
         self.lang = lang
         self.package = package
-        self.processors = self._get_stanza_processors(processors, processors_packages)
+        self.processors = get_stanza_processors(processors, processors_packages)
         self.vocab = nlp.vocab
         self.use_gpu = use_gpu
         self.snlp = Pipeline(lang=self.lang,
@@ -148,13 +150,27 @@ class StanzaPipeline(object):
                 break
         return embs
 
-    def _get_stanza_processors(self, processors: Optional[str], processors_packages: Optional[str]) -> Dict[str, str]:
-        if processors_packages is None:
-            return processors or {}
-        elif processors is None:
-            raise ValueError("Need to set processors when processors_packages is not None")
-        else:
-            processors = processors.split(",")
-            processors_packages = processors_packages.split(",")
-            assert len(processors) == len(processors_packages), "stanza processors and packages doesn't match"
-            return dict(zip(processors, processors_packages))
+
+def get_stanza_processors(processors: Optional[str],
+                          processors_packages: Optional[str]) -> Union[str, Dict[str, str]]:
+    if processors_packages is None:
+        return processors or {}
+    elif processors is None:
+        raise ValueError("Need to set processors when processors_packages is not None")
+    else:
+        processors = processors.split(",")
+        processors_packages = processors_packages.split(",")
+        assert len(processors) == len(processors_packages), "stanza processors and packages doesn't match"
+        return dict(zip(processors, processors_packages))
+
+
+def get_stanza_load_list(lang: str = "en",
+                         package: str = "default",
+                         processors: Union[str, Dict[str, str]] = {}) -> List[List[str]]:
+    stanza_dir = get_stanza_model_dir()
+    resources_filepath = os.path.join(stanza_dir, "resources.json")
+    with open(resources_filepath) as infile:
+        resources = json.load(infile)
+    lang, _, package, processors = process_pipeline_parameters(lang, stanza_dir, package, processors)
+    stanza_load_list = maintain_processor_list(resources, lang, package, processors)
+    return stanza_load_list

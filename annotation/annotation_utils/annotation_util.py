@@ -1,9 +1,9 @@
-from typing import Dict, Union, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from pyspark.sql import SparkSession, DataFrame
+from annotation.pipes.stanza_pipeline import get_stanza_processors
 from utils.config_util import read_config, config_type_casting, clean_config_str
 from utils.general_util import get_filepaths_recursively
-from utils.resource_util import get_stanza_model_dir, get_spacy_model_path
-from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
+from utils.resource_util import get_spacy_model_path
 from spacy.tokenizer import Tokenizer
 from spacy import Language
 import spacy
@@ -31,18 +31,6 @@ def load_blank_nlp(lang: str, package: str, whitespace_tokenizer: bool = False) 
     return blank_nlp
 
 
-def get_stanza_load_list(lang: str = "en",
-                         package: str = "default",
-                         processors: Union[str, Dict[str, str]] = {}) -> List[List[str]]:
-    stanza_dir = get_stanza_model_dir()
-    resources_filepath = os.path.join(stanza_dir, "resources.json")
-    with open(resources_filepath) as infile:
-        resources = json.load(infile)
-    lang, _, package, processors = process_pipeline_parameters(lang, stanza_dir, package, processors)
-    stanza_load_list = maintain_processor_list(resources, lang, package, processors)
-    return stanza_load_list
-
-
 def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
     config = read_config(config_filepath)
 
@@ -60,18 +48,22 @@ def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
             custom_pipe_name = section.split(":")[-1].strip()
             custom_pipes_params[custom_pipe_name] = config_type_casting(config.items(section))
 
+    custom_pipes_config = {}
+    for custom_pipe_name, add_custom_pipe in config_type_casting(config.items("CustomPipes")).items():
+        if add_custom_pipe:
+            custom_pipes_config[custom_pipe_name] = custom_pipes_params.get(custom_pipe_name, {})
+
     nlp_model_config = dict(
         use_gpu=config["Annotator"].getboolean("use_gpu"),
         lang=clean_config_str(config["Annotator"]["lang"]),
         spacy_package=clean_config_str(config["Annotator"]["spacy_package"]),
-        meta_tokenizer_config=config_type_casting(config.items("MetaTokenizer")),
+        metadata_tokenizer_config=config_type_casting(config.items("MetadataTokenizer")),
         preprocessor_config=optional_section_configs["Preprocessor"],
         stanza_base_tokenizer_package=clean_config_str(config["BaseTokenizer"]["stanza_base_tokenizer_package"]),
         normalizer_config=optional_section_configs["Normalizer"],
         stanza_pipeline_config=optional_section_configs["StanzaPipeline"],
         spacy_pipeline_config=optional_section_configs["SpacyPipeline"],
-        custom_pipes_config=[(k, custom_pipes_params.get(k, {})) for k, v in
-                             config_type_casting(config.items("CustomPipes")).items() if v])
+        custom_pipes_config=None if not custom_pipes_config else custom_pipes_config,)
     return nlp_model_config
 
 
@@ -81,6 +73,63 @@ def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
     for section in config.sections():
         annotation_config.update(config_type_casting(config.items(section)))
     return annotation_config
+
+
+def get_canonicalization_nlp_model_config(nlp_model_config_filepath: str) -> Dict[str, Any]:
+    nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
+    nlp_model_config["metadata_tokenizer_config"]["ignore_metadata"] = True
+    nlp_model_config["normalizer_config"] = None
+    # set language_detector and spell_detector
+    if "fastlang_detector" in nlp_model_config["custom_pipes_config"]:
+        nlp_model_config["custom_pipes_config"] = {"fastlang_detector": {}}
+    else:
+        nlp_model_config["custom_pipes_config"] = {"lang_detector": {}}
+    nlp_model_config["custom_pipes_config"].update({"spell_detector": {}})
+
+    # set pos detector and lemma detector
+    if nlp_model_config["stanza_pipeline_config"]:
+        stanza_processors = get_stanza_processors(nlp_model_config["stanza_pipeline_config"]["processors"],
+                                                  nlp_model_config["stanza_pipeline_config"]["processors_packages"])
+        stanza_pos_lemma = ["tokenize", "pos", "lemma"]
+        if not stanza_processors:
+            nlp_model_config["stanza_pipeline_config"]["processors"] = ",".join(stanza_pos_lemma)
+        elif isinstance(stanza_processors, str):
+            nlp_model_config["stanza_pipeline_config"]["processors"] = \
+                ",".join([i for i in stanza_pos_lemma if i in stanza_processors])
+        else:
+            pos_lemma_processors, pos_lemma_processors_packages = [], []
+            for i in stanza_pos_lemma:
+                if i in stanza_processors:
+                    pos_lemma_processors.append(i)
+                    pos_lemma_processors_packages.append(stanza_processors[i])
+            nlp_model_config["stanza_pipeline_config"]["processors"] = ",".join(pos_lemma_processors)
+            nlp_model_config["stanza_pipeline_config"]["processors_packages"] = ",".join(pos_lemma_processors_packages)
+
+        processors = nlp_model_config["stanza_pipeline_config"]["processors"]
+        if "pos" in processors and "lemma" in processors:
+            nlp_model_config["spacy_pipeline_config"] = None
+        if "pos" not in processors and "lemma" not in processors:
+            nlp_model_config["stanza_pipeline_config"] = None
+            return nlp_model_config
+
+    if nlp_model_config["spacy_pipeline_config"]:
+        nlp_model_config["spacy_pipeline_config"]["sentence_detector"] = False
+        pipes = nlp_model_config["spacy_pipeline_config"]["pipes"]
+        spacy_pos_lemma = ["tok2vec", "tagger", "attribute_ruler", "lemmatizer"]
+        if not pipes:
+            nlp_model_config["spacy_pipeline_config"]["pipes"] = ",".join(spacy_pos_lemma)
+        else:
+            pos_lemma_pipes = []
+            for i in spacy_pos_lemma:
+                if i in pipes:
+                    pos_lemma_pipes.append(i)
+            nlp_model_config["spacy_pipeline_config"]["pipes"] = ",".join(pos_lemma_pipes)
+    return nlp_model_config
+
+
+def get_full_nlp_model_config(nlp_model_config_filepath: str, normalization_filepath: str) -> Dict[str, Any]:
+    nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
+    return nlp_model_config
 
 
 def load_annotation(spark: SparkSession,
