@@ -7,6 +7,7 @@ from hunspell.hunspell import HunspellWrap
 from pyspark.sql.types import BooleanType, ArrayType, StringType
 from pyspark.sql import DataFrame, Column
 import pyspark.sql.functions as F
+import editdistance
 import pandas as pd
 import json
 
@@ -77,6 +78,40 @@ def _set_suggesions_similarity_by_top_similar_words(suggestions: List[str],
     return suggestions_similarity if suggestions_similarity else None
 
 
+def _get_valid_word_pos(word_pos_freq_dict: Dict[str, int],
+                        word_pos_filter_min_percent: float) -> Tuple[List[str], int]:
+    word_pos_count = sum(word_pos_freq_dict.values())
+    threshold = word_pos_count * word_pos_filter_min_percent
+    valid_word_pos = [k for k, v in word_pos_freq_dict.items() if v >= threshold]
+    return valid_word_pos, word_pos_count
+
+
+def _get_spell_norm_canonical(misspelling: str, suggestions: Dict[str, float], word_to_pos: Dict[str, Dict[str, int]],
+                              spell_norm_suggestion_filter_min_percent: float,
+                              spell_norm_word_pos_filter_min_percent: float) -> str:
+    canonical_candidates = []
+    if suggestions:
+        for suggestion in suggestions:
+            suggestion_lower = suggestion.lower()
+            misspelling_pos, misspelling_count = _get_valid_word_pos(word_to_pos[misspelling],
+                                                                     spell_norm_word_pos_filter_min_percent)
+            suggestion_pos, suggestion_count = _get_valid_word_pos(word_to_pos[suggestion_lower],
+                                                                   spell_norm_word_pos_filter_min_percent)
+            common_pos = set(misspelling_pos).intersection(set(suggestion_pos))
+            if common_pos and suggestion_count * spell_norm_suggestion_filter_min_percent >= misspelling_count:
+                canonical_candidates.append(suggestion)
+    if len(canonical_candidates) == 0:
+        return None
+    elif len(canonical_candidates) == 1:
+        return canonical_candidates[0]
+    else:
+        canonical_candidates = sorted(canonical_candidates, key=lambda x: editdistance.eval(x.lower(), misspelling))
+        if canonical_candidates[0].lower() == canonical_candidates or "PROPN" in common_pos:
+            return canonical_candidates[0]
+        else:
+            return canonical_candidates[1]
+
+
 def get_bigram_norm_candidates_match_dict(bigram_norm_candidates_filepath: str,
                                           match_lowercase: bool = True) -> Dict[str, str]:
     bigram_norm_candidates_pdf = pd.read_csv(bigram_norm_candidates_filepath, encoding="utf-8",
@@ -107,11 +142,10 @@ def get_bigram_norm_candidates(vocab_sdf: DataFrame,
 def get_spell_norm_candidates(vocab_sdf: DataFrame,
                               annotation_sdf: DataFrame,
                               spell_norm_candidates_filepath: str,
-                              spell_norm_vocab_filter_min_count: int = 5,
+                              spell_norm_suggestion_filter_min_count: int = 5,
                               num_partitions: int = 1):
-    vocab_sdf = vocab_sdf.filter(F.col("count") >= spell_norm_vocab_filter_min_count)
+    vocab_sdf = vocab_sdf.filter(F.col("count") >= spell_norm_suggestion_filter_min_count)
     vocab = set([x.word for x in vocab_sdf.select("word").distinct().collect()])
-
     misspelling_sdf = annotation_sdf.select(F.explode(annotation_sdf._.misspellings).alias("misspelling"))
     misspelling_sdf = misspelling_sdf.select(F.lower(F.col("misspelling").text).alias("misspelling"),
                                              F.size(F.col("misspelling").ids).alias("count"),
@@ -143,9 +177,15 @@ def get_bigram_norm(bigram_norm_candidates_filepath: str,
 
 
 def get_spell_norm(spell_norm_candidates_filepath: str,
+                   vocab_filepath: str,
                    wv_model_filepath: str,
                    spell_norm_filepath: str,
+                   spell_norm_suggestion_filter_min_percent: float = 0.25,
+                   spell_norm_word_pos_filter_min_percent: float = 0.25,
                    wv_spell_norm_filter_min_similarity: int = 0.8):
+    vocab_pdf = pd.read_csv(vocab_filepath, encoding="utf-8", keep_default_na=False, na_values="")
+    vocab_pdf["pos"] = vocab_pdf["top_three_pos"].apply(json.loads)
+    word_to_pos = dict(zip(vocab_pdf["word"], vocab_pdf["pos"]))
     sdf = spark.read.csv(spell_norm_candidates_filepath, header=True, quote='"', escape='"', inferSchema=True)
     sdf = sdf.withColumn("top_similar_words",
                          pudf_get_misspelling_topn_similar_words(F.col("misspelling"), wv_model_filepath,
@@ -156,6 +196,12 @@ def get_spell_norm(spell_norm_candidates_filepath: str,
     pdf["suggestions_similarity"] = pdf.apply(
         lambda x: _set_suggesions_similarity_by_top_similar_words(x["suggestions"], x["top_similar_words"]), axis=1)
     pdf = pdf.drop(columns=["suggestions", "top_similar_words"])
+    pdf["canonical"] = pdf.apply(lambda x: _get_spell_norm_canonical(
+        x["misspelling"], x["suggestions_similarity"], word_to_pos, spell_norm_suggestion_filter_min_percent,
+        spell_norm_word_pos_filter_min_percent), axis=1)
+    pdf = pdf.dropna(subset=["canonical"])
+    pdf["similarity"] = pdf.apply(lambda x: x["suggestions_similarity"][x["canonical"]], axis=1)
+    pdf = pdf[["misspelling", "count", "similarity", "canonical"]]
     save_pdf(pdf, spell_norm_filepath)
 
 
@@ -193,7 +239,7 @@ if __name__ == "__main__":
     #
     # get_bigram_norm_candidates(vocab_sdf, bigram_sdf, bigram_norm_candidates_filepath)
     # get_spell_norm_candidates(vocab_sdf, canonicalization_annotation_sdf, spell_norm_candidates_filepath,
-    #                           spell_norm_vocab_filter_min_count=annotation_config["spell_norm_vocab_filter_min_count"])
+    #                           spell_norm_suggestion_filter_min_count=annotation_config["spell_norm_suggestion_filter_min_count"])
 
     # # ==========================================================================================================
 
@@ -202,7 +248,10 @@ if __name__ == "__main__":
     # get_bigram_norm(bigram_norm_candidates_filepath, wv_model_filepath,
     #                 bigram_norm_filepath, wv_bigram_norm_filter_min_similarity)
 
+    spell_norm_suggestion_filter_min_percent = annotation_config["spell_norm_suggestion_filter_min_percent"]
+    spell_norm_word_pos_filter_min_percent = annotation_config["spell_norm_word_pos_filter_min_percent"]
     wv_spell_norm_filter_min_similarity = annotation_config["wv_spell_norm_filter_min_similarity"]
     wv_model_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder, "model", "fasttext")
-    get_spell_norm(spell_norm_candidates_filepath, wv_model_filepath,
-                   spell_norm_filepath, wv_spell_norm_filter_min_similarity)
+    get_spell_norm(spell_norm_candidates_filepath, vocab_filepath, wv_model_filepath, spell_norm_filepath,
+                   spell_norm_suggestion_filter_min_percent, spell_norm_word_pos_filter_min_percent,
+                   wv_spell_norm_filter_min_similarity)
