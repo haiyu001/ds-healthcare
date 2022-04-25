@@ -1,4 +1,4 @@
-from annotation.annotation_utils.annotation_util import DEFAULT_SPACY_PACKAGE
+from annotation.annotation_utils.annotator_util import DEFAULT_SPACY_PACKAGE
 from utils.resource_util import get_model_filepath, get_spacy_model_path
 from quickumls import QuickUMLS
 

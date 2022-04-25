@@ -1,15 +1,16 @@
-from typing import Any, Iterator, Dict, Union
+from typing import Any, Iterator, Dict, Union, Optional
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
-from annotation.annotation_utils.annotation_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE
+from annotation.annotation_utils.annotator_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE
 from annotation.pipes.stanza_pipeline import get_stanza_load_list
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetadataTokenizer
+from utils.general_util import get_filepaths_recursively
 from utils.log_util import get_logger
 from annotation.pipes.factories import *
 from spacy.tokens import Doc
 from pyspark.sql.types import StringType
-from pyspark.sql import Column, functions as F
+from pyspark.sql import Column, functions as F, SparkSession, DataFrame
 from threading import Lock
 import pandas as pd
 import json
@@ -235,3 +236,16 @@ def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column
             yield doc_json_str
 
     return F.pandas_udf(annotate, StringType())(text_iter)
+
+
+def load_annotation(spark: SparkSession,
+                    annotation_dir: str,
+                    drop_non_english: bool = True,
+                    num_partitions: Optional[int] = None) -> DataFrame:
+    annotation_filepaths = get_filepaths_recursively(annotation_dir, ["json", "txt"])
+    annotation_sdf = spark.read.json(annotation_filepaths)
+    if drop_non_english:
+        annotation_sdf = annotation_sdf.filter(annotation_sdf["_"]["language"]["lang"] == "en")
+    if num_partitions is not None:
+        annotation_sdf = annotation_sdf.repartion(num_partitions)
+    return annotation_sdf

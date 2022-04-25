@@ -1,5 +1,5 @@
 from typing import Optional, Dict, List, Iterator
-from annotation.annotation_utils.annotation_util import load_blank_nlp
+from annotation.annotation_utils.annotator_util import load_blank_nlp
 from utils.spark_util import write_sdf_to_file
 from pyspark import Row
 from pyspark.sql import DataFrame, Column
@@ -93,10 +93,10 @@ def extact_wv_corpus_from_annotation(annotation_sdf: DataFrame,
 
 
 if __name__ == "__main__":
-    from annotation.annotation_utils.annotation_util import read_nlp_model_config, read_annotation_config
+    from annotation.annotation_utils.annotator_util import read_nlp_model_config, read_annotation_config
     from utils.resource_util import get_repo_dir, get_data_filepath
-    from annotation.annotation_utils.annotation_util import load_annotation
-    from annotation.components.canonicalizer import get_bigram_norm_candidates_match_dict
+    from annotation.components.annotator import load_annotation
+    from annotation.components.canonicalizer_bigram import get_bigram_canonicalization_candidates_match_dict
     from utils.spark_util import get_spark_session
     import os
 
@@ -108,19 +108,23 @@ if __name__ == "__main__":
     domain_dir = get_data_filepath(annotation_config["domain"])
     extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
+    bigram_spell_canonicalization_dir = os.path.join(canonicalization_dir,
+                                                     annotation_config["bigram_spell_canonicalization_folder"])
     canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
 
     canonicalization_annotation_dir = os.path.join(canonicalization_dir,
                                                    annotation_config["canonicalization_annotation_folder"])
-    bigram_norm_candidates_filepath = os.path.join(canonicalization_dir,
-                                                   annotation_config["bigram_norm_candidates_filename"])
+    bigram_canonicalization_candidates_filepath = os.path.join(bigram_spell_canonicalization_dir,
+                                                   annotation_config["bigram_canonicalization_candidates_filename"])
     wv_corpus_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
                                       annotation_config["canonicalization_wv_corpus_filename"])
 
-    spark = get_spark_session("test", config_updates={}, master_config="local[4]", log_level="WARN")
+    spark_cores = 6
+    spark = get_spark_session("test", config_updates={}, master_config=f"local[{spark_cores}]", log_level="WARN")
 
     match_lowercase = annotation_config["wv_corpus_match_lowercase"]
-    ngram_match_dict = get_bigram_norm_candidates_match_dict(bigram_norm_candidates_filepath, match_lowercase)
+    ngram_match_dict = get_bigram_canonicalization_candidates_match_dict(bigram_canonicalization_candidates_filepath,
+                                                                         match_lowercase)
     annotation_sdf = load_annotation(spark, canonicalization_annotation_dir, annotation_config["drop_non_english"])
 
     extact_wv_corpus_from_annotation(

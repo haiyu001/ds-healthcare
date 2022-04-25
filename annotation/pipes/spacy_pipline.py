@@ -1,5 +1,5 @@
 from typing import Optional
-from annotation.annotation_utils.annotation_util import DEFAULT_SPACY_PACKAGE, get_spacy_model_pipes
+from annotation.annotation_utils.annotator_util import DEFAULT_SPACY_PACKAGE, get_spacy_model_pipes
 from utils.resource_util import get_spacy_model_path
 from spacy.tokens import Doc
 import spacy

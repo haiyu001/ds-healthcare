@@ -1,8 +1,6 @@
-from typing import Dict, List, Any, Optional
-from pyspark.sql import SparkSession, DataFrame
+from typing import Dict, List, Any
 from annotation.pipes.stanza_pipeline import get_stanza_processors
 from utils.config_util import read_config, config_type_casting, clean_config_str
-from utils.general_util import get_filepaths_recursively
 from utils.resource_util import get_spacy_model_path
 from spacy.tokenizer import Tokenizer
 from spacy import Language
@@ -29,6 +27,14 @@ def load_blank_nlp(lang: str, package: str, whitespace_tokenizer: bool = False) 
     if whitespace_tokenizer:
         blank_nlp.tokenizer = Tokenizer(blank_nlp.vocab, token_match=re.compile(r'\S+').match)
     return blank_nlp
+
+
+def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
+    config = read_config(config_filepath)
+    annotation_config = {}
+    for section in config.sections():
+        annotation_config.update(config_type_casting(config.items(section)))
+    return annotation_config
 
 
 def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
@@ -65,14 +71,6 @@ def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
         spacy_pipeline_config=optional_section_configs["SpacyPipeline"],
         custom_pipes_config=None if not custom_pipes_config else custom_pipes_config,)
     return nlp_model_config
-
-
-def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
-    config = read_config(config_filepath)
-    annotation_config = {}
-    for section in config.sections():
-        annotation_config.update(config_type_casting(config.items(section)))
-    return annotation_config
 
 
 def get_canonicalization_nlp_model_config(nlp_model_config_filepath: str) -> Dict[str, Any]:
@@ -132,14 +130,3 @@ def get_full_nlp_model_config(nlp_model_config_filepath: str, normalization_file
     return nlp_model_config
 
 
-def load_annotation(spark: SparkSession,
-                    annotation_dir: str,
-                    drop_non_english: bool = True,
-                    num_partitions: Optional[int] = None) -> DataFrame:
-    annotation_filepaths = get_filepaths_recursively(annotation_dir, ["json", "txt"])
-    annotation_sdf = spark.read.json(annotation_filepaths)
-    if drop_non_english:
-        annotation_sdf = annotation_sdf.filter(annotation_sdf["_"]["language"]["lang"] == "en")
-    if num_partitions is not None:
-        annotation_sdf = annotation_sdf.repartion(num_partitions)
-    return annotation_sdf

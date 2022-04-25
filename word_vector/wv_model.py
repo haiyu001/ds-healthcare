@@ -62,7 +62,7 @@ def build_word2vec(vector_size: int,
 
 
 if __name__ == "__main__":
-    from annotation.annotation_utils.annotation_util import read_annotation_config
+    from annotation.annotation_utils.annotator_util import read_annotation_config
     from utils.resource_util import get_repo_dir, get_data_filepath
     import os
 
@@ -73,8 +73,8 @@ if __name__ == "__main__":
 
     domain_dir = get_data_filepath(annotation_config["domain"])
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    bigram_norm_candidates_filepath = os.path.join(canonicalization_dir,
-                                                   annotation_config["bigram_norm_candidates_filename"])
+    bigram_canonicalization_candidates_filepath = os.path.join(canonicalization_dir,
+                                                   annotation_config["bigram_canonicalization_candidates_filename"])
     wv_corpus_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
                                       annotation_config["canonicalization_wv_corpus_filename"])
     wv_model_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         wv_corpus_filepath=wv_corpus_filepath,
         wv_model_filepath=wv_model_filepath,
         min_count=5,
-        workers=1,
+        workers=4,
         epochs=10,
         max_final_vocab=100000,
     )
