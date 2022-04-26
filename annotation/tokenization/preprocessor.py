@@ -8,6 +8,11 @@ from textacy.preprocessing.normalize import whitespace as normalize_whitespace
 from textacy.preprocessing.resources import RE_LINEBREAK
 import re
 
+REPLACE_EMAIL = "RP_EMAIL"
+REPLACE_URL = "RP_URL"
+REPLACE_HASHTAG = "RP_HASHTAG"
+REPLACE_HANDLE = "RP_HANDLE"
+
 
 class Preprocessor(object):
 
@@ -48,16 +53,16 @@ class Preprocessor(object):
             text = RE_LINEBREAK.sub(r" ", text)
 
         if self.rp_emails or self.rm_emails:
-            text = replace_emails(text, repl="RP_EMAIL" if not self.rm_emails else " ")
+            text = replace_emails(text, repl=REPLACE_EMAIL if not self.rm_emails else " ")
 
         if self.rp_urls or self.rm_urls:
-            text = replace_urls(text, repl="RP_URL" if not self.rm_urls else " ")
+            text = replace_urls(text, repl=REPLACE_URL if not self.rm_urls else " ")
 
         if self.rp_hashtags or self.rm_hashtags:
-            text = replace_hashtags(text, repl="RP_HASHTAG" if not self.rm_hashtags else " ")
+            text = replace_hashtags(text, repl=REPLACE_HASHTAG if not self.rm_hashtags else " ")
 
         if self.rp_handles or self.rm_handles:
-            text = replace_user_handles(text, repl="RP_HANDLE" if not self.rm_handles else " ")
+            text = replace_user_handles(text, repl=REPLACE_HANDLE if not self.rm_handles else " ")
 
         if self.norm_punctuation:  # norm repeating punctuation
             for p in ",;:":

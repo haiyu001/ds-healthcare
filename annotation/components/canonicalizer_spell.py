@@ -76,7 +76,8 @@ def _get_correction(misspelling: str,
                     spell_canonicalization_suggestion_filter_min_count: int,
                     spell_canonicalization_edit_distance_filter_max_count: int,
                     spell_canonicalization_misspelling_filter_max_percent: float,
-                    spell_canonicalization_word_pos_filter_min_percent: float) -> Tuple[Optional[str], Optional[int]]:
+                    spell_canonicalization_word_pos_filter_min_percent: float) -> \
+        Tuple[Optional[str], Optional[int], Optional[float]]:
     edit_distance_threshold = 1 if len(misspelling) <= 4 else spell_canonicalization_edit_distance_filter_max_count
     misspelling_pos, misspelling_count = _get_valid_word_pos(word_to_pos[misspelling],
                                                              spell_canonicalization_word_pos_filter_min_percent)

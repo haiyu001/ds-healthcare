@@ -130,3 +130,9 @@ def extract_topn_common(sdf: DataFrame,
     return sdf
 
 
+def union_sdfs(*sdfs: DataFrame) -> DataFrame:
+    all_sdf = sdfs[0]
+    for sdf in sdfs[1:]:
+        all_sdf = all_sdf.unionByName(sdf, allowMissingColumns=True)
+    return all_sdf
+

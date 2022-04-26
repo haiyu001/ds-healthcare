@@ -44,6 +44,12 @@ prefix_trigram_base_word_pos = [
     "NOUN",
 ]
 
+ampersand_trigram_word_pos = [
+    "ADJ", 
+    "NOUN", 
+    "PROPN",
+]
+
 hyphen_trigram_two_words_pos = [
     ("NOUN", "NOUN"),
     ("NOUN", "ADJ"),

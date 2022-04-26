@@ -29,9 +29,11 @@ def pudf_get_valid_suggestions(suggestions: Column, unigram: Set[str]) -> Column
 def _get_unigram_bigram_similarity(unigram: str,
                                    bigram: str,
                                    wv_model: Union[FastTextKeyedVectors, KeyedVectors]) -> Optional[float]:
+    similarity = None
     concat_bigram = "_".join(bigram.split())
     if unigram in wv_model.key_to_index and concat_bigram in wv_model.key_to_index:
-        return wv_model.similarity(unigram, concat_bigram)
+        similarity = wv_model.similarity(unigram, concat_bigram)
+    return similarity
 
 
 def _get_bigram_canonicalization_canonical(unigram: str, bigram: str, unigram_count: int, bigram_count: int,
