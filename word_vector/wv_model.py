@@ -86,7 +86,7 @@ if __name__ == "__main__":
         wv_corpus_filepath=wv_corpus_filepath,
         wv_model_filepath=wv_model_filepath,
         min_count=5,
-        workers=4,
+        workers=1,
         epochs=10,
         max_final_vocab=100000,
     )

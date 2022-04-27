@@ -55,7 +55,7 @@ def load_json_file(input_filepath: str) -> Dict[Any, Any]:
         return json_dict
 
 
-def dump_json_file(json_dict: Dict[Any, Any], ouput_filepath: str):
-    with open(ouput_filepath, "w", encoding="utf-8") as output:
+def dump_json_file(json_dict: Dict[Any, Any], output_filepath: str):
+    with open(output_filepath, "w", encoding="utf-8") as output:
         json.dump(json_dict, output, ensure_ascii=False, indent=4)
 

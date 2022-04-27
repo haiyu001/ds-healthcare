@@ -1,4 +1,5 @@
-from typing import Dict, List
+from typing import Dict, List, Any, Optional, Tuple
+from utils.general_util import load_json_file
 from spacy.matcher import Matcher
 from spacy.tokens import Doc, Token
 from spacy.util import filter_spans
@@ -9,36 +10,54 @@ class Normalizer(object):
 
     def __init__(self,
                  nlp: Language,
-                 replace_words: Dict[str, str] = {},
-                 merge_words: Dict[str, str] = {},
-                 split_words: Dict[str, str] = {},
-                 replace_ignore_case: bool = True,
-                 merge_ignore_case: bool = True,
-                 split_ignore_case: bool = True):
-
+                 replace_norm: Optional[Dict[str, Dict[str, Any]]] = None,
+                 merge_norm: Optional[Dict[str, Dict[str, Any]]] = None,
+                 split_norm: Optional[Dict[str, Dict[str, Any]]] = None,
+                 normalization_json_filepath: Optional[str] = None):
         self.vocab = nlp.vocab
-        self.merge_words = merge_words
-        self.split_words = split_words
-        self.replace_words = replace_words
-        self.merge_ignore_case = merge_ignore_case
-        self.split_ignore_case = split_ignore_case
-        self.replace_ignore_case = replace_ignore_case
-        self.merge_matcher = self._create_merge_matcher()
+        self.normalization_json_filepath = normalization_json_filepath
+        if self.normalization_json_filepath is None:
+            self.replace_norm = replace_norm
+            self.merge_norm = merge_norm
+            self.split_norm = split_norm
+        else:
+            self.replace_norm, self.merge_norm, self.split_norm = self.load_normalization()
+        if self.merge_norm:
+            self.merge_matcher = self._create_merge_matcher()
         Token.set_extension("norm_text", default=None, force=True)
-        Token.set_extension("norm_space", default=None, force=True)
 
     def normalize(self, doc: Doc) -> Doc:
-        self.normalize_replace(doc)
-        self.normalize_merge(doc)
-        norm_spaces = self.normalize_split(doc)
+        norm_spaces = None
+        if self.replace_norm:
+            self.normalize_replace(doc)
+        if self.merge_norm:
+            self.normalize_merge(doc)
+        if self.split_norm:
+            norm_spaces = self.normalize_split(doc)
         norm_doc = self.create_norm_doc(doc, norm_spaces)
         return norm_doc
 
+    def load_normalization(self) -> \
+            Tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+        normalization_dict = load_json_file(self.normalization_json_filepath)
+        self.replace_norm, self.merge_norm, self.split_norm = {}, {}, {}
+        for id, id_normalization_dict in normalization_dict.items():
+            normalization_type = id_normalization_dict["type"]
+            if normalization_type == "replace":
+                self.replace_norm[id] = id_normalization_dict
+            elif normalization_type == "merge":
+                self.merge_norm[id] = id_normalization_dict
+            elif normalization_type == "split":
+                self.split_norm[id] = id_normalization_dict
+            else:
+                raise ValueError(f"Unsupported normalization type of {normalization_type}")
+        return self.replace_norm, self.merge_norm, self.split_norm
+
     def _create_merge_matcher(self) -> Matcher:
         matcher = Matcher(self.vocab)
-        case = "LOWER" if self.merge_ignore_case else "TEXT"
-        for key_id in self.merge_words:
-            pattern = [{case: word} for word in key_id.split()]
+        for key_id in self.merge_norm:
+            case = "LOWER" if self.merge_norm[key_id]["case_insensitive"] else "TEXT"
+            pattern = [{case: word} for word in self.merge_norm[key_id]["key"].split()]
             matcher.add(key_id, [pattern])
         return matcher
 
@@ -62,19 +81,19 @@ class Normalizer(object):
     def normalize_replace(self, doc: Doc):
         for token in doc:
             token_text = token.text
-            token_match = token.lower_ if self.replace_ignore_case else token_text
-            if token_match in self.replace_words:
-                norm_text = self._match_case(token_text, self.replace_words[token_match])
+            if token.lower_ in self.replace_norm and (self.replace_norm[token.lower_]["case_insensitive"] or
+                                                      self.replace_norm[token.lower_]["key"] == token_text):
+                norm_text = self._match_case(token_text, self.replace_norm[token.lower_]["value"])
                 token._.set("norm_text", norm_text)
 
     def normalize_merge(self, doc: Doc):
-        merge_spans = {doc[token_start: token_end]: self.merge_words[self.vocab.strings[match_id]]
+        merge_spans = {doc[token_start: token_end]: self.merge_norm[self.vocab.strings[match_id]]["value"]
                        for match_id, token_start, token_end in self.merge_matcher(doc)}
         filtered_merge_spans = filter_spans(list(merge_spans.keys()))
         merge_spans = {k: v for k, v in merge_spans.items() if k in filtered_merge_spans}
         with doc.retokenize() as retokenizer:
             for merge_span in merge_spans:
-                norm_text = self._match_case(merge_span.text, merge_spans[merge_span]["merge"])
+                norm_text = self._match_case(merge_span.text, merge_spans[merge_span])
                 attrs = {"_": {"norm_text": norm_text}}
                 retokenizer.merge(merge_span, attrs=attrs)
 
@@ -83,11 +102,11 @@ class Normalizer(object):
         with doc.retokenize() as retokenizer:
             for token in doc:
                 token_text = token.text
-                token_match = token.lower_ if self.split_ignore_case else token_text
-                if token_match in self.split_words:
-                    split_parts = self.split_words[token_match].split()
-                    len_parts = len(split_parts)
+                if token.lower_ in self.split_norm and (self.split_norm[token.lower_]["case_insensitive"] or
+                                                        self.split_norm[token.lower_]["key"] == token_text):
+                    split_parts = self.split_norm[token.lower_]["value"].split()
                     orths = self._map_split_text(token_text, split_parts)
+                    len_parts = len(split_parts)
                     dummy_heads = [(token, i) for i in range(len_parts)]
                     retokenizer.split(token, orths, heads=dummy_heads)
                     norm_spaces.extend([True] * (len_parts - 1) + [token.whitespace_.isspace()])
@@ -95,20 +114,30 @@ class Normalizer(object):
                     norm_spaces.append(token.whitespace_.isspace())
         return norm_spaces
 
-    def create_norm_doc(self, doc: Doc, norm_spaces: List[bool]) -> Doc:
-        norm_words, sent_starts = [], [] if doc.has_annotation("SENT_START") else None
+    def create_norm_doc(self, doc: Doc, norm_spaces: Optional[List[bool]] = None) -> Doc:
+        add_norm_space = norm_spaces is None
+        add_sent_start = doc.has_annotation("SENT_START")
+        sent_starts = None
+        if add_norm_space:
+            norm_spaces = []
+        if add_sent_start:
+            sent_starts = []
+        norm_words = []
         org_texts_with_ws = []
+
         for token in doc:
             org_texts_with_ws.append(token.text + token.whitespace_)
             norm_words.append(token._.get("norm_text") or token.text)
-            if sent_starts is not None:
+            if add_norm_space:
+                norm_spaces.append(token.whitespace_.isspace())
+            if add_sent_start:
                 sent_starts.append(token.is_sent_start)
-        norm_doc = Doc(self.vocab, words=norm_words, spaces=norm_spaces, sent_starts=sent_starts,
+        norm_doc = Doc(self.vocab,
+                       words=norm_words,
+                       spaces=norm_spaces,
+                       sent_starts=sent_starts,
                        user_data={"org_texts_with_ws": org_texts_with_ws})
         return norm_doc
 
     def get_normalizer_config(self) -> str:
-        ignore_case_config = []
-        for attr in ["replace_ignore_case", "merge_ignore_case", "split_ignore_case"]:
-            ignore_case_config.append(f"{attr}={getattr(self, attr)}")
-        return ", ".join(ignore_case_config)
+        return f" ({self.normalization_json_filepath})" if self.normalization_json_filepath is not None else ""

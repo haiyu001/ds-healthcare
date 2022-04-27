@@ -3,8 +3,8 @@ from annotation.annotation_utils.canonicalizer_util import prefixes, hyphen_trig
     prefix_trigram_base_word_pos, hyphen_trigram_two_words_pos, ampersand_trigram_word_pos, intensifiers
 from annotation.tokenization.preprocessor import REPLACE_EMAIL, REPLACE_URL, REPLACE_HASHTAG, REPLACE_HANDLE
 from annotation.pipes.spell_detector import get_hunspell_checker
+from utils.general_util import save_pdf, dump_json_file, split_filepath
 from hunspell.hunspell import HunspellWrap
-from utils.general_util import save_pdf
 import pandas as pd
 import operator
 import json
@@ -71,14 +71,18 @@ def _load_unigram_bigram_trigram_dict(unigram_filepath: str,
 def _filter_canonicalization_dict(data_dict: Dict[str, Dict[str, str]],
                                   canonicalization_dict: Dict[str, str],
                                   canonicalization_type: str,
-                                  canonicalization_source: str) -> Dict[str, Dict[str, str]]:
+                                  canonicalization_source: str,
+                                  case_insensitive: bool = True) -> Dict[str, Dict[str, str]]:
     filtered_canonicalization_dict = {}
     for canonicalization_key, canonicalization_value in canonicalization_dict.items():
-        if canonicalization_key not in data_dict:
-            filtered_canonicalization_dict[canonicalization_key] = {
-                "canonicalization_value": canonicalization_value,
-                "canonicalization_type": canonicalization_type,
-                "canonicalization_source": canonicalization_source,
+        canonicalization_key_lower = canonicalization_key.lower()
+        if canonicalization_key_lower not in data_dict:
+            filtered_canonicalization_dict[canonicalization_key_lower] = {
+                "key": canonicalization_key,
+                "value": canonicalization_value,
+                "type": canonicalization_type,
+                "source": canonicalization_source,
+                "case_insensitive": case_insensitive,
             }
     return filtered_canonicalization_dict
 
@@ -175,30 +179,34 @@ def get_canonicalization(bigram_canonicalization_filepath: str,
                                                trigram_words_to_count)
     ampersand_merge_dict = get_ampersand_canonicalization(unigram_to_pos, trigram_words_to_count)
 
-    merge_dict.update(_filter_canonicalization_dict(merge_dict, prefix_merge_dict, "merge", "prefix"))
-    merge_dict.update(_filter_canonicalization_dict(merge_dict, hyphen_merge_dict, "merge", "hyphen"))
-    merge_dict.update(_filter_canonicalization_dict(merge_dict, ampersand_merge_dict, "merge", "ampersand"))
-    replace_dict.update(_filter_canonicalization_dict(replace_dict, prefix_replace_dict, "replace", "prefix"))
-    replace_dict.update(_filter_canonicalization_dict(replace_dict, hyphen_replace_dict, "replace", "hyphen"))
+    merge_dict.update(_filter_canonicalization_dict(merge_dict, prefix_merge_dict, "merge", "prefix", True))
+    merge_dict.update(_filter_canonicalization_dict(merge_dict, hyphen_merge_dict, "merge", "hyphen", True))
+    merge_dict.update(_filter_canonicalization_dict(merge_dict, ampersand_merge_dict, "merge", "ampersand", True))
+    replace_dict.update(_filter_canonicalization_dict(replace_dict, prefix_replace_dict, "replace", "prefix", True))
+    replace_dict.update(_filter_canonicalization_dict(replace_dict, hyphen_replace_dict, "replace", "hyphen", True))
 
     # add bigram and spell canonicalization
     bigram_merge_dict, bigram_split_dict, spell_replace_dict = \
         get_bigram_and_spell_canonicalization(bigram_canonicalization_filepath, spell_canonicalization_filepath)
 
-    merge_dict.update(_filter_canonicalization_dict(merge_dict, bigram_merge_dict, "merge", "bigram"))
-    replace_dict.update(_filter_canonicalization_dict(replace_dict, spell_replace_dict, "replace", "spell"))
-    split_dict.update(_filter_canonicalization_dict(replace_dict, bigram_split_dict, "split", "bigram"))
+    merge_dict.update(_filter_canonicalization_dict(merge_dict, bigram_merge_dict, "merge", "bigram", True))
+    replace_dict.update(_filter_canonicalization_dict(replace_dict, spell_replace_dict, "replace", "spell", True))
+    split_dict.update(_filter_canonicalization_dict(replace_dict, bigram_split_dict, "split", "bigram", True))
 
     # filter preprocessor replacement
     replace_dict = _filter_preprocesor_replacement(replace_dict)
     merge_dict = _filter_preprocesor_replacement(merge_dict)
     split_dict = _filter_preprocesor_replacement(split_dict)
 
-    # create canonicalization pdf
+    # dump canonicalization to json
     canonicalization_dict = {**replace_dict, **merge_dict, **split_dict}
+    file_dir, file_name, file_format = split_filepath(canonicalization_filepath)
+    dump_json_file(canonicalization_dict, os.path.join(file_dir, f"{file_name}.json"))
+
+    # save canonicalization to csv
     canonicalization_pdf = pd.DataFrame(canonicalization_dict).transpose().reset_index()
-    canonicalization_pdf = canonicalization_pdf.rename(columns={"index": "canonicalization_key"})
-    canonicalization_pdf = canonicalization_pdf.sort_values(by=["canonicalization_type", "canonicalization_source"])
+    canonicalization_pdf = canonicalization_pdf.rename(columns={"index": "id"})
+    canonicalization_pdf = canonicalization_pdf.sort_values(by=["type", "source"])
     save_pdf(canonicalization_pdf, canonicalization_filepath)
 
 
@@ -213,16 +221,19 @@ if __name__ == "__main__":
     domain_dir = get_data_filepath(annotation_config["domain"])
     extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    bigram_spell_canonicalization_dir = os.path.join(canonicalization_dir,
-                                                     annotation_config["bigram_spell_canonicalization_folder"])
+    canonicalization_extraction_dir = os.path.join(
+        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
 
-    unigram_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_unigram_filename"])
-    bigram_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_bigram_filename"])
-    trigram_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_trigram_filename"])
-    bigram_canonicalization_filepath = os.path.join(bigram_spell_canonicalization_dir,
-                                                    annotation_config["bigram_canonicalization_filename"])
-    spell_canonicalization_filepath = os.path.join(bigram_spell_canonicalization_dir,
-                                                   annotation_config["spell_canonicalization_filename"])
+    unigram_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["canonicalization_unigram_filename"])
+    bigram_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["canonicalization_bigram_filename"])
+    trigram_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["canonicalization_trigram_filename"])
+    bigram_canonicalization_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["bigram_canonicalization_filename"])
+    spell_canonicalization_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["spell_canonicalization_filename"])
     canonicalization_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_filename"])
     conjunction_trigram_canonicalization_filter_min_count = \
         annotation_config["conjunction_trigram_canonicalization_filter_min_count"]

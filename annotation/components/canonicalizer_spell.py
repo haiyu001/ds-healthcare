@@ -128,7 +128,7 @@ def get_spell_canonicalization_candidates(unigram_sdf: DataFrame,
     write_sdf_to_file(spell_canonicalization_candidates_sdf, spell_canonicalization_candidates_filepath, num_partitions)
 
 
-def get_spell_canonicalization(spell_canonicalization_candidates_filepath: str,
+def get_spell_canonicalization(spell_canonicalization_candidates_sdf: DataFrame,
                                unigram_filepath: str,
                                wv_model_filepath: str,
                                spell_canonicalization_filepath: str,
@@ -138,12 +138,10 @@ def get_spell_canonicalization(spell_canonicalization_candidates_filepath: str,
                                spell_canonicalization_word_pos_filter_min_percent: float = 0.25,
                                wv_spell_canonicalization_filter_min_similarity: float = 0.8):
     word_to_pos = _load_word_to_pos(unigram_filepath)
-    sdf = spark.read.csv(spell_canonicalization_candidates_filepath, header=True,
-                         quote='"', escape='"', inferSchema=True)
-    sdf = sdf.withColumn(
+    spell_canonicalization_candidates_sdf = spell_canonicalization_candidates_sdf.withColumn(
         "top_similar_words", pudf_get_misspelling_topn_similar_words(F.col("misspelling"), wv_model_filepath,
                                                                      wv_spell_canonicalization_filter_min_similarity))
-    pdf = sdf.toPandas()
+    pdf = spell_canonicalization_candidates_sdf.toPandas()
     pdf["suggestions"] = pdf["suggestions"].apply(json.loads)
     pdf["top_similar_words"] = pdf["top_similar_words"].apply(json.loads)
     pdf["suggestions_similarity"] = pdf.apply(
@@ -173,32 +171,36 @@ if __name__ == "__main__":
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
     canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
 
-    unigram_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_unigram_filename"])
-    canonicalization_annotation_dir = os.path.join(canonicalization_dir,
-                                                   annotation_config["canonicalization_annotation_folder"])
-    bigram_spell_canonicalization_dir = os.path.join(canonicalization_dir,
-                                                     annotation_config["bigram_spell_canonicalization_folder"])
-    spell_canonicalization_candidates_filepath = os.path.join(bigram_spell_canonicalization_dir,
-                                                              annotation_config[
-                                                                  "spell_canonicalization_candidates_filename"])
-    spell_canonicalization_filepath = os.path.join(bigram_spell_canonicalization_dir,
-                                                   annotation_config["spell_canonicalization_filename"])
+    canonicalization_annotation_dir = os.path.join(
+        canonicalization_dir, annotation_config["canonicalization_annotation_folder"])
+    canonicalization_extraction_dir = os.path.join(
+        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
+    unigram_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["canonicalization_unigram_filename"])
+    spell_canonicalization_candidates_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["spell_canonicalization_candidates_filename"])
+    spell_canonicalization_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["spell_canonicalization_filename"])
 
     spark_cores = 6
     spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="WARN")
 
-    # spell canonicalization candidates
+    # ================================ spell canonicalization candidates =====================================
+
     unigram_sdf = spark.read.csv(unigram_filepath, header=True, quote='"', escape='"', inferSchema=True)
-    canonicalization_annotation_sdf = load_annotation(spark, canonicalization_annotation_dir,
-                                                      annotation_config["drop_non_english"])
+    canonicalization_annotation_sdf = load_annotation(
+        spark, canonicalization_annotation_dir, annotation_config["drop_non_english"])
     get_spell_canonicalization_candidates(unigram_sdf,
                                           canonicalization_annotation_sdf,
                                           spell_canonicalization_candidates_filepath,
                                           annotation_config["spell_canonicalization_suggestion_filter_min_count"])
 
-    # spell canonicalization
+    # ===================================== spell canonicalization ==========================================
+
+    spell_canonicalization_candidates_sdf = spark.read.csv(
+        spell_canonicalization_candidates_filepath, header=True, quote='"', escape='"', inferSchema=True)
     wv_model_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder, "model", "fasttext")
-    get_spell_canonicalization(spell_canonicalization_candidates_filepath,
+    get_spell_canonicalization(spell_canonicalization_candidates_sdf,
                                unigram_filepath,
                                wv_model_filepath,
                                spell_canonicalization_filepath,

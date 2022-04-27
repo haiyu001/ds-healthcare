@@ -8,17 +8,35 @@ import os
 if __name__ == "__main__":
 
     dummy_normalizer_config = {
-        "merge_words": {"battery life": {"merge": "batterylife", "type": "canonical"}},
-        "split_words": {"autonomouscars": "autonomous cars"},
-        "replace_words": {"thesr": "these"},
+        "replace_norm": {
+            "thesr": {
+                "key": "thesr",
+                "value": "these",
+                "case_insensitive": True,
+            }
+        },
+        "merge_norm": {
+            "battery life": {
+                "key": "battery life",
+                "value": "batterylife",
+                "case_insensitive": True,
+            }
+        },
+        "split_norm": {
+            "autonomouscars": {
+                "key": "autonomouscars",
+                "value": "autonomous cars",
+                "case_insensitive": True,
+            }
+        },
     }
 
     nlp_model_config_filepath = os.path.join(get_repo_dir(), "conf", "nlp_model_template.cfg")
 
-    # nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
-    # nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
+    # nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
 
-    nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
+    nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
+    nlp_model_config["normalizer_config"].update(dummy_normalizer_config)
 
     nlp = Annotator(**nlp_model_config).nlp
 

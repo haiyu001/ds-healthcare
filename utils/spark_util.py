@@ -61,13 +61,13 @@ def _merge_spark_text_files(save_filepath: str, part_filepaths: List[str]):
                     output_file.write(line)
 
 
-def write_sdf_to_file(sdf: DataFrame, save_filepath: str, num_partitions: int = 1):
+def write_sdf_to_file(sdf: DataFrame, save_filepath: str, num_partitions: Optional[int] = None):
     file_dir, file_name, file_format = split_filepath(save_filepath)
     write_sdf_to_dir(sdf, file_dir, file_name, file_format, num_partitions=num_partitions)
     spark_data_dir = os.path.join(file_dir, file_name)
     part_filepaths = [os.path.join(spark_data_dir, part_filename)
                       for part_filename in os.listdir(spark_data_dir) if part_filename.startswith("part-")]
-    if num_partitions > 1:
+    if len(part_filepaths) > 1:
         if file_format == "txt" or file_format == "text":
             _merge_spark_text_files(save_filepath, part_filepaths)
         else:
@@ -117,16 +117,13 @@ def extract_topn_common(sdf: DataFrame,
                         partition_by: str,
                         key_by: str,
                         value_by: str,
-                        topn: int = 3,
-                        save_filepath: Optional[str] = None) -> DataFrame:
+                        topn: int = 3) -> DataFrame:
     w = Window.partitionBy(partition_by).orderBy(F.col(value_by).desc())
     sdf = sdf.select(partition_by, key_by, value_by)
     sdf = sdf.withColumn("rank", F.row_number().over(w))
     sdf = sdf.filter(F.col("rank") <= topn).drop("rank")
     sdf = sdf.groupby(partition_by) \
         .agg(F.to_json(F.map_from_entries(F.collect_list(F.struct(key_by, value_by)))).alias(key_by))
-    if save_filepath:
-        write_sdf_to_file(sdf, save_filepath)
     return sdf
 
 

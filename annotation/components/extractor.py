@@ -142,50 +142,64 @@ if __name__ == "__main__":
 
     domain_dir = get_data_filepath(annotation_config["domain"])
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
+    canonicalization_extraction_dir = os.path.join(
+        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
     extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
 
     spark_cores = 6
     spark = get_spark_session("test", config_updates={}, master_config=f"local[{spark_cores}]", log_level="WARN")
 
-    # ==========================================================================================================
+    # ======================================== canonicalizer =========================================
 
-    # load canonicalization annotation
-    canonicalization_annotation_dir = os.path.join(canonicalization_dir,
-                                                   annotation_config["canonicalization_annotation_folder"])
-    canonicalization_annotation_sdf = load_annotation(spark, canonicalization_annotation_dir,
-                                                      annotation_config["drop_non_english"])
+    # # load canonicalization annotation
+    # canonicalization_annotation_dir = os.path.join(
+    #     canonicalization_dir, annotation_config["canonicalization_annotation_folder"])
+    # canonicalization_annotation_sdf = load_annotation(spark, canonicalization_annotation_dir,
+    #                                                   annotation_config["drop_non_english"])
+    #
+    # # extract canonicalization unigram
+    # canonicalization_unigram_filepath = os.path.join(
+    #     canonicalization_extraction_dir, annotation_config["canonicalization_unigram_filename"])
+    # extract_unigram(canonicalization_annotation_sdf, canonicalization_unigram_filepath)
+    #
+    # # extract canonicalization bigram
+    # canonicalization_bigram_filepath = os.path.join(
+    #     canonicalization_extraction_dir, annotation_config["canonicalization_bigram_filename"])
+    # extract_ngram(canonicalization_annotation_sdf, canonicalization_bigram_filepath,
+    #               n=2, ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
+    #
+    # # extract canonicalization trigram
+    # canonicalization_trigram_filepath = os.path.join(
+    #     canonicalization_extraction_dir, annotation_config["canonicalization_trigram_filename"])
+    # extract_ngram(canonicalization_annotation_sdf, canonicalization_trigram_filepath,
+    #               n=3, ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
+
+    # ======================================== annotator ===============================================
+
+    # load annotation
+    annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
+    annotation_sdf = load_annotation(spark, annotation_dir, annotation_config["drop_non_english"])
 
     # extract unigram
-    unigram_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_unigram_filename"])
-    extract_unigram(canonicalization_annotation_sdf, unigram_filepath)
+    unigram_filepath = os.path.join(extraction_dir, annotation_config["canonicalization_unigram_filename"])
+    extract_unigram(annotation_sdf, unigram_filepath)
 
     # extract bigram
-    bigram_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_bigram_filename"])
-    extract_ngram(canonicalization_annotation_sdf, bigram_filepath, n=2,
-                  ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
+    bigram_filepath = os.path.join(extraction_dir, annotation_config["canonicalization_bigram_filename"])
+    extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_filter_min_count"])
 
     # extract trigram
-    trigram_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_trigram_filename"])
-    extract_ngram(canonicalization_annotation_sdf, trigram_filepath, n=3,
-                  ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
+    trigram_filepath = os.path.join(extraction_dir, annotation_config["canonicalization_trigram_filename"])
+    extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_filter_min_count"])
 
-    # # ==========================================================================================================
-    #
-    # # load full annotation
-    # full_annotation_dir = os.path.join(domain_dir, annotation_config["full_annotation_folder"])
-    # full_annotation_sdf = load_annotation(spark, full_annotation_dir, annotation_config["drop_non_english"])
-    #
-    # # extract phrase
-    # phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
-    # extract_phrase(full_annotation_sdf, phrase_filepath,
-    #                phrase_filter_min_count=annotation_config["phrase_filter_min_count"])
-    #
-    # # extract entity
-    # entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
-    # extract_entity(full_annotation_sdf, entity_filepath,
-    #                entity_filter_min_count=annotation_config["entity_filter_min_count"])
-    #
-    # # extract umls_concept
-    # umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
-    # extract_umls_concept(full_annotation_sdf, umls_concept_filepath,
-    #                      umls_concept_filter_min_count=annotation_config["umls_concept_filter_min_count"])
+    # extract phrase
+    phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
+    extract_phrase(annotation_sdf, phrase_filepath, annotation_config["phrase_filter_min_count"])
+
+    # extract entity
+    entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
+    extract_entity(annotation_sdf, entity_filepath, annotation_config["entity_filter_min_count"])
+
+    # extract umls_concept
+    umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
+    extract_umls_concept(annotation_sdf, umls_concept_filepath, annotation_config["umls_concept_filter_min_count"])

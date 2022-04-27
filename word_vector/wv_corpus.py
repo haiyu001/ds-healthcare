@@ -108,16 +108,16 @@ if __name__ == "__main__":
     domain_dir = get_data_filepath(annotation_config["domain"])
     extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    bigram_spell_canonicalization_dir = os.path.join(canonicalization_dir,
-                                                     annotation_config["bigram_spell_canonicalization_folder"])
+    canonicalization_extraction_dir = os.path.join(
+        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
     canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
 
-    canonicalization_annotation_dir = os.path.join(canonicalization_dir,
-                                                   annotation_config["canonicalization_annotation_folder"])
-    bigram_canonicalization_candidates_filepath = os.path.join(bigram_spell_canonicalization_dir,
-                                                   annotation_config["bigram_canonicalization_candidates_filename"])
-    wv_corpus_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
-                                      annotation_config["canonicalization_wv_corpus_filename"])
+    canonicalization_annotation_dir = os.path.join(
+        canonicalization_dir, annotation_config["canonicalization_annotation_folder"])
+    wv_corpus_filepath = os.path.join(
+        canonicalization_dir, canonicalization_wv_folder, annotation_config["canonicalization_wv_corpus_filename"])
+    bigram_canonicalization_candidates_filepath = os.path.join(
+        canonicalization_extraction_dir, annotation_config["bigram_canonicalization_candidates_filename"])
 
     spark_cores = 6
     spark = get_spark_session("test", config_updates={}, master_config=f"local[{spark_cores}]", log_level="WARN")

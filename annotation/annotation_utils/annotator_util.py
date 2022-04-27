@@ -125,8 +125,10 @@ def get_canonicalization_nlp_model_config(nlp_model_config_filepath: str) -> Dic
     return nlp_model_config
 
 
-def get_full_nlp_model_config(nlp_model_config_filepath: str, normalization_filepath: str) -> Dict[str, Any]:
+def get_nlp_model_config(nlp_model_config_filepath: str, normalization_json_filepath: str) -> Dict[str, Any]:
     nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
+    if nlp_model_config["normalizer_config"] is not None:
+        nlp_model_config["normalizer_config"].update({"normalization_json_filepath": normalization_json_filepath})
     return nlp_model_config
 
 

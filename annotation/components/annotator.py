@@ -127,7 +127,7 @@ def get_nlp_model_config_str(nlp: Language) -> str:
     if isinstance(base_tokenizer, StanzaBaseTokenizer):
         table[-1][-1] += \
             f" ({get_stanza_load_list(base_tokenizer.lang, base_tokenizer.tokenize_package, 'tokenize')[0][1]})"
-    table.append(["normalizer", f"Yes ({normalizer.get_normalizer_config()})" if normalizer else "No"])
+    table.append(["normalizer", "Yes" + normalizer.get_normalizer_config() if normalizer else "No"])
     # stanza_pipeline
     if "stanza_pipeline" in pipe_names:
         pipe = nlp.get_pipe("stanza_pipeline")
