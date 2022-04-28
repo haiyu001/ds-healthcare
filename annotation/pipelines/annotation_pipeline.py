@@ -36,7 +36,6 @@ def load_input(spark: SparkSession,
     if input_dir:
         logging.info(f"\n{'=' * 100}\nload input from {input_dir}\n{'=' * 100}\n")
         input_sdf = spark.read.text(os.path.join(input_dir, "*.json"))
-
     num_partitions = annotation_config["num_partitions"]
     input_sdf = input_sdf.repartition(num_partitions).cache()
     return input_sdf
@@ -114,7 +113,6 @@ def build_canonicalization(spark: SparkSession,
                                 wv_model_filepath,
                                 bigram_canonicalization_filepath,
                                 annotation_config["wv_bigram_canonicalization_filter_min_similarity"])
-
     get_spell_canonicalization(spell_canonicalization_candidates_sdf,
                                canonicalization_unigram_filepath,
                                wv_model_filepath,
@@ -124,7 +122,6 @@ def build_canonicalization(spark: SparkSession,
                                annotation_config["spell_canonicalization_misspelling_filter_max_percent"],
                                annotation_config["spell_canonicalization_word_pos_filter_min_percent"],
                                annotation_config["wv_spell_canonicalization_filter_min_similarity"])
-
     get_canonicalization(bigram_canonicalization_filepath,
                          spell_canonicalization_filepath,
                          canonicalization_unigram_filepath,
