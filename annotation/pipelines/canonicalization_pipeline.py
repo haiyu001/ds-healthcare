@@ -142,16 +142,16 @@ def main(spark: SparkSession,
         canonicalization_extraction_dir, annotation_config["bigram_canonicalization_candidates_filename"])
     spell_canonicalization_candidates_filepath = os.path.join(
         canonicalization_extraction_dir, annotation_config["spell_canonicalization_candidates_filename"])
+    wv_corpus_filepath = os.path.join(
+        canonicalization_wv_dir, annotation_config["canonicalization_wv_corpus_filename"])
+    wv_model_filepath = os.path.join(
+        canonicalization_wv_dir, annotation_config["canonicalization_wv_model_filename"])
     bigram_canonicalization_filepath = os.path.join(
         canonicalization_extraction_dir, annotation_config["bigram_canonicalization_filename"])
     spell_canonicalization_filepath = os.path.join(
         canonicalization_extraction_dir, annotation_config["spell_canonicalization_filename"])
     canonicalization_filepath = os.path.join(
         canonicalization_dir, annotation_config["canonicalization_filename"])
-    wv_corpus_filepath = os.path.join(
-        canonicalization_wv_dir, annotation_config["canonicalization_wv_corpus_filename"])
-    wv_model_filepath = os.path.join(
-        canonicalization_wv_dir, annotation_config["canonicalization_wv_model_filename"])
 
     load_input_and_build_canonicalization_annotation(spark,
                                                      input_filepath,
