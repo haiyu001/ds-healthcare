@@ -35,7 +35,7 @@ def udf_get_words(tokens: Column) -> Column:
 
 def extract_unigram(annotation_sdf: DataFrame,
                     unigram_filepath: str,
-                    num_partitions: int = 1):
+                    num_partitions: Optional[int] = None) -> DataFrame:
     tokens_sdf = annotation_sdf.select(F.explode(annotation_sdf.tokens).alias("token")).cache()
     tokens_sdf = tokens_sdf.select(F.lower(F.col("token").text).alias("word"),
                                    F.lower(F.col("token").lemma).alias("lemma"),
@@ -50,12 +50,13 @@ def extract_unigram(annotation_sdf: DataFrame,
     unigram_sdf = count_sdf.join(pos_sdf, on="word", how="inner").join(lemma_sdf, on="word", how="inner")
     unigram_sdf = unigram_sdf.orderBy(F.asc("word"))
     write_sdf_to_file(unigram_sdf, unigram_filepath, num_partitions)
+    return unigram_sdf
 
 
 def extract_ngram(annotation_sdf: DataFrame,
                   ngram_filepath: str, n: int,
                   ngram_filter_min_count: Optional[int] = None,
-                  num_partitions: int = 1):
+                  num_partitions: Optional[int] = None) -> DataFrame:
     tokens_sdf = annotation_sdf.select(F.col("tokens"))
     words_sdf = tokens_sdf.withColumn("words", udf_get_words(F.col("tokens")))
     ngram = NGram(n=n, inputCol="words", outputCol="ngrams")
@@ -67,12 +68,13 @@ def extract_ngram(annotation_sdf: DataFrame,
     if ngram_filter_min_count:
         ngram_sdf = ngram_sdf.filter(F.col("count") >= ngram_filter_min_count)
     write_sdf_to_file(ngram_sdf, ngram_filepath, num_partitions)
+    return ngram_sdf
 
 
 def extract_phrase(annotation_sdf: DataFrame,
                    phrase_filepath: str,
                    phrase_filter_min_count: Optional[int] = None,
-                   num_partitions: int = 1):
+                   num_partitions: Optional[int] = None):
     phrase_sdf = annotation_sdf.select(F.explode(annotation_sdf._.phrases).alias("phrase"))
     phrase_sdf = phrase_sdf.select(F.lower(F.col("phrase").text).alias("phrase"),
                                    F.col("phrase").phrase_count.alias("count"),
@@ -95,7 +97,7 @@ def extract_phrase(annotation_sdf: DataFrame,
 def extract_entity(annotation_sdf: DataFrame,
                    entity_filepath: str,
                    entity_filter_min_count: Optional[int] = None,
-                   num_partitions: int = 1):
+                   num_partitions: Optional[int] = None):
     entity_sdf = annotation_sdf.select(F.explode(annotation_sdf.entities).alias("entity"))
     entity_sdf = entity_sdf.select(F.lower(F.col("entity").text).alias("text_lower"),
                                    F.col("entity").entity.alias("entity"),
@@ -114,7 +116,7 @@ def extract_entity(annotation_sdf: DataFrame,
 def extract_umls_concept(annotation_sdf: DataFrame,
                          umls_concept_filepath: str,
                          umls_concept_filter_min_count: Optional[int] = None,
-                         num_partitions: int = 1):
+                         num_partitions: Optional[int] = None):
     umls_concept_sdf = annotation_sdf.select(F.explode(annotation_sdf._.umls_concepts).alias("umls_concept"))
     umls_concept_sdf = umls_concept_sdf.select(F.lower(F.col("umls_concept").text).alias("text_lower"),
                                                F.col("umls_concept").concepts.alias("concepts"),

@@ -1,5 +1,6 @@
-from typing import Set, Dict, Union, Optional, Iterator, List, Tuple
+from typing import Set, Dict, Union, Optional
 from utils.general_util import save_pdf
+from utils.spark_util import write_sdf_to_file
 from gensim.models import KeyedVectors
 from gensim.models.fasttext import FastTextKeyedVectors, FastText
 from hunspell.hunspell import HunspellWrap
@@ -60,7 +61,7 @@ def get_bigram_canonicalization_candidates_match_dict(bigram_canonicalization_ca
 def get_bigram_canonicalization_candidates(unigram_sdf: DataFrame,
                                            bigram_sdf: DataFrame,
                                            bigram_canonicalization_candidates_filepath: str,
-                                           num_partitions: int = 1):
+                                           num_partitions: Optional[int] = None):
     unigram_sdf = unigram_sdf.select(F.col("word").alias("unigram"),
                                      F.col("count").alias("unigram_count"))
     bigram_sdf = bigram_sdf.select(F.regexp_replace(F.col("ngram"), " ", "").alias("unigram"),
@@ -92,47 +93,3 @@ def get_bigram_canonicalization(bigram_canonicalization_candidates_filepath: str
     pdf = pd.concat([negative_auxiliary_pdf, other_pdf])
     pdf = pdf.sort_values(by="max_count", ascending=False).drop(columns=["max_count"])
     save_pdf(pdf, bigram_canonicalization_filepath)
-
-
-if __name__ == "__main__":
-    from annotation.annotation_utils.annotator_util import read_annotation_config
-    from utils.resource_util import get_data_filepath, get_repo_dir
-    from utils.spark_util import get_spark_session, write_sdf_to_file
-    import os
-
-    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
-    annotation_config = read_annotation_config(annotation_config_filepath)
-
-    domain_dir = get_data_filepath(annotation_config["domain"])
-    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    canonicalization_extraction_dir = os.path.join(
-        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
-    canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
-
-    unigram_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["canonicalization_unigram_filename"])
-    bigram_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["canonicalization_bigram_filename"])
-    bigram_canonicalization_candidates_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["bigram_canonicalization_candidates_filename"])
-    bigram_canonicalization_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["bigram_canonicalization_filename"])
-
-    # ================================ bigram canonicalization candidates =======================================
-
-    spark_cores = 6
-    spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="WARN")
-
-    unigram_sdf = spark.read.csv(unigram_filepath, header=True, quote='"', escape='"', inferSchema=True)
-    bigram_sdf = spark.read.csv(bigram_filepath, header=True, quote='"', escape='"', inferSchema=True)
-    get_bigram_canonicalization_candidates(unigram_sdf,
-                                           bigram_sdf,
-                                           bigram_canonicalization_candidates_filepath)
-
-    # ===================================== bigram canonicalization ============================================
-
-    wv_model_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder, "model", "fasttext")
-    get_bigram_canonicalization(bigram_canonicalization_candidates_filepath,
-                                wv_model_filepath,
-                                bigram_canonicalization_filepath,
-                                annotation_config["wv_bigram_canonicalization_filter_min_similarity"])

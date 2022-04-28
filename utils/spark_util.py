@@ -1,7 +1,6 @@
 from typing import Optional, Dict, List
 from utils.general_util import split_filepath, save_pdf
 from utils.resource_util import zip_repo
-from utils.log_util import get_logger
 from pyspark import SparkConf
 from pyspark.sql import SparkSession, Window
 from pyspark.sql import DataFrame
@@ -9,6 +8,7 @@ import pyspark.sql.functions as F
 from pathlib import Path
 from pprint import pformat
 import pandas as pd
+import logging
 import shutil
 import os
 
@@ -103,7 +103,7 @@ def convert_to_orc(spark: SparkSession,
     if type_casting:
         for col, cast_type in type_casting.items():
             sdf = sdf.withColumn(col, F.col(col).cast(cast_type))
-    logger = get_logger()
+    logger = logging.getLogger("root")
     logger.info(f"data types of orc file:\n{pformat(sdf.dtypes)}")
     write_sdf_to_file(sdf, output_filepath)
 

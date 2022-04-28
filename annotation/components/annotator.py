@@ -1,4 +1,4 @@
-from typing import Any, Iterator, Dict, Union, Optional
+from typing import Any, Iterator, Dict, Union
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
 from annotation.annotation_utils.annotator_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE
 from annotation.pipes.stanza_pipeline import get_stanza_load_list
@@ -6,7 +6,6 @@ from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetadataTokenizer
 from utils.general_util import get_filepaths_recursively
-from utils.log_util import get_logger
 from annotation.pipes.factories import *
 from spacy.tokens import Doc
 from pyspark.sql.types import StringType
@@ -16,6 +15,7 @@ import pandas as pd
 import json
 import warnings
 import spacy
+import logging
 
 
 class SingletonMeta(type):
@@ -96,7 +96,7 @@ class Annotator(metaclass=SingletonMeta):
             for pipe_name, pipe_config in custom_pipes_config.items():
                 nlp.add_pipe(pipe_name, config=pipe_config)
 
-        logger = get_logger()
+        logger = logging.getLogger("root")
         logger.info(f"nlp model config (use_gpu = {use_gpu}):\n{get_nlp_model_config_str(nlp)}")
 
         self.nlp = nlp

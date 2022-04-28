@@ -1,5 +1,6 @@
 from typing import Set, Dict, Optional, Iterator, List, Tuple
 from utils.general_util import save_pdf
+from utils.spark_util import write_sdf_to_file
 from gensim.models.fasttext import FastText
 from pyspark.sql.types import ArrayType, StringType
 from pyspark.sql import DataFrame, Column
@@ -109,7 +110,7 @@ def get_spell_canonicalization_candidates(unigram_sdf: DataFrame,
                                           annotation_sdf: DataFrame,
                                           spell_canonicalization_candidates_filepath: str,
                                           spell_canonicalization_suggestion_filter_min_count: int = 5,
-                                          num_partitions: int = 1):
+                                          num_partitions: Optional[int] = None):
     unigram_sdf = unigram_sdf.filter(F.col("count") >= spell_canonicalization_suggestion_filter_min_count)
     unigram = set([x.word for x in unigram_sdf.select("word").distinct().collect()])
     misspelling_sdf = annotation_sdf.select(F.explode(annotation_sdf._.misspellings).alias("misspelling"))
@@ -155,57 +156,3 @@ def get_spell_canonicalization(spell_canonicalization_candidates_sdf: DataFrame,
     pdf = pdf[["misspelling", "correction", "misspelling_count", "correction_count", "similarity"]]
     pdf = pdf.dropna(subset=["correction"]).sort_values(by="misspelling_count", ascending=False)
     save_pdf(pdf, spell_canonicalization_filepath)
-
-
-if __name__ == "__main__":
-    from annotation.annotation_utils.annotator_util import read_annotation_config
-    from annotation.components.annotator import load_annotation
-    from utils.resource_util import get_data_filepath, get_repo_dir
-    from utils.spark_util import get_spark_session, write_sdf_to_file
-    import os
-
-    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
-    annotation_config = read_annotation_config(annotation_config_filepath)
-
-    domain_dir = get_data_filepath(annotation_config["domain"])
-    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
-
-    canonicalization_annotation_dir = os.path.join(
-        canonicalization_dir, annotation_config["canonicalization_annotation_folder"])
-    canonicalization_extraction_dir = os.path.join(
-        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
-    unigram_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["canonicalization_unigram_filename"])
-    spell_canonicalization_candidates_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["spell_canonicalization_candidates_filename"])
-    spell_canonicalization_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["spell_canonicalization_filename"])
-
-    spark_cores = 6
-    spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="WARN")
-
-    # ================================ spell canonicalization candidates =====================================
-
-    unigram_sdf = spark.read.csv(unigram_filepath, header=True, quote='"', escape='"', inferSchema=True)
-    canonicalization_annotation_sdf = load_annotation(
-        spark, canonicalization_annotation_dir, annotation_config["drop_non_english"])
-    get_spell_canonicalization_candidates(unigram_sdf,
-                                          canonicalization_annotation_sdf,
-                                          spell_canonicalization_candidates_filepath,
-                                          annotation_config["spell_canonicalization_suggestion_filter_min_count"])
-
-    # ===================================== spell canonicalization ==========================================
-
-    spell_canonicalization_candidates_sdf = spark.read.csv(
-        spell_canonicalization_candidates_filepath, header=True, quote='"', escape='"', inferSchema=True)
-    wv_model_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder, "model", "fasttext")
-    get_spell_canonicalization(spell_canonicalization_candidates_sdf,
-                               unigram_filepath,
-                               wv_model_filepath,
-                               spell_canonicalization_filepath,
-                               annotation_config["spell_canonicalization_suggestion_filter_min_count"],
-                               annotation_config["spell_canonicalization_edit_distance_filter_max_count"],
-                               annotation_config["spell_canonicalization_misspelling_filter_max_percent"],
-                               annotation_config["spell_canonicalization_word_pos_filter_min_percent"],
-                               annotation_config["wv_spell_canonicalization_filter_min_similarity"])

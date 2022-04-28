@@ -82,7 +82,7 @@ def extact_wv_corpus_from_annotation(annotation_sdf: DataFrame,
                                      wv_corpus_filepath: str,
                                      ngram_match_dict: Optional[Dict[str, str]] = None,
                                      match_lowercase: bool = True,
-                                     num_partitions: int = 1):
+                                     num_partitions: Optional[int] = None):
     text_sdf = annotation_sdf.select(udf_get_text(F.col("tokens"), match_lowercase).alias("text"))
     wv_corpus_sdf = text_sdf.select(pudf_get_wv_corpus_line(F.col("text"),
                                                             lang,
@@ -90,49 +90,3 @@ def extact_wv_corpus_from_annotation(annotation_sdf: DataFrame,
                                                             ngram_match_dict,
                                                             match_lowercase))
     write_sdf_to_file(wv_corpus_sdf, wv_corpus_filepath, num_partitions)
-
-
-if __name__ == "__main__":
-    from annotation.annotation_utils.annotator_util import read_nlp_model_config, read_annotation_config
-    from utils.resource_util import get_repo_dir, get_data_filepath
-    from annotation.components.annotator import load_annotation
-    from annotation.components.canonicalizer_bigram import get_bigram_canonicalization_candidates_match_dict
-    from utils.spark_util import get_spark_session
-    import os
-
-    nlp_model_config_filepath = os.path.join(get_repo_dir(), "conf", "nlp_model_template.cfg")
-    nlp_model_config = read_nlp_model_config(nlp_model_config_filepath)
-    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
-    annotation_config = read_annotation_config(annotation_config_filepath)
-
-    domain_dir = get_data_filepath(annotation_config["domain"])
-    extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
-    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    canonicalization_extraction_dir = os.path.join(
-        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
-    canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
-
-    canonicalization_annotation_dir = os.path.join(
-        canonicalization_dir, annotation_config["canonicalization_annotation_folder"])
-    wv_corpus_filepath = os.path.join(
-        canonicalization_dir, canonicalization_wv_folder, annotation_config["canonicalization_wv_corpus_filename"])
-    bigram_canonicalization_candidates_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["bigram_canonicalization_candidates_filename"])
-
-    spark_cores = 6
-    spark = get_spark_session("test", config_updates={}, master_config=f"local[{spark_cores}]", log_level="WARN")
-
-    match_lowercase = annotation_config["wv_corpus_match_lowercase"]
-    ngram_match_dict = get_bigram_canonicalization_candidates_match_dict(bigram_canonicalization_candidates_filepath,
-                                                                         match_lowercase)
-    annotation_sdf = load_annotation(spark, canonicalization_annotation_dir, annotation_config["drop_non_english"])
-
-    extact_wv_corpus_from_annotation(
-        annotation_sdf=annotation_sdf,
-        lang=nlp_model_config["lang"],
-        spacy_package=nlp_model_config["spacy_package"],
-        wv_corpus_filepath=wv_corpus_filepath,
-        ngram_match_dict=ngram_match_dict,
-        match_lowercase=match_lowercase,
-        num_partitions=4
-    )

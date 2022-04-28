@@ -1,5 +1,6 @@
 from typing import Dict, Any, List, Tuple, Optional
 from configparser import ConfigParser, ExtendedInterpolation
+from smart_open import open
 
 
 def _get_config_parser() -> ConfigParser:

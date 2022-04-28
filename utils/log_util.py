@@ -6,10 +6,8 @@ import logging
 import os
 
 
-def get_logger(logger_name: Optional[str] = None, log_filename: Optional[str] = None) -> Logger:
-    logger_name = logger_name or "ds"
-    log_filename = log_filename or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    logger = logging.getLogger(logger_name)
+def get_logger(logs_dir: Optional[str] = None) -> Logger:
+    logger = logging.getLogger("root")
     logger.setLevel(logging.DEBUG)
     handler_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
@@ -21,7 +19,8 @@ def get_logger(logger_name: Optional[str] = None, log_filename: Optional[str] = 
         logger.addHandler(handler)
 
         # file logging
-        logs_dir = os.path.join(get_repo_dir(), "logs")
+        log_filename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        logs_dir = logs_dir or os.path.join(get_repo_dir(), "logs")
         log_filepath = os.path.join(logs_dir, f"{log_filename}.log")
         handler = logging.FileHandler(log_filepath, "w")
         handler.setLevel(logging.INFO)

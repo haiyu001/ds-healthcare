@@ -1,8 +1,9 @@
 from typing import Optional
 from utils.general_util import make_dir
-from utils.log_util import get_logger
 from gensim.models import FastText, Word2Vec
 import multiprocessing
+import logging
+import os
 
 
 def get_corpus_size(corpus_file_path: str) -> int:
@@ -26,7 +27,7 @@ def build_word2vec(vector_size: int,
         corpus_size = get_corpus_size(wv_corpus_filepath)
         workers = max(1, min(int(corpus_size / 200000), 16, multiprocessing.cpu_count()))
 
-    logger = get_logger()
+    logger = logging.getLogger("root")
     logger.info(f"\n{'=' * 100}\n"
                 f"{'fastText' if use_char_ngram else 'Word2Vec'}"
                 f"\tepochs: {epochs} | workers: {workers} | min_count: {min_count} | max_final_vocab: {max_final_vocab}"
@@ -59,40 +60,3 @@ def build_word2vec(vector_size: int,
     model_path = os.path.join(model_dir, "fasttext" if use_char_ngram else "word2vec")
     model.save(model_path, separately=[])
     model.wv.save_word2vec_format(wv_model_filepath, binary=False)
-
-
-if __name__ == "__main__":
-    from annotation.annotation_utils.annotator_util import read_annotation_config
-    from utils.resource_util import get_repo_dir, get_data_filepath
-    import os
-
-    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
-    annotation_config = read_annotation_config(annotation_config_filepath)
-    canonicalization_folder = annotation_config["canonicalization_folder"]
-    canonicalization_wv_folder = annotation_config["canonicalization_wv_folder"]
-
-    domain_dir = get_data_filepath(annotation_config["domain"])
-    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    bigram_canonicalization_candidates_filepath = os.path.join(canonicalization_dir,
-                                                   annotation_config["bigram_canonicalization_candidates_filename"])
-    wv_corpus_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
-                                      annotation_config["canonicalization_wv_corpus_filename"])
-    wv_model_filepath = os.path.join(canonicalization_dir, canonicalization_wv_folder,
-                                      annotation_config["canonicalization_wv_model_filename"])
-
-    build_word2vec(
-        vector_size=annotation_config["word_vector_size"],
-        use_char_ngram=True,
-        wv_corpus_filepath=wv_corpus_filepath,
-        wv_model_filepath=wv_model_filepath,
-        min_count=5,
-        workers=1,
-        epochs=10,
-        max_final_vocab=100000,
-    )
-
-    # model_path = os.path.join(os.path.splitext(wv_model_filepath)[0], "fasttext")
-    # print(FastText.load(model_path).wv)
-
-
-

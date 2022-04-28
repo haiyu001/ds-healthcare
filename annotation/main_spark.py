@@ -23,11 +23,11 @@ if __name__ == "__main__":
 
     # ======================================== canonicalizer =========================================
 
-    # input_sdf = spark.read.text(input_filepath).repartition(spark_cores)
-    # canonicalization_nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
-    # canonicalization_annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), canonicalization_nlp_model_config))
-    # write_sdf_to_dir(canonicalization_annotation_sdf, canonicalization_dir,
-    #                  annotation_config["canonicalization_annotation_folder"], file_format="txt")
+    input_sdf = spark.read.text(input_filepath).repartition(spark_cores)
+    canonicalization_nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
+    canonicalization_annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), canonicalization_nlp_model_config))
+    write_sdf_to_dir(canonicalization_annotation_sdf, canonicalization_dir,
+                     annotation_config["canonicalization_annotation_folder"], file_format="txt")
 
     # ======================================== annotator ===============================================
 

@@ -8,6 +8,7 @@ from hunspell.hunspell import HunspellWrap
 import pandas as pd
 import operator
 import json
+import os
 
 
 def _get_bigram_canonicalization(unigram: str, bigram: str, unigram_count: int, bigram_count: int,
@@ -208,40 +209,3 @@ def get_canonicalization(bigram_canonicalization_filepath: str,
     canonicalization_pdf = canonicalization_pdf.rename(columns={"index": "id"})
     canonicalization_pdf = canonicalization_pdf.sort_values(by=["type", "source"])
     save_pdf(canonicalization_pdf, canonicalization_filepath)
-
-
-if __name__ == "__main__":
-    from annotation.annotation_utils.annotator_util import read_annotation_config
-    from utils.resource_util import get_data_filepath, get_repo_dir
-    import os
-
-    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
-    annotation_config = read_annotation_config(annotation_config_filepath)
-
-    domain_dir = get_data_filepath(annotation_config["domain"])
-    extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
-    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    canonicalization_extraction_dir = os.path.join(
-        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
-
-    unigram_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["canonicalization_unigram_filename"])
-    bigram_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["canonicalization_bigram_filename"])
-    trigram_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["canonicalization_trigram_filename"])
-    bigram_canonicalization_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["bigram_canonicalization_filename"])
-    spell_canonicalization_filepath = os.path.join(
-        canonicalization_extraction_dir, annotation_config["spell_canonicalization_filename"])
-    canonicalization_filepath = os.path.join(canonicalization_dir, annotation_config["canonicalization_filename"])
-    conjunction_trigram_canonicalization_filter_min_count = \
-        annotation_config["conjunction_trigram_canonicalization_filter_min_count"]
-
-    get_canonicalization(bigram_canonicalization_filepath,
-                         spell_canonicalization_filepath,
-                         unigram_filepath,
-                         bigram_filepath,
-                         trigram_filepath,
-                         canonicalization_filepath,
-                         conjunction_trigram_canonicalization_filter_min_count)
