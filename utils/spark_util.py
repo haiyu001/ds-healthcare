@@ -103,8 +103,7 @@ def convert_to_orc(spark: SparkSession,
     if type_casting:
         for col, cast_type in type_casting.items():
             sdf = sdf.withColumn(col, F.col(col).cast(cast_type))
-    logger = logging.getLogger("root")
-    logger.info(f"data types of orc file:\n{pformat(sdf.dtypes)}")
+    logging.info(f"data types of orc file:\n{pformat(sdf.dtypes)}")
     write_sdf_to_file(sdf, output_filepath)
 
 

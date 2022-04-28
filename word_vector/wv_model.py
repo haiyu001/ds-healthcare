@@ -22,16 +22,14 @@ def build_word2vec(vector_size: int,
                    workers: Optional[int] = None,
                    epochs: int = 8,
                    max_final_vocab: int = 1000000):
-
     if workers is None:
         corpus_size = get_corpus_size(wv_corpus_filepath)
         workers = max(1, min(int(corpus_size / 200000), 16, multiprocessing.cpu_count()))
 
-    logger = logging.getLogger("root")
-    logger.info(f"\n{'=' * 100}\n"
-                f"{'fastText' if use_char_ngram else 'Word2Vec'}"
-                f"\tepochs: {epochs} | workers: {workers} | min_count: {min_count} | max_final_vocab: {max_final_vocab}"
-                f"\n{'=' * 100}\n")
+    logging.info(f"\n{'=' * 100}\n"
+                 f"{'fastText' if use_char_ngram else 'Word2Vec'}"
+                 f"\tepochs: {epochs} | workers: {workers} | min_count: {min_count} | max_final_vocab: {max_final_vocab}"
+                 f"\n{'=' * 100}\n")
 
     default_params = dict(
         vector_size=vector_size,
@@ -41,12 +39,12 @@ def build_word2vec(vector_size: int,
         window=5,
         alpha=0.02,
         min_alpha=0.0001,
-        sg=1,                   # skip-gram if sg = 1 else cbow
-        hs=0,                   # negative sampling if hs = 0 else hierarchical softmax
-        negative=5,             # negative sampling
-        sorted_vocab=1,         # sort the vocabulary by descending frequency before assigning word indices.
-        max_vocab_size=None,    # no limit
-        workers=workers,        # require install cython
+        sg=1,  # skip-gram if sg = 1 else cbow
+        hs=0,  # negative sampling if hs = 0 else hierarchical softmax
+        negative=5,  # negative sampling
+        sorted_vocab=1,  # sort the vocabulary by descending frequency before assigning word indices.
+        max_vocab_size=None,  # no limit
+        workers=workers,  # require install cython
         batch_words=10000,
         sample=0.0001,
     )

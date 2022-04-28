@@ -1,12 +1,15 @@
+from datetime import datetime
+from utils.resource_util import get_repo_dir
 from typing import List, Tuple, Optional, Dict, Any
 from pathlib import Path
 import pandas as pd
+import logging
 import json
 import csv
 import os
 
 
-def make_dir(dir):
+def make_dir(dir: str) -> str:
     if not os.path.exists(dir):
         os.makedirs(dir)
     return dir
@@ -59,3 +62,23 @@ def dump_json_file(json_dict: Dict[Any, Any], output_filepath: str):
     with open(output_filepath, "w", encoding="utf-8") as output:
         json.dump(json_dict, output, ensure_ascii=False, indent=4)
 
+
+def setup_logger(logs_dir: Optional[str] = None):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    handler_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+    # console logging
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(handler_formatter)
+    logger.addHandler(handler)
+
+    # file logging
+    logs_dir = logs_dir or os.path.join(get_repo_dir(), "logs")
+    log_filename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_filepath = os.path.join(logs_dir, f"{log_filename}.log")
+    handler = logging.FileHandler(log_filepath, "w")
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(handler_formatter)
+    logger.addHandler(handler)

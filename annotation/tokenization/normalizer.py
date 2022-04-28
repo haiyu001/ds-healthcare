@@ -13,10 +13,10 @@ class Normalizer(object):
                  replace_norm: Optional[Dict[str, Dict[str, Any]]] = None,
                  merge_norm: Optional[Dict[str, Dict[str, Any]]] = None,
                  split_norm: Optional[Dict[str, Dict[str, Any]]] = None,
-                 normalization_json_filepath: Optional[str] = None):
+                 canonicalization_filepath: Optional[str] = None):
         self.vocab = nlp.vocab
-        self.normalization_json_filepath = normalization_json_filepath
-        if self.normalization_json_filepath is None:
+        self.canonicalization_filepath = canonicalization_filepath
+        if self.canonicalization_filepath is None:
             self.replace_norm = replace_norm
             self.merge_norm = merge_norm
             self.split_norm = split_norm
@@ -27,6 +27,8 @@ class Normalizer(object):
         Token.set_extension("norm_text", default=None, force=True)
 
     def normalize(self, doc: Doc) -> Doc:
+        if not self.replace_norm and not self.merge_norm and not self.split_norm:
+            return doc
         norm_spaces = None
         if self.replace_norm:
             self.normalize_replace(doc)
@@ -39,7 +41,7 @@ class Normalizer(object):
 
     def load_normalization(self) -> \
             Tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
-        normalization_dict = load_json_file(self.normalization_json_filepath)
+        normalization_dict = load_json_file(self.canonicalization_filepath)
         self.replace_norm, self.merge_norm, self.split_norm = {}, {}, {}
         for id, id_normalization_dict in normalization_dict.items():
             normalization_type = id_normalization_dict["type"]
@@ -140,4 +142,4 @@ class Normalizer(object):
         return norm_doc
 
     def get_normalizer_config(self) -> str:
-        return f" ({self.normalization_json_filepath})" if self.normalization_json_filepath is not None else ""
+        return f" ({self.canonicalization_filepath})" if self.canonicalization_filepath is not None else ""

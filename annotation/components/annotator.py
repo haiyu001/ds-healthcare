@@ -10,96 +10,73 @@ from annotation.pipes.factories import *
 from spacy.tokens import Doc
 from pyspark.sql.types import StringType
 from pyspark.sql import Column, functions as F, SparkSession, DataFrame
-from threading import Lock
 import pandas as pd
 import json
 import warnings
 import spacy
-import logging
 
 
-class SingletonMeta(type):
-    _instances = {}
-    _lock: Lock = Lock()
+def get_nlp_model(use_gpu: bool = False,
+                  lang: str = "en",
+                  spacy_package: Optional[str] = None,
+                  metadata_tokenizer_config: Optional[Dict[str, List[str]]] = None,
+                  preprocessor_config: Optional[Dict[str, bool]] = None,
+                  stanza_base_tokenizer_package: Optional[Union[str, Dict[str, str]]] = None,
+                  normalizer_config: Optional[Dict[str, Any]] = None,
+                  stanza_pipeline_config: Optional[Dict[str, Any]] = None,
+                  spacy_pipeline_config: Optional[Dict[str, Any]] = None,
+                  custom_pipes_config: Optional[List[Tuple[str, Dict[str, Any]]]] = None):
+    """
+    :param use_gpu: run annotation on GPU
+    :param lang: model language
+    :param spacy_package: spacy blank nlp package name if None then use DEFAULT_SPACY_PACKAGE
+    :param metadata_tokenizer_config: None if all records are text string, otherwise set this config for json string
+    :param preprocessor_config: None if don't apply preprocessor, {} if use default preprocessor config
+    :param stanza_base_tokenizer_package: None if use spacy base tokenizer otherwise use stanza base tokenizer
+    :param normalizer_config: None if annotation don't apply normalizer otherwise set this config for normalizer
+    :param stanza_pipeline_config: None if don't use stanza pipeline, {} if use default stanza pipeline config
+    :param spacy_pipeline_config: None if don't use spacy pipeline, {} if use default spacy pipeline config
+    :param custom_pipes_config: None if don't apply custom pipes, otherwise [(pipe_name, pipe_config), ...}]
+    :return: global spacy nlp model
+    """
 
-    def __call__(cls, *args, **kwargs):
-        with cls._lock:
-            if cls not in cls._instances:
-                instance = super().__call__(*args, **kwargs)
-                cls._instances[cls] = instance
-        return cls._instances[cls]
+    if use_gpu:
+        spacy.prefer_gpu()
 
+    if not stanza_base_tokenizer_package and stanza_pipeline_config is not None:
+        warnings.warn("Spacy base tokenizer doesn't do sentence segmentation but stanza pipeline requires input doc"
+                      " has annotation of sentences, so sentence_detector will be used to do sentence detection.",
+                      stacklevel=2)
 
-class Annotator(metaclass=SingletonMeta):
-    nlp: Language = None
+    # create blank nlp
+    spacy_package = spacy_package or DEFAULT_SPACY_PACKAGE
+    nlp = load_blank_nlp(lang, spacy_package)
 
-    def __init__(self,
-                 use_gpu: bool = False,
-                 lang: str = "en",
-                 spacy_package: Optional[str] = None,
-                 metadata_tokenizer_config: Optional[Dict[str, List[str]]] = None,
-                 preprocessor_config: Optional[Dict[str, bool]] = None,
-                 stanza_base_tokenizer_package: Optional[Union[str, Dict[str, str]]] = None,
-                 normalizer_config: Optional[Dict[str, Any]] = None,
-                 stanza_pipeline_config: Optional[Dict[str, Any]] = None,
-                 spacy_pipeline_config: Optional[Dict[str, Any]] = None,
-                 custom_pipes_config: Optional[List[Tuple[str, Dict[str, Any]]]] = None):
-        """
-        :param use_gpu: run annotation on GPU
-        :param lang: model language
-        :param spacy_package: spacy blank nlp package name
-        :param metadata_tokenizer_config: None if all records are text string, otherwise set this config for json string
-        :param preprocessor_config: None if don't apply preprocessor, {} if use default preprocessor config
-        :param stanza_base_tokenizer_package: None if use spacy base tokenizer otherwise use stanza base tokenizer
-        :param normalizer_config: None if annotation don't apply normalizer otherwise set this config for normalizer
-        :param stanza_pipeline_config: None if don't use stanza pipeline, {} if use default stanza pipeline config
-        :param spacy_pipeline_config: None if don't use spacy pipeline, {} if use default spacy pipeline config
-        :param custom_pipes_config: None if don't apply custom pipes, otherwise [(pipe_name, pipe_config), ...}]
-        :return: global spacy nlp model
-        """
+    # set nlp tokenizer
+    base_tokenizer = StanzaBaseTokenizer(nlp, lang, stanza_base_tokenizer_package) \
+        if stanza_base_tokenizer_package else SpacyBaseTokenizer(nlp)
+    preprocessor = normalizer = None
+    if preprocessor_config is not None:
+        preprocessor = Preprocessor(**preprocessor_config)
+    if normalizer_config is not None:
+        normalizer = Normalizer(nlp, **normalizer_config)
+    nlp.tokenizer = MetadataTokenizer(base_tokenizer, preprocessor, normalizer, **metadata_tokenizer_config) \
+        if metadata_tokenizer_config is not None else MetadataTokenizer(base_tokenizer, preprocessor, normalizer)
 
-        if use_gpu:
-            spacy.prefer_gpu()
+    # add stanza or/and spacy pipline (stanza pipeline need to run before spacy pipeline if both pipelines added)
+    if stanza_pipeline_config is not None:
+        stanza_pipeline_config["use_gpu"] = use_gpu
+        nlp.add_pipe("stanza_pipeline", config=stanza_pipeline_config)
+    if spacy_pipeline_config is not None:
+        spacy_pipeline_config["package"] = spacy_package
+        nlp.add_pipe("spacy_pipeline", config=spacy_pipeline_config)
 
-        if not stanza_base_tokenizer_package and stanza_pipeline_config is not None:
-            warnings.warn("Spacy base tokenizer doesn't do sentence segmentation but stanza pipeline requires input doc"
-                          " has annotation of sentences, so sentence_detector will be used to do sentence detection.",
-                          stacklevel=2)
+    # add custom pipes
+    if custom_pipes_config:
+        for pipe_name, pipe_config in custom_pipes_config.items():
+            nlp.add_pipe(pipe_name, config=pipe_config)
 
-        # create blank nlp
-        spacy_package = spacy_package or DEFAULT_SPACY_PACKAGE
-        nlp = load_blank_nlp(lang, spacy_package)
-
-        # set nlp tokenizer
-        base_tokenizer = StanzaBaseTokenizer(nlp, lang, stanza_base_tokenizer_package) \
-            if stanza_base_tokenizer_package else SpacyBaseTokenizer(nlp)
-
-        preprocessor = normalizer = None
-        if preprocessor_config is not None:
-            preprocessor = Preprocessor(**preprocessor_config)
-        if normalizer_config is not None:
-            normalizer = Normalizer(nlp, **normalizer_config)
-
-        nlp.tokenizer = MetadataTokenizer(base_tokenizer, preprocessor, normalizer, **metadata_tokenizer_config) \
-            if metadata_tokenizer_config is not None else MetadataTokenizer(base_tokenizer, preprocessor, normalizer)
-
-        # add stanza or/and spacy pipline (stanza pipeline need to run before spacy pipeline if both pipelines added)
-        if stanza_pipeline_config is not None:
-            stanza_pipeline_config["use_gpu"] = use_gpu
-            nlp.add_pipe("stanza_pipeline", config=stanza_pipeline_config)
-        if spacy_pipeline_config is not None:
-            spacy_pipeline_config["package"] = spacy_package
-            nlp.add_pipe("spacy_pipeline", config=spacy_pipeline_config)
-
-        # add custom pipes
-        if custom_pipes_config:
-            for pipe_name, pipe_config in custom_pipes_config.items():
-                nlp.add_pipe(pipe_name, config=pipe_config)
-
-        logger = logging.getLogger("root")
-        logger.info(f"nlp model config (use_gpu = {use_gpu}):\n{get_nlp_model_config_str(nlp)}")
-
-        self.nlp = nlp
+    return nlp
 
 
 def get_nlp_model_config_str(nlp: Language) -> str:
@@ -229,7 +206,7 @@ def doc_to_json_str(doc: Doc) -> str:
 
 def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column:
     def annotate(text_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
-        nlp = Annotator(**nlp_model_config).nlp
+        nlp = get_nlp_model(**nlp_model_config)
         for text in text_iter:
             doc = text.apply(nlp)
             doc_json_str = doc.apply(doc_to_json_str)

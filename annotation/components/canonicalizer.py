@@ -104,13 +104,17 @@ def get_bigram_and_spell_canonicalization(bigram_canonicalization_filepath: str,
         spell_canonicalization_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     bigram_canonicalization_pdf = pd.read_csv(
         bigram_canonicalization_filepath, encoding="utf-8", keep_default_na=False, na_values="")
-    bigram_canonicalization = dict(bigram_canonicalization_pdf.apply(
-        lambda x: _get_bigram_canonicalization(x["unigram"], x["bigram"], x["unigram_count"], x["bigram_count"],
-                                               get_hunspell_checker()), axis=1).tolist())
-    spell_replace_dict = dict(zip(spell_canonicalization_pdf["misspelling"],
-                                  spell_canonicalization_pdf["correction"]))
+
+    if not bigram_canonicalization_pdf.empty:
+        bigram_canonicalization = dict(bigram_canonicalization_pdf.apply(
+            lambda x: _get_bigram_canonicalization(x["unigram"], x["bigram"], x["unigram_count"], x["bigram_count"],
+                                                   get_hunspell_checker()), axis=1).tolist())
+    else:
+        bigram_canonicalization = {}
     unigram_to_bigram_count = dict(zip(bigram_canonicalization_pdf["unigram"],
                                        bigram_canonicalization_pdf["bigram_count"]))
+    spell_replace_dict = dict(zip(spell_canonicalization_pdf["misspelling"],
+                                  spell_canonicalization_pdf["correction"]))
     misspelling_to_correction_count = dict(zip(spell_canonicalization_pdf["misspelling"],
                                                spell_canonicalization_pdf["correction_count"]))
     common_words = set(spell_replace_dict.keys()).intersection(set(bigram_canonicalization.keys()))
@@ -202,10 +206,11 @@ def get_canonicalization(bigram_canonicalization_filepath: str,
     # dump canonicalization to json
     canonicalization_dict = {**replace_dict, **merge_dict, **split_dict}
     file_dir, file_name, file_format = split_filepath(canonicalization_filepath)
-    dump_json_file(canonicalization_dict, os.path.join(file_dir, f"{file_name}.json"))
+    dump_json_file(canonicalization_dict, canonicalization_filepath)
 
     # save canonicalization to csv
+    canonicalization_csv_filepath = os.path.join(file_dir, f"{file_name}.csv")
     canonicalization_pdf = pd.DataFrame(canonicalization_dict).transpose().reset_index()
     canonicalization_pdf = canonicalization_pdf.rename(columns={"index": "id"})
     canonicalization_pdf = canonicalization_pdf.sort_values(by=["type", "source"])
-    save_pdf(canonicalization_pdf, canonicalization_filepath)
+    save_pdf(canonicalization_pdf, canonicalization_csv_filepath)
