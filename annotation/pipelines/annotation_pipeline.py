@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from annotation.annotation_utils.annotator_util import read_annotation_config, get_nlp_model_config, \
     get_canonicalization_nlp_model_config
 from annotation.components.annotator import pudf_annotate, load_annotation, get_nlp_model, get_nlp_model_config_str
@@ -20,7 +20,7 @@ import logging
 import os
 
 
-def get_master_config(annotation_config_filepath):
+def get_master_config(annotation_config_filepath: str) -> Optional[str]:
     annotation_config = read_annotation_config(annotation_config_filepath)
     num_partitions = annotation_config["num_partitions"]
     return f"local[{num_partitions}]" if platform == "darwin" else None
@@ -30,10 +30,11 @@ def load_input(spark: SparkSession,
                input_filepath: str,
                input_dir: str,
                annotation_config: Dict[str, str]) -> DataFrame:
-    logging.info(f"\n{'=' * 100}\nload input\n{'=' * 100}\n")
     if input_filepath:
+        logging.info(f"\n{'=' * 100}\nload input from {input_filepath}\n{'=' * 100}\n")
         input_sdf = spark.read.text(input_filepath)
     if input_dir:
+        logging.info(f"\n{'=' * 100}\nload input from {input_dir}\n{'=' * 100}\n")
         input_sdf = spark.read.text(os.path.join(input_dir, "*.json"))
 
     num_partitions = annotation_config["num_partitions"]
