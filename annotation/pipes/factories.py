@@ -69,12 +69,12 @@ def create_spell_checker_component(nlp: Language, name: str, attrs: Tuple[str, s
                                                            "accepted_semtypes": None,
                                                            "best_match": True,
                                                            "keep_uppercase": False,
-                                                           "attrs": ("umls_concepts",), })
+                                                           "attrs": ("umls_concepts", "concepts"), })
 def create_umls_concept_detector_component(nlp: Language, name: str, quickumls_filepath: Optional[str],
                                            overlapping_criteria: str, similarity_name: str, threshold: float,
                                            window: int,
                                            accepted_semtypes: Optional[List[str]], best_match: bool,
                                            keep_uppercase: bool,
-                                           attrs: Tuple[str]) -> UMLSConceptDetector:
+                                           attrs: Tuple[str, str]) -> UMLSConceptDetector:
     return UMLSConceptDetector(nlp, quickumls_filepath, overlapping_criteria, similarity_name, threshold, window,
                                accepted_semtypes, best_match, keep_uppercase, attrs)

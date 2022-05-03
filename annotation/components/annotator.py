@@ -16,6 +16,18 @@ import warnings
 import spacy
 
 
+def _get_umls_concepts(doc):
+    umls_concepts = []
+    for concept_span in doc._.umls_concepts:
+        umls_concepts.append({
+            "start_id": concept_span.start,
+            "end_id": concept_span.end,
+            "text": concept_span.text,
+            "concepts": concept_span._.concepts,
+        })
+    return umls_concepts
+
+
 def get_nlp_model(use_gpu: bool = False,
                   lang: str = "en",
                   spacy_package: Optional[str] = None,
@@ -193,7 +205,7 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
         data["_"]["misspellings"] = doc._.get("misspellings")
 
     if doc.has_extension("umls_concepts"):
-        data["_"]["umls_concepts"] = doc._.get("umls_concepts")
+        data["_"]["umls_concepts"] = _get_umls_concepts(doc)
 
     return data
 
