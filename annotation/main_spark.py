@@ -33,10 +33,10 @@ if __name__ == "__main__":
     write_sdf_to_dir(canonicalization_annotation_sdf, canonicalization_dir,
                      annotation_config["canonicalization_annotation_folder"], file_format="txt")
 
-    # # ======================================== annotator ===============================================
-    #
-    # normalization_json_filepath = os.path.join(canonicalization_dir, "normalization.json")
-    # input_sdf = spark.read.text(input_filepath).repartition(spark_cores)
-    # nlp_model_config = get_nlp_model_config(nlp_model_config_filepath, normalization_json_filepath)
-    # annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), nlp_model_config))
-    # write_sdf_to_dir(annotation_sdf, domain_dir, annotation_config["annotation_folder"], file_format="txt")
+    # ======================================== annotator ===============================================
+
+    input_sdf = spark.read.text(input_filepath).repartition(spark_cores)
+    normalization_json_filepath = os.path.join(canonicalization_dir, "normalization.json")
+    nlp_model_config = get_nlp_model_config(nlp_model_config_filepath, normalization_json_filepath)
+    annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), nlp_model_config))
+    write_sdf_to_dir(annotation_sdf, domain_dir, annotation_config["annotation_folder"], file_format="txt")

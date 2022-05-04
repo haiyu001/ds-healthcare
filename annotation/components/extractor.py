@@ -101,15 +101,17 @@ def extract_entity(annotation_sdf: DataFrame,
     entity_sdf = annotation_sdf.select(F.explode(annotation_sdf.entities).alias("entity"))
     entity_sdf = entity_sdf.select(F.lower(F.col("entity").text).alias("text_lower"),
                                    F.col("entity").entity.alias("entity"),
-                                   F.col("entity").text.alias("text"))
+                                   F.col("entity").text.alias("text"),
+                                   F.col("entity").negation.alias("negation"))
     entity_sdf = entity_sdf.groupby(["text_lower"]) \
         .agg(pudf_get_most_common_text(F.collect_list("entity")).alias("entity"),
              pudf_get_most_common_text(F.collect_list("text")).alias("text"),
-             F.count(F.col("text")).alias("count")) \
+             F.count(F.col("text")).alias("count"),
+             F.sum(F.col("negation").cast("int")).alias("negation_count")) \
         .orderBy(F.asc("entity"), F.desc("count"))
     if entity_filter_min_count:
         entity_sdf = entity_sdf.filter(F.col("count") >= entity_filter_min_count)
-    entity_sdf = entity_sdf.select("text", "entity", "count")
+    entity_sdf = entity_sdf.select("text", "count", "negation_count", "entity")
     write_sdf_to_file(entity_sdf, entity_filepath, num_partitions)
 
 
@@ -120,88 +122,15 @@ def extract_umls_concept(annotation_sdf: DataFrame,
     umls_concept_sdf = annotation_sdf.select(F.explode(annotation_sdf._.umls_concepts).alias("umls_concept"))
     umls_concept_sdf = umls_concept_sdf.select(F.lower(F.col("umls_concept").text).alias("text_lower"),
                                                F.col("umls_concept").concepts.alias("concepts"),
-                                               F.col("umls_concept").text.alias("text"))
+                                               F.col("umls_concept").text.alias("text"),
+                                               F.col("umls_concept").negation.alias("negation"))
     umls_concept_sdf = umls_concept_sdf.groupby(["text_lower"]) \
         .agg(pudf_get_most_common_text(F.collect_list("text")).alias("text"),
              F.to_json(F.first(F.col("concepts"))).alias("concepts"),
-             F.count(F.col("text")).alias("count")) \
+             F.count(F.col("text")).alias("count"),
+             F.sum(F.col("negation").cast("int")).alias("negation_count"))\
         .orderBy(F.desc("count"))
     if umls_concept_filter_min_count:
         umls_concept_sdf = umls_concept_sdf.filter(F.col("count") >= umls_concept_filter_min_count)
-    umls_concept_sdf = umls_concept_sdf.select("text", "count", "concepts")
+    umls_concept_sdf = umls_concept_sdf.select("text", "count", "negation_count", "concepts")
     write_sdf_to_file(umls_concept_sdf, umls_concept_filepath, num_partitions)
-
-
-if __name__ == "__main__":
-    from utils.spark_util import get_spark_session
-    from utils.resource_util import get_data_filepath, get_repo_dir
-    from annotation.annotation_utils.annotator_util import read_annotation_config
-    from annotation.components.annotator import load_annotation
-    import os
-
-    annotation_config_filepath = os.path.join(get_repo_dir(), "conf", "annotation_template.cfg")
-    annotation_config = read_annotation_config(annotation_config_filepath)
-
-    domain_dir = get_data_filepath(annotation_config["domain"])
-    canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
-    canonicalization_extraction_dir = os.path.join(
-        canonicalization_dir, annotation_config["canonicalization_extraction_folder"])
-    extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
-
-    spark_cores = 6
-    spark = get_spark_session("test", config_updates={}, master_config=f"local[{spark_cores}]", log_level="WARN")
-
-    # ======================================== canonicalizer =========================================
-
-    # # load canonicalization annotation
-    # canonicalization_annotation_dir = os.path.join(
-    #     canonicalization_dir, annotation_config["canonicalization_annotation_folder"])
-    # canonicalization_annotation_sdf = load_annotation(spark, canonicalization_annotation_dir,
-    #                                                   annotation_config["drop_non_english"])
-    #
-    # # extract canonicalization unigram
-    # canonicalization_unigram_filepath = os.path.join(
-    #     canonicalization_extraction_dir, annotation_config["canonicalization_unigram_filename"])
-    # extract_unigram(canonicalization_annotation_sdf, canonicalization_unigram_filepath)
-    #
-    # # extract canonicalization bigram
-    # canonicalization_bigram_filepath = os.path.join(
-    #     canonicalization_extraction_dir, annotation_config["canonicalization_bigram_filename"])
-    # extract_ngram(canonicalization_annotation_sdf, canonicalization_bigram_filepath,
-    #               n=2, ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
-    #
-    # # extract canonicalization trigram
-    # canonicalization_trigram_filepath = os.path.join(
-    #     canonicalization_extraction_dir, annotation_config["canonicalization_trigram_filename"])
-    # extract_ngram(canonicalization_annotation_sdf, canonicalization_trigram_filepath,
-    #               n=3, ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
-
-    # ======================================== annotator ===============================================
-
-    # load annotation
-    annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
-    annotation_sdf = load_annotation(spark, annotation_dir, annotation_config["drop_non_english"])
-
-    # extract unigram
-    unigram_filepath = os.path.join(extraction_dir, annotation_config["canonicalization_unigram_filename"])
-    extract_unigram(annotation_sdf, unigram_filepath)
-
-    # extract bigram
-    bigram_filepath = os.path.join(extraction_dir, annotation_config["canonicalization_bigram_filename"])
-    extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_filter_min_count"])
-
-    # extract trigram
-    trigram_filepath = os.path.join(extraction_dir, annotation_config["canonicalization_trigram_filename"])
-    extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_filter_min_count"])
-
-    # extract phrase
-    phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
-    extract_phrase(annotation_sdf, phrase_filepath, annotation_config["phrase_filter_min_count"])
-
-    # extract entity
-    entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
-    extract_entity(annotation_sdf, entity_filepath, annotation_config["entity_filter_min_count"])
-
-    # extract umls_concept
-    umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
-    extract_umls_concept(annotation_sdf, umls_concept_filepath, annotation_config["umls_concept_filter_min_count"])

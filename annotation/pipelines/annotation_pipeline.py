@@ -6,7 +6,8 @@ from annotation.components.canonicalizer import get_canonicalization
 from annotation.components.canonicalizer_bigram import get_bigram_canonicalization_candidates, \
     get_bigram_canonicalization_candidates_match_dict, get_bigram_canonicalization
 from annotation.components.canonicalizer_spell import get_spell_canonicalization_candidates, get_spell_canonicalization
-from annotation.components.extractor import extract_unigram, extract_ngram
+from annotation.components.extractor import extract_unigram, extract_ngram, extract_phrase, extract_entity, \
+    extract_umls_concept
 from word_vector.wv_corpus import extact_wv_corpus_from_annotation
 from word_vector.wv_model import build_word2vec
 from utils.resource_util import get_data_filepath
@@ -33,9 +34,11 @@ def load_input(spark: SparkSession,
     if input_filepath:
         logging.info(f"\n{'=' * 100}\nload input from {input_filepath}\n{'=' * 100}\n")
         input_sdf = spark.read.text(input_filepath)
-    if input_dir:
+    elif input_dir:
         logging.info(f"\n{'=' * 100}\nload input from {input_dir}\n{'=' * 100}\n")
         input_sdf = spark.read.text(os.path.join(input_dir, "*.json"))
+    else:
+        raise ValueError("set input_filepath or input_dir for annotation")
     num_partitions = annotation_config["num_partitions"]
     input_sdf = input_sdf.repartition(num_partitions).cache()
     return input_sdf
@@ -131,6 +134,22 @@ def build_canonicalization(spark: SparkSession,
                          annotation_config["conjunction_trigram_canonicalization_filter_min_count"])
 
 
+def build_extraction(annotation_sdf: DataFrame,
+                     unigram_filepath: str,
+                     bigram_filepath: str,
+                     trigram_filepath: str,
+                     phrase_filepath: str,
+                     entity_filepath: str,
+                     umls_concept_filepath: str,
+                     annotation_config: Dict[str, Any]):
+    extract_unigram(annotation_sdf, unigram_filepath)
+    extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_filter_min_count"])
+    extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_filter_min_count"])
+    extract_phrase(annotation_sdf, phrase_filepath, annotation_config["phrase_filter_min_count"])
+    extract_entity(annotation_sdf, entity_filepath, annotation_config["entity_filter_min_count"])
+    extract_umls_concept(annotation_sdf, umls_concept_filepath, annotation_config["umls_concept_filter_min_count"])
+
+
 def main(spark: SparkSession,
          nlp_model_config_filepath: str,
          annotation_config_filepath: str,
@@ -139,6 +158,8 @@ def main(spark: SparkSession,
     # load annotation config
     annotation_config = read_annotation_config(annotation_config_filepath)
     domain_dir = get_data_filepath(annotation_config["domain"])
+    annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
+    extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
     canonicalization_annotation_dir = os.path.join(
         canonicalization_dir, annotation_config["canonicalization_annotation_folder"])
@@ -166,6 +187,12 @@ def main(spark: SparkSession,
         canonicalization_extraction_dir, annotation_config["spell_canonicalization_filename"])
     canonicalization_filepath = os.path.join(
         canonicalization_dir, annotation_config["canonicalization_filename"])
+    unigram_filepath = os.path.join(extraction_dir, annotation_config["unigram_filename"])
+    bigram_filepath = os.path.join(extraction_dir, annotation_config["bigram_filename"])
+    trigram_filepath = os.path.join(extraction_dir, annotation_config["trigram_filename"])
+    phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
+    entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
+    umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
 
     # load nlp model config
     canonicalization_nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
@@ -228,6 +255,21 @@ def main(spark: SparkSession,
                      domain_dir,
                      annotation_config["annotation_folder"],
                      nlp_model_config)
+
+    # load annotation
+    annotation_sdf = load_annotation(spark,
+                                     annotation_dir,
+                                     annotation_config["drop_non_english"])
+
+    # extract unigram, bigram, trigram, phrase, entity and umls_concept
+    build_extraction(annotation_sdf,
+                     unigram_filepath,
+                     bigram_filepath,
+                     trigram_filepath,
+                     phrase_filepath,
+                     entity_filepath,
+                     umls_concept_filepath,
+                     annotation_config)
 
 
 if __name__ == "__main__":

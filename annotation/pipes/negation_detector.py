@@ -26,7 +26,8 @@ class NegationDetector(object):
         self.max_distance = max_distance
         self.entity_types = entity_types.split(",") if entity_types else None
         self.umls_concept_types = umls_concept_types.split(",") if umls_concept_types else None
-        self.chunk_prefix = chunk_prefix.split(",") if chunk_prefix else None
+        self.chunk_prefix = list(set(proposition_chunk_prefix + chunk_prefix.split(","))) \
+            if chunk_prefix else proposition_chunk_prefix
         self.pseudo_negations = pseudo_negations
         self.preceding_negations = preceding_negations
         self.following_negations = following_negations
@@ -36,8 +37,8 @@ class NegationDetector(object):
         Span.set_extension(self._negation, default=False, force=True)
 
     def __call__(self, doc) -> Doc:
-        preceding_negations, following_negations, terminating_starts = self.get_negations_and_terminations(doc)
-        boundaries = self.get_boundaries(doc, terminating_starts)
+        preceding_negations, following_negations, termination_starts = self.get_negations_and_terminations(doc)
+        boundaries = self.get_boundaries(doc, termination_starts)
         for boundary in boundaries:
             preceding_negations_in_boundary = [preceding_negation for preceding_negation in preceding_negations
                                                if boundary[0] <= preceding_negation[0] < boundary[1]]
@@ -52,7 +53,7 @@ class NegationDetector(object):
                                           following_negations_in_boundary)
             # set concept negation
             umls_concepts_in_boundary = [umls_concept for umls_concept in doc._.umls_concepts
-                                    if umls_concept.start >= boundary[0] and umls_concept.end < boundary[1]]
+                                         if umls_concept.start >= boundary[0] and umls_concept.end < boundary[1]]
             if self.umls_concept_types:
                 umls_concepts_in_boundary = [umls_concept for umls_concept in umls_concepts_in_boundary
                                              if len(set(self.umls_concept_types) &
@@ -94,8 +95,7 @@ class NegationDetector(object):
         neg_terms = {"pseudo_negations": proposition_pseudo,
                      "preceding_negations": proposition_preceding,
                      "following_negations": proposition_following,
-                     "termination": proposition_termination,
-                     "chunk_prefix": proposition_chunk_prefix, }
+                     "termination": proposition_termination, }
         if self.neg_termset.startswith("en_clinical"):
             neg_terms["pseudo_negations"] = pseudo_clinical
             neg_terms["preceding_negations"] = proposition_preceding_clinical
@@ -114,8 +114,6 @@ class NegationDetector(object):
                 list(set(neg_terms["following_negations"] + self.following_negations.split(",")))
         if self.termination:
             neg_terms["termination"] = list(set(neg_terms["termination"] + self.termination.split(",")))
-        if self.chunk_prefix:
-            neg_terms["chunk_prefix"] = list(set(neg_terms["chunk_prefix"] + self.chunk_prefix.split(",")))
         return neg_terms
 
     def build_negation_matcher(self) -> PhraseMatcher:
@@ -141,7 +139,7 @@ class NegationDetector(object):
                 preceding_negations.append((start, end))
             elif self.nlp.vocab.strings[match_id] == "following":
                 following_negations.append((start, end))
-            elif self.nlp.vocab.strings[match_id] == "terminating":
+            elif self.nlp.vocab.strings[match_id] == "termination":
                 termination_starts.append(start)
         return preceding_negations, following_negations, termination_starts
 
