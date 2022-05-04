@@ -23,6 +23,7 @@ def _get_umls_concepts(doc):
             "start_id": concept_span.start,
             "end_id": concept_span.end,
             "text": concept_span.text,
+            "negation": concept_span._.negation,
             "concepts": concept_span._.concepts,
         })
     return umls_concepts
@@ -167,7 +168,8 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
         data["entities"] = [{"start_id": ent.start,
                              "end_id": ent.end,
                              "entity": ent.label_,
-                             "text": ent.text, } for ent in doc.ents]
+                             "text": ent.text,
+                             "negation": ent._.negation} for ent in doc.ents]
 
     for i, token in enumerate(doc):
         token_data = {

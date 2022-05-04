@@ -1,14 +1,14 @@
 from typing import Tuple, Optional, List
+from annotation.pipes.spacy_pipline import SpacyPipeline
+from annotation.pipes.stanza_pipeline import StanzaPipeline
+from annotation.pipes.sentence_detector import SentenceDetector
 from annotation.pipes.fastlang_detector import FastLangDetector
 from annotation.pipes.lang_detector import LangDetector
 from annotation.pipes.phrase_detector import PhraseDetector
-from annotation.pipes.sentence_detector import SentenceDetector
-from annotation.pipes.spacy_pipline import SpacyPipeline
-from annotation.pipes.stanza_pipeline import StanzaPipeline
 from annotation.pipes.spell_detector import SpellDetector
-from spacy.language import Language
-
 from annotation.pipes.umls_concept_detector import UMLSConceptDetector
+from annotation.pipes.negation_detector import NegationDetector
+from spacy.language import Language
 
 
 @Language.factory("spacy_pipeline", default_config={"lang": "en",
@@ -34,16 +34,16 @@ def create_stanza_pipeline_component(nlp: Language, name: str, lang: str, packag
     return StanzaPipeline(nlp, lang, package, processors, processors_packages, use_gpu, set_token_vector_hooks, attrs)
 
 
+@Language.factory("sentence_detector", default_config={"lang": "en"})
+def create_sentence_detector_component(nlp: Language, name: str, lang: str) -> SentenceDetector:
+    return SentenceDetector(lang)
+
+
 @Language.factory("fastlang_detector", default_config={"attrs": ("language", "language_score"),
                                                        "model_name": "lid.176.ftz", })
 def create_lang_detector_component(nlp: Language, name: str, attrs: Tuple[str, str],
                                    model_name: str) -> FastLangDetector:
     return FastLangDetector(attrs, model_name)
-
-
-@Language.factory("sentence_detector", default_config={"lang": "en"})
-def create_sentence_detector_component(nlp: Language, name: str, lang: str) -> SentenceDetector:
-    return SentenceDetector(lang)
 
 
 @Language.factory("lang_detector", default_config={"attrs": ("language", "language_score")})
@@ -72,9 +72,26 @@ def create_spell_checker_component(nlp: Language, name: str, attrs: Tuple[str, s
                                                            "attrs": ("umls_concepts", "concepts"), })
 def create_umls_concept_detector_component(nlp: Language, name: str, quickumls_filepath: Optional[str],
                                            overlapping_criteria: str, similarity_name: str, threshold: float,
-                                           window: int,
-                                           accepted_semtypes: Optional[List[str]], best_match: bool,
-                                           keep_uppercase: bool,
-                                           attrs: Tuple[str, str]) -> UMLSConceptDetector:
+                                           window: int, accepted_semtypes: Optional[List[str]], best_match: bool,
+                                           keep_uppercase: bool, attrs: Tuple[str, str]) -> UMLSConceptDetector:
     return UMLSConceptDetector(nlp, quickumls_filepath, overlapping_criteria, similarity_name, threshold, window,
                                accepted_semtypes, best_match, keep_uppercase, attrs)
+
+
+@Language.factory("negation_detector", default_config={"neg_termset": "en",
+                                                       "max_distance": 5,
+                                                       "entity_types": None,
+                                                       "umls_concept_types": None,
+                                                       "chunk_prefix": None,
+                                                       "pseudo_negations": None,
+                                                       "preceding_negations": None,
+                                                       "following_negations": None,
+                                                       "termination": None,
+                                                       "attrs": ("negation",), })
+def create_negation_detector_component(nlp: Language, name: str, neg_termset: str, max_distance: int,
+                                       entity_types: Optional[str], umls_concept_types: Optional[str],
+                                       chunk_prefix: Optional[str], pseudo_negations: Optional[str],
+                                       preceding_negations: Optional[str], following_negations: Optional[str],
+                                       termination: Optional[str], attrs: Tuple[str]) -> NegationDetector:
+    return NegationDetector(nlp, neg_termset, max_distance, entity_types, umls_concept_types, chunk_prefix,
+                            pseudo_negations, preceding_negations, following_negations, termination, attrs)

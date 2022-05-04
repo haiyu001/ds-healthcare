@@ -35,27 +35,28 @@ sentiment_negation = {
     "wouldnt": "before",
 }
 
-social_negation = sentiment_negation + [  # from VADER
-    "none",
-    "nope",
-    "nothing",
-    "nowhere",
-    "uhuh",
-    "uh-uh",
-    "rarely",
-    "seldom",
-    "despite",
-]
+sentiment_negation_social = {**sentiment_negation, **{
+    "none": "before",
+    "nope": "before",
+    "nothing": "before",
+    "nowhere": "before",
+    "uhuh": "before",
+    "uh-uh": "before",
+    "rarely": "before",
+    "seldom": "before",
+    "despite": "before",
+}}
 
-black_negation = [
-    "never so",
-    "never this",
-    "without doubt",
-    "at least",
-    "very least",
-]
+sentiment_pseudo = {
+    "never so": "before",
+    "never this": "before",
+    "without doubt": "before",
+    "at least": "before",
+    "very least": "before",
+    "not only": "before",
+}
 
-pseudo = [
+proposition_pseudo = [
     "no further",
     "not able to be",
     "not certain if",
@@ -139,7 +140,11 @@ proposition_termination = [
     "yet",
 ]
 
-pseudo_clinical = pseudo + [
+proposition_chunk_prefix = [
+    "no",
+]
+
+pseudo_clinical = proposition_pseudo + [
     "gram negative",
     "not rule out",
     "not ruled out",
@@ -217,7 +222,7 @@ proposition_termination_clinical = proposition_termination + [
     "trigger event for",
 ]
 
-proposition_preceding_clinical_historical = proposition_preceding_clinical + [
+proposition_preceding_clinical_sensitive = proposition_preceding_clinical + [
     "concern for",
     "supposed",
     "which causes",

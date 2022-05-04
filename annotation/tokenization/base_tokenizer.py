@@ -23,6 +23,10 @@ class SpacyBaseTokenizer(BaseTokenizer):
         doc = self.tokenizer(text)
         return doc
 
+    def pipe(self, texts):
+        for text in texts:
+            yield self.tokenize(text)
+
 
 class StanzaBaseTokenizer(BaseTokenizer):
 
@@ -107,3 +111,7 @@ class StanzaBaseTokenizer(BaseTokenizer):
             text_spaces.append(False)
             text_sents.append(False)
         return text_words, text_spaces, text_sents
+
+    def pipe(self, texts):
+        for text in texts:
+            yield self.tokenize(text)
