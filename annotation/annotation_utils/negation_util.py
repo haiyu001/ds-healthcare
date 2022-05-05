@@ -196,6 +196,8 @@ proposition_following_clinical = proposition_following + [
     "were ruled out",
     "free",
     "disappear",         # from UMLS NEG LEXICON
+    "disappears",        # from UMLS NEG LEXICON
+    "disappeared",       # from UMLS NEG LEXICON
 ]
 
 proposition_termination_clinical = proposition_termination + [

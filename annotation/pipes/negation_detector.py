@@ -82,11 +82,10 @@ class NegationDetector(object):
         if distance > self.max_distance:
             comma_ids = [token.i for token in doc[left: right] if token.text == "," or token.text == "and"]
             distance_ids = sorted(list(set([left, right] + comma_ids)))
-            if distance_ids:
-                distances = [distance_ids[i + 1] - distance_ids[i] - 1 for i in range(len(distance_ids) - 1)]
-                distances = [d for d in distances if d > 0]
-                if distances and all(d <= 3 for d in distances):
-                    distance = 0
+            distances = [distance_ids[i + 1] - distance_ids[i] - 1 for i in range(len(distance_ids) - 1)]
+            non_zero_distances = [distance for distance in distances if distance > 0]
+            if distances and all(distance <= 3 for distance in non_zero_distances):
+                distance = 0
         return distance
 
     def _get_neg_terms(self) -> Dict[str, List[str]]:

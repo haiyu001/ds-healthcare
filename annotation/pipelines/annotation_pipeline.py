@@ -142,6 +142,7 @@ def build_extraction(annotation_sdf: DataFrame,
                      entity_filepath: str,
                      umls_concept_filepath: str,
                      annotation_config: Dict[str, Any]):
+    logging.info(f"\n{'=' * 100}\nextract unigram, bigram, trigram, phrase, entity and umls_concept\n{'=' * 100}\n")
     extract_unigram(annotation_sdf, unigram_filepath)
     extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_filter_min_count"])
     extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_filter_min_count"])
