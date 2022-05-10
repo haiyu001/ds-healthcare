@@ -14,10 +14,10 @@ if __name__ == "__main__":
 
     samples = ["Heart Attack", "He had a huge heart attack"]
 
-    # mm = MetaMap.get_instance(get_model_filepath("UMLS", "MetaMap", "public_mm", "bin", "metamap18"))
-    # concepts, error = mm.extract_concepts(sents, [1, 2])
-    # for concept in concepts:
-    #     print(concept)
+    mm = MetaMap.get_instance(get_model_filepath("UMLS", "MetaMap", "public_mm", "bin", "metamap18"))
+    concepts, error = mm.extract_concepts(samples, [1, 2])
+    for concept in concepts:
+        print(concept)
 
     mm_lite = MetaMapLite.get_instance(get_model_filepath("UMLS", "MetaMap", "public_mm_lite"))
     concepts, error = mm_lite.extract_concepts(samples, [1, 2])
