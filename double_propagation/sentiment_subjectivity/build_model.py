@@ -1,32 +1,59 @@
+from typing import Dict, List, Optional
 from ml.binary_mlp import BinaryModel
 from ml.ml_utils import get_train_val_test
 from utils.general_util import setup_logger, save_pdf, load_json_file, make_dir
 from utils.resource_util import get_model_filepath
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf
-import tensorflow as tf
 import pandas as pd
+import tensorflow as tf
 import os
 
 
-def get_similarity_stats_pdf(sim_df, prefix):
-    stats_pdf = pd.DataFrame({f"{prefix}_min": sim_df.min(axis=1),
-                              f"{prefix}_max": sim_df.max(axis=1),
-                              f"{prefix}_std": sim_df.std(axis=1),
-                              f"{prefix}_avg": sim_df.mean(axis=1)})
+def get_similarity_stats_pdf(similarity_matrix_pdf: pd.DataFrame, prefix: str):
+    stats_pdf = pd.DataFrame({f"{prefix}_min": similarity_matrix_pdf.min(axis=1),
+                              f"{prefix}_max": similarity_matrix_pdf.max(axis=1),
+                              f"{prefix}_std": similarity_matrix_pdf.std(axis=1),
+                              f"{prefix}_avg": similarity_matrix_pdf.mean(axis=1)})
     return stats_pdf
 
 
-def get_sentiment_features_df(sentiment_neg_similarity_pdf, sentiment_pos_similarity_pdf, sentiment_features_pdf):
-    neg_stats_pdf = get_similarity_stats_pdf(sentiment_neg_similarity_pdf, "neg")
-    pos_stats_pdf = get_similarity_stats_pdf(sentiment_pos_similarity_pdf, "pos")
-    features_pdf = pd.concat([neg_stats_pdf, pos_stats_pdf, sentiment_features_pdf], axis=1)
-    features_pdf = features_pdf[["label"] + [i for i in features_pdf.columns if i != "label"]]
-    non_sentiment_cnt = features_pdf[features_pdf["label"] == 0].shape[0]
-    sentiment_cnt = features_pdf[features_pdf["label"] == 1].shape[0]
-    save_pdf(features_pdf,get_model_filepath("model", "sentiment", "training",
-                                             f"sentiment_no-{non_sentiment_cnt}_yes-{sentiment_cnt}_training.csv"),
-             csv_index_label="word", csv_index=True)
-    return features_pdf
+def get_sentiment_features_pdf(sentiment_vecs_filepath: str) -> pd.DataFrame:
+    sentiment_model_dir = get_model_filepath("model", "sentiment", "training")
+    opinion_neg = WordVec(os.path.join(sentiment_model_dir, "absa_seed_opinions_neg_vecs.txt"))
+    opinion_pos = WordVec(os.path.join(sentiment_model_dir, "absa_seed_opinions_pos_vecs.txt"))
+    sentiment_vecs = WordVec(sentiment_vecs_filepath)
+    sentiment_neg_similarity_pdf = sentiment_vecs.vecs_pdf.dot(opinion_neg.vecs_pdf.T)
+    sentiment_pos_similarity_pdf = sentiment_vecs.vecs_pdf.dot(opinion_pos.vecs_pdf.T)
+    neg_stats_features_pdf = get_similarity_stats_pdf(sentiment_neg_similarity_pdf, "neg")
+    pos_stats_features_pdf = get_similarity_stats_pdf(sentiment_pos_similarity_pdf, "pos")
+    sentiment_vecs_features_pdf = load_txt_vecs_to_pdf(sentiment_vecs_filepath)
+    sentiment_features_pdf = pd.concat(
+        [neg_stats_features_pdf, pos_stats_features_pdf, sentiment_vecs_features_pdf], axis=1)
+    return sentiment_features_pdf
+
+
+def get_sentiment_training_pdf(sentiment_vecs_filepath: str, sentiment_labels: Dict[str, int]):
+    sentiment_features_pdf = get_sentiment_features_pdf(sentiment_vecs_filepath)
+    sentiment_features_pdf["label"] = [sentiment_labels[word] for word in sentiment_features_pdf.index]
+    sentiment_training_pdf = sentiment_features_pdf[
+        ["label"] + [i for i in sentiment_features_pdf.columns if i != "label"]]
+    non_sentiment_cnt = sentiment_training_pdf[sentiment_training_pdf["label"] == 0].shape[0]
+    sentiment_cnt = sentiment_training_pdf[sentiment_training_pdf["label"] == 1].shape[0]
+    sentiment_training_filepath = get_model_filepath(
+        "model", "sentiment", "training", f"sentiment_no-{non_sentiment_cnt}_yes-{sentiment_cnt}_training.csv")
+    save_pdf(sentiment_training_pdf, sentiment_training_filepath, csv_index_label="word", csv_index=True)
+
+
+def get_model_prediction_pdf(features_pdf: List[str],
+                             model_filepath: str,
+                             predicted_score_col: str = "predicted_score",
+                             save_filepath: Optional[str] = None) -> pd.DataFrame:
+    model = tf.keras.models.load_model(model_filepath)
+    predictions = model.predict(x=features_pdf, verbose=1)
+    prediction_pdf = pd.DataFrame({predicted_score_col: predictions[:, 0]}, index=features_pdf.index)
+    if save_filepath:
+        save_pdf(prediction_pdf, save_filepath, csv_index=True)
+    return prediction_pdf
 
 
 if __name__ == "__main__":
@@ -34,27 +61,20 @@ if __name__ == "__main__":
 
     # ============================================ sentiment features =============================================
 
-    sentiment_model_dir = get_model_filepath("model", "sentiment", "training")
-    sentiment_features_df = load_txt_vecs_to_pdf(os.path.join(sentiment_model_dir, "sentiment_vecs.txt"))
-    sentiment_labels = load_json_file(os.path.join(sentiment_model_dir, "sentiment_labels.json"))
-    sentiment_features_df["label"] = [sentiment_labels[word] for word in sentiment_features_df.index]
-
-    sentiment_vec = WordVec(os.path.join(sentiment_model_dir, "sentiment_vecs.txt"))
-    opinion_neg = WordVec(os.path.join(sentiment_model_dir, "absa_seed_opinions_neg_vecs.txt"))
-    opinion_pos = WordVec(os.path.join(sentiment_model_dir, "absa_seed_opinions_pos_vecs.txt"))
-    sentiment_neg_similarity_pdf = sentiment_vec.vecs_pdf.dot(opinion_neg.vecs_pdf.T)
-    sentiment_pos_similarity_pdf = sentiment_vec.vecs_pdf.dot(opinion_pos.vecs_pdf.T)
-    get_sentiment_features_df(sentiment_neg_similarity_pdf, sentiment_pos_similarity_pdf, sentiment_features_df)
+    sentiment_vecs_filepath = get_model_filepath("model", "sentiment", "training", "sentiment_vecs.txt")
+    sentiment_labels = load_json_file(get_model_filepath("model", "sentiment", "training", "sentiment_labels.json"))
+    get_sentiment_training_pdf(sentiment_vecs_filepath, sentiment_labels)
 
     # # ============================================== sentiment model ==============================================
 
     sentiment_model_dir = get_model_filepath("model", "sentiment", "training")
-    sentiment_model_training_data_filepath = os.path.join(sentiment_model_dir, "sentiment_no-3573_yes-3566_training.csv")
-    features_df = pd.read_csv(sentiment_model_training_data_filepath, index_col="word", encoding="utf-8")
+    sentiment_model_training_data_filepath = os.path.join(sentiment_model_dir,
+                                                          "sentiment_no-3573_yes-3566_training.csv")
+    features_pdf = pd.read_csv(sentiment_model_training_data_filepath, index_col="word", encoding="utf-8")
 
     for i in range(5, 9):
         print("=" * 50, i, "=" * 50)
-        features_df = features_df.sample(frac=1.0)
+        features_pdf = features_pdf.sample(frac=1.0)
         sentiment_i_dir = os.path.join(sentiment_model_dir, f"sentiment_{i}")
         model = BinaryModel(make_dir(sentiment_i_dir),
                             input_dimension=308,
@@ -65,7 +85,7 @@ if __name__ == "__main__":
                             second_hidden_layer_size=16,
                             epochs=200,
                             batch_size=16)
-        X_train, y_train, X_val, y_val, X_test, y_test = get_train_val_test(features_df, val_size=0.05, test_size=0.05)
+        X_train, y_train, X_val, y_val, X_test, y_test = get_train_val_test(features_pdf, val_size=0.05, test_size=0.05)
         model.train_model(X_train, y_train, X_val, y_val, X_test, y_test, class_weight=None)
 
     # # ============================================== subjectivity model ==============================================
@@ -73,11 +93,11 @@ if __name__ == "__main__":
     subjectivity_model_dir = get_model_filepath("model", "subjectivity", "training")
     subjectivity_model_training_data_filepath = os.path.join(subjectivity_model_dir,
                                                              "subjectivity_weak-2698_strong-4515_training.csv")
-    features_df = pd.read_csv(subjectivity_model_training_data_filepath, index_col="word", encoding="utf-8")
+    features_pdf = pd.read_csv(subjectivity_model_training_data_filepath, index_col="word", encoding="utf-8")
 
     for i in range(2, 6):
         print("=" * 50, i, "=" * 50)
-        features_df = features_df.sample(frac=1.0)
+        features_pdf = features_pdf.sample(frac=1.0)
         subjectivity_i_dir = os.path.join(subjectivity_model_dir, f"subjectivity_{i}")
         model = BinaryModel(make_dir(subjectivity_i_dir),
                             input_dimension=300,
@@ -88,5 +108,5 @@ if __name__ == "__main__":
                             second_hidden_layer_size=32,
                             epochs=300,
                             batch_size=16)
-        X_train, y_train, X_val, y_val, X_test, y_test = get_train_val_test(features_df, val_size=0.05, test_size=0.05)
+        X_train, y_train, X_val, y_val, X_test, y_test = get_train_val_test(features_pdf, val_size=0.05, test_size=0.05)
         model.train_model(X_train, y_train, X_val, y_val, X_test, y_test, class_weight={0: 0.6, 1: 0.4})

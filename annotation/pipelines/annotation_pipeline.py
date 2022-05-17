@@ -1,6 +1,5 @@
 from typing import Dict, Any, Optional
-from annotation.annotation_utils.annotator_util import read_annotation_config, get_nlp_model_config, \
-    get_canonicalization_nlp_model_config
+from annotation.annotation_utils.annotator_util import get_nlp_model_config, get_canonicalization_nlp_model_config
 from annotation.components.annotator import pudf_annotate, load_annotation, get_nlp_model, get_nlp_model_config_str
 from annotation.components.canonicalizer import get_canonicalization
 from annotation.components.canonicalizer_bigram import get_bigram_canonicalization_candidates, \
@@ -8,6 +7,7 @@ from annotation.components.canonicalizer_bigram import get_bigram_canonicalizati
 from annotation.components.canonicalizer_spell import get_spell_canonicalization_candidates, get_spell_canonicalization
 from annotation.components.extractor import extract_unigram, extract_ngram, extract_phrase, extract_entity, \
     extract_umls_concept
+from utils.config_util import read_config_to_dict
 from word_vector.wv_corpus import extact_wv_corpus_from_annotation
 from word_vector.wv_model import build_word2vec
 from utils.resource_util import get_data_filepath
@@ -22,7 +22,7 @@ import os
 
 
 def get_master_config(annotation_config_filepath: str) -> Optional[str]:
-    annotation_config = read_annotation_config(annotation_config_filepath)
+    annotation_config = read_config_to_dict(annotation_config_filepath)
     num_partitions = annotation_config["num_partitions"]
     return f"local[{num_partitions}]" if platform == "darwin" else None
 
@@ -157,7 +157,7 @@ def main(spark: SparkSession,
          input_filepath: str,
          input_dir: str):
     # load annotation config
-    annotation_config = read_annotation_config(annotation_config_filepath)
+    annotation_config = read_config_to_dict(annotation_config_filepath)
     domain_dir = get_data_filepath(annotation_config["domain"])
     annotation_dir = os.path.join(domain_dir, annotation_config["annotation_folder"])
     extraction_dir = os.path.join(domain_dir, annotation_config["extraction_folder"])

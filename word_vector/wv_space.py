@@ -4,6 +4,7 @@ from sklearn.preprocessing import normalize
 import marisa_trie
 import pandas as pd
 import numpy as np
+import logging
 import re
 
 
@@ -82,20 +83,16 @@ class WordVec(object):
     def extract_txt_vecs(self, words: List[str], save_filepath: str):
         if len(words) != len(set(words)):
             raise ValueError("Some words are duplicated")
-        if len(set(words) & set(self.get_vocab())) != len(words):
-            raise ValueError("Some words are out of vocabulary")
-        word_to_vec = dict()
-        num_rows, num_cols = len(words), None
-        with open(self.txt_vecs_filepath, "r", encoding="utf-8") as input:
-            _, num_cols = next(input).strip("\n").strip().split()
-            for line in input:
-                word = line.split()[0]
-                if word in words:
-                    word_to_vec[word] = line
+        if len(set(words) & set(self.get_vocab())) != len(words) and not self.use_oov_strategy:
+            raise ValueError("Some words are out of vocabulary, set use_oov_strategy for handling oov extraction")
+        num_rows, num_cols = len(words), self.vecs_pdf.shape[1]
         with open(save_filepath, "w", encoding="utf-8") as output:
             output.write(f"{num_rows} {num_cols}\n")
             for word in words:
-                output.write(word_to_vec[word])
+                word_vec = self.get_word_vec(word)
+                word_vec_str = " ".join([str(i) for i in word_vec])
+                output.write(word + " " + word_vec_str + "\n")
+        logging.info(f"the extracted word vecs dimension: ({num_rows}, {num_cols})")
 
 
 class ConceptNetWordVec(WordVec):
@@ -111,4 +108,5 @@ def load_txt_vecs_to_pdf(txt_vecs_filepath: str, l2_norm: bool = False) -> pd.Da
     vecs = word_vecs.vectors
     if l2_norm:
         vecs = normalize(vecs, norm="l2", axis=1)
-    return pd.DataFrame(vecs, index=vocab, dtype="float64")
+    index = pd.Index(vocab, name="word")
+    return pd.DataFrame(vecs, index=index, dtype="float64")

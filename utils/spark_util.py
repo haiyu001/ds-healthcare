@@ -1,9 +1,11 @@
+from collections import Counter
 from typing import Optional, Dict, List
 from utils.general_util import split_filepath, save_pdf
 from utils.resource_util import zip_repo
 from pyspark import SparkConf
-from pyspark.sql import SparkSession, Window
+from pyspark.sql import SparkSession, Window, Column
 from pyspark.sql import DataFrame
+from pyspark.sql.types import StringType
 import pyspark.sql.functions as F
 from pathlib import Path
 from pprint import pformat
@@ -131,4 +133,12 @@ def union_sdfs(*sdfs: DataFrame) -> DataFrame:
     for sdf in sdfs[1:]:
         all_sdf = all_sdf.unionByName(sdf, allowMissingColumns=True)
     return all_sdf
+
+
+def pudf_get_most_common_text(texts: Column) -> Column:
+    def get_most_common_text(texts: pd.Series) -> pd.Series:
+        most_common_text = texts.apply(lambda x: Counter(x).most_common(1)[0][0])
+        return most_common_text
+
+    return F.pandas_udf(get_most_common_text, StringType())(texts)
 

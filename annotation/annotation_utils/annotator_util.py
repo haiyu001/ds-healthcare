@@ -29,14 +29,6 @@ def load_blank_nlp(lang: str, package: str, whitespace_tokenizer: bool = False) 
     return blank_nlp
 
 
-def read_annotation_config(config_filepath: str) -> Dict[str, Any]:
-    config = read_config(config_filepath)
-    annotation_config = {}
-    for section in config.sections():
-        annotation_config.update(config_type_casting(config.items(section)))
-    return annotation_config
-
-
 def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
     config = read_config(config_filepath)
 

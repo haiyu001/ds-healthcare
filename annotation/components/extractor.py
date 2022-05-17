@@ -1,20 +1,11 @@
 from typing import List, Optional
-from utils.spark_util import extract_topn_common, write_sdf_to_file
+from utils.spark_util import extract_topn_common, write_sdf_to_file, pudf_get_most_common_text
 from pyspark.sql.types import ArrayType, StringType, Row, BooleanType
 from pyspark.sql import DataFrame, Column
 import pyspark.sql.functions as F
 from pyspark.ml.feature import NGram
-from collections import Counter
 from string import punctuation
 import pandas as pd
-
-
-def pudf_get_most_common_text(texts: Column) -> Column:
-    def get_most_common_text(texts: pd.Series) -> pd.Series:
-        most_common_text = texts.apply(lambda x: Counter(x).most_common(1)[0][0])
-        return most_common_text
-
-    return F.pandas_udf(get_most_common_text, StringType())(texts)
 
 
 def pudf_is_valid_ngram(ngrams: Column) -> Column:

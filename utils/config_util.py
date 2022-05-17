@@ -17,6 +17,14 @@ def read_config(config_filepath: str) -> ConfigParser:
     return config
 
 
+def read_config_to_dict(config_filepath: str) -> Dict[str, Any]:
+    config = read_config(config_filepath)
+    config_dict = {}
+    for section in config.sections():
+        config_dict.update(config_type_casting(config.items(section)))
+    return config_dict
+
+
 def copy_config(config_filepath: str, save_filepath: str):
     with open(config_filepath) as input:
         conf_content = input.read()
