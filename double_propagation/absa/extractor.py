@@ -22,7 +22,7 @@ def udf_extract_opinions_and_aspects(doc_text: Column,
                                      doc_tokens: Column,
                                      doc_sentiments: Column,
                                      aspects: List[AspectTerm],
-                                     opinions: Dict[str, str]):
+                                     opinions: Dict[str, str]) -> Column:
     def extract_opinoins_and_aspects(doc_text, doc_sentences, doc_tokens, doc_sentiments):
         opinion_candidates = []
         aspect_candidates = []
@@ -128,7 +128,7 @@ def udf_get_aspect_opinions(rules: Column, sources: Column, threshold: int) -> C
     return F.udf(get_aspect_opinions, MapType(StringType(), IntegerType(), False))(rules, sources)
 
 
-def udf_get_opinion_aspects(rules: Column, sources: Column, threshold: int):
+def udf_get_opinion_aspects(rules: Column, sources: Column, threshold: int) -> Column:
     def get_opinion_aspects(rules, sources):
         aspects = [source.lower() for rule, source in zip(rules, sources) if
                    rule in [RuleType.A_O.name, RuleType.A_X_O.name]]
@@ -138,7 +138,7 @@ def udf_get_opinion_aspects(rules: Column, sources: Column, threshold: int):
     return F.udf(get_opinion_aspects, MapType(StringType(), IntegerType(), False))(rules, sources)
 
 
-def load_absa_sdf(annotation_sdf):
+def load_absa_sdf(annotation_sdf: DataFrame) -> DataFrame:
     absa_columns = [F.col("text").alias("doc_text"),
                     F.col("tokens").alias("doc_tokens"),
                     F.col("sentences").alias("doc_sentences")]
@@ -166,7 +166,7 @@ def get_aspect_opinion_thresholds(absa_sdf: DataFrame,
     return aspect_threshold, opinion_threshold
 
 
-def save_candidates_pdf(candidates_pdf, save_filepath):
+def save_candidates_pdf(candidates_pdf: pd.DataFrame, save_filepath: str):
     preprocessor_replace_list = "|".join([REPLACE_EMAIL, REPLACE_URL, REPLACE_HASHTAG, REPLACE_HANDLE])
     candidates_pdf = candidates_pdf[~(candidates_pdf["text"].str.contains(preprocessor_replace_list, regex=True))]
     candidates_pdf = candidates_pdf.sort_values(by='count', ascending=False)
@@ -175,7 +175,7 @@ def save_candidates_pdf(candidates_pdf, save_filepath):
 
 def filter_aspect_candidates(aspect_candidates_sdf: DataFrame,
                              aspect_stop_words: Set[str],
-                             accumulated_aspects: List[AspectTerm]):
+                             accumulated_aspects: List[AspectTerm]) -> DataFrame:
     aspect_candidates_sdf = aspect_candidates_sdf.filter(
         udf_filter_aspect_candidates(aspect_candidates_sdf.candidate, aspect_stop_words, accumulated_aspects))
     aspect_candidates_sdf = aspect_candidates_sdf.select(F.lower(F.col("candidate.text")).alias("text"),
@@ -190,7 +190,7 @@ def filter_aspect_candidates(aspect_candidates_sdf: DataFrame,
 
 def filter_opinion_candidates(opinion_candidates_sdf: DataFrame,
                               opinion_stop_words: Set[str],
-                              accumulated_opinions: Dict[str, str]):
+                              accumulated_opinions: Dict[str, str]) -> DataFrame:
     opinion_candidates_sdf = opinion_candidates_sdf.filter(
         udf_filter_opinion_candidates(opinion_candidates_sdf.candidate, opinion_stop_words, accumulated_opinions))
     opinion_candidates_sdf = opinion_candidates_sdf.select(F.lower(F.col("candidate.text")).alias("text"),
