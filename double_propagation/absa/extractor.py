@@ -8,6 +8,7 @@ from double_propagation.absa.extraction_rules import rule_O_O, rule_O_X_O, rule_
 from double_propagation.absa.data_types import RelationTerm, Relation, AspectTerm, candidates_schema
 from double_propagation.absa_utils.extractor_util import load_absa_stop_words, load_absa_seed_opinions, norm_pos, \
     VALID_OPINION_REX, VALID_ASPECT_REX, get_sentence_sentiment
+import pandas as pd
 from pyspark.sql import DataFrame
 from collections import Counter
 import string
@@ -230,7 +231,7 @@ def get_aspect_candidates_pdf(aspect_candidates_sdfs: List[DataFrame],
                               aspect_stop_words: Set[str],
                               aspect_threshold: int,
                               aspect_opinions_filter_min_count: int = 3,
-                              num_samples: int = 10):
+                              num_samples: int = 10) -> pd.DataFrame:
     aspect_candidates_sdf = union_sdfs(*aspect_candidates_sdfs)
     aspect_candidates_sdf = filter_aspect_candidates(aspect_candidates_sdf, aspect_stop_words, [])
     aspect_candidates_sdf = aspect_candidates_sdf.groupby(["text"]).agg(F.collect_list("lemma").alias("lemmas"),
@@ -255,8 +256,9 @@ def get_aspect_candidates_pdf(aspect_candidates_sdfs: List[DataFrame],
 def get_opinion_candidates_pdf(opinion_candidates_sdfs: List[DataFrame],
                                stop_words: Set[str],
                                opinion_threshold: int,
+                               polarity_filter_min_ratio: float,
                                opinion_aspects_filter_min_count: int = 3,
-                               num_samples: int = 10):
+                               num_samples: int = 10) -> pd.DataFrame:
     opinion_raw_df = union_sdfs(*opinion_candidates_sdfs)
     opinion_raw_df = filter_opinion_candidates(opinion_raw_df, stop_words, [])
     opinion_raw_df = opinion_raw_df.groupby(["text"]).agg(F.collect_list("polarity").alias("polarities"),
@@ -268,7 +270,7 @@ def get_opinion_candidates_pdf(opinion_candidates_sdfs: List[DataFrame],
     opinion_raw_df = opinion_raw_df.select(
         "text",
         "count",
-        udf_get_opinion_polarity(F.col("polarities")).alias("polarity"),
+        udf_get_opinion_polarity(F.col("polarities"), polarity_filter_min_ratio).alias("polarity"),
         udf_get_opinion_aspects(F.col("rules"), F.col("sources"), opinion_aspects_filter_min_count).alias("aspects"),
         F.slice(F.shuffle(F.col("sentences")), 1, num_samples).alias("samples"))
     opinion_candidates_pdf = opinion_raw_df.toPandas()
@@ -359,7 +361,8 @@ def aspect_opinion_extraction(annotation_sdf: DataFrame,
                      f"extracted opinions: {len(iter_opinions)}\n{'=' * 100}\n")
 
     aspect_candidates_pdf = get_aspect_candidates_pdf(aspect_candidates_sdfs, aspect_stop_words, aspect_threshold)
-    opinion_candidates_pdf = get_opinion_candidates_pdf(opinion_candidates_sdfs, opinion_stop_words, opinion_threshold)
+    opinion_candidates_pdf = get_opinion_candidates_pdf(opinion_candidates_sdfs, opinion_stop_words, opinion_threshold,
+                                                        polarity_filter_min_ratio)
     save_candidates_pdf(aspect_candidates_pdf, aspect_candidates_filepath)
     save_candidates_pdf(opinion_candidates_pdf, opinion_candidates_filepath)
 
