@@ -182,7 +182,7 @@ def get_aspect_opinion_thresholds(absa_sdf: DataFrame,
 def save_candidates_pdf(candidates_pdf: pd.DataFrame, save_filepath: str):
     preprocessor_replace_list = "|".join([REPLACE_EMAIL, REPLACE_URL, REPLACE_HASHTAG, REPLACE_HANDLE])
     candidates_pdf = candidates_pdf[~(candidates_pdf["text"].str.contains(preprocessor_replace_list, regex=True))]
-    candidates_pdf = candidates_pdf.sort_values(by='count', ascending=False)
+    candidates_pdf = candidates_pdf.sort_values(by="count", ascending=False)
     save_pdf(candidates_pdf, save_filepath)
 
 
@@ -272,21 +272,21 @@ def get_opinion_candidates_pdf(opinion_candidates_sdfs: List[DataFrame],
                                polarity_filter_min_ratio: float,
                                opinion_aspects_filter_min_count: int = 3,
                                opinion_aspects_num_samples: int = 10) -> pd.DataFrame:
-    opinion_raw_df = union_sdfs(*opinion_candidates_sdfs)
-    opinion_raw_df = filter_opinion_candidates(opinion_raw_df, stop_words, [])
-    opinion_raw_df = opinion_raw_df.groupby(["text"]).agg(F.collect_list("polarity").alias("polarities"),
+    opinion_candidates_sdf = union_sdfs(*opinion_candidates_sdfs)
+    opinion_candidates_sdf = filter_opinion_candidates(opinion_candidates_sdf, stop_words, [])
+    opinion_candidates_sdf = opinion_candidates_sdf.groupby(["text"]).agg(F.collect_list("polarity").alias("polarities"),
                                                           F.collect_list("rule").alias("rules"),
                                                           F.collect_list("source").alias("sources"),
                                                           F.collect_set("sentence").alias("sentences"),
                                                           F.count("*").alias("count"))
-    opinion_raw_df = opinion_raw_df.filter(F.col("count") >= opinion_threshold)
-    opinion_raw_df = opinion_raw_df.select(
+    opinion_candidates_sdf = opinion_candidates_sdf.filter(F.col("count") >= opinion_threshold)
+    opinion_candidates_sdf = opinion_candidates_sdf.select(
         "text",
         "count",
         udf_get_opinion_polarity(F.col("polarities"), polarity_filter_min_ratio).alias("polarity"),
         udf_get_opinion_aspects(F.col("rules"), F.col("sources"), opinion_aspects_filter_min_count).alias("aspects"),
         F.slice(F.shuffle(F.col("sentences")), 1, opinion_aspects_num_samples).alias("samples"))
-    opinion_candidates_pdf = opinion_raw_df.toPandas()
+    opinion_candidates_pdf = opinion_candidates_sdf.toPandas()
     opinion_candidates_pdf["aspects"] = opinion_candidates_pdf["aspects"].apply(json.dumps, ensure_ascii=False)
     opinion_candidates_pdf["samples"] = opinion_candidates_pdf["samples"].apply(list) \
         .apply(json.dumps, ensure_ascii=False)
