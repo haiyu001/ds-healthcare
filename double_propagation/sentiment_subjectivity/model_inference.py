@@ -1,4 +1,4 @@
-from double_propagation.sentiment_subjectivity.build_model import get_sentiment_features_pdf, get_model_prediction_pdf
+from double_propagation.sentiment_subjectivity.model_building import get_sentiment_features_pdf, get_model_prediction_pdf
 from utils.general_util import setup_logger, save_pdf
 from utils.resource_util import get_model_filepath
 from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
@@ -10,17 +10,17 @@ if __name__ == "__main__":
     setup_logger()
 
     test_dir = "/Users/haiyang/Desktop/opinion_test"
-    concetnet_vecs_filepath = get_model_filepath("model", "conceptnet", "numberbatch-en-19.08.txt")
+    conceptnet_vecs_filepath = get_model_filepath("model", "conceptnet", "numberbatch-en-19.08.txt")
     opinion_vecs_filepath = os.path.join(test_dir, "opinion_vecs.txt")
     opinions_filepath = os.path.join(test_dir, "opinions_test.csv")
     sentiment_prediction_filepath = os.path.join(test_dir, "opinions_sentiment_prediction.csv")
     subjectivity_prediction_filepath = os.path.join(test_dir, "opinions_subjectivity_prediction.csv")
     opinion_sentiment_subjectivity_scores_filepath = os.path.join(test_dir, "opinion_sentiment_subjectivity_scores.csv")
 
-    # # extract opinion vecs
-    # opinions = pd.read_csv(opinions_filepath, encoding="utf-8")["text"].tolist()
-    # wordvec = ConceptNetWordVec(concetnet_vecs_filepath, use_oov_strategy=True)
-    # opinion_vecs = wordvec.extract_txt_vecs(opinions, opinion_vecs_filepath)
+    # extract opinion vecs
+    opinions = pd.read_csv(opinions_filepath, encoding="utf-8")["text"].tolist()
+    wordvec = ConceptNetWordVec(conceptnet_vecs_filepath, use_oov_strategy=True)
+    wordvec.extract_txt_vecs(opinions, opinion_vecs_filepath)
 
     # run sentiment model prediction
     sentiment_features_pdf = get_sentiment_features_pdf(opinion_vecs_filepath)
@@ -41,5 +41,6 @@ if __name__ == "__main__":
     # save opinion sentiment subjectivity scores
     opinion_sentiment_subjectivity_scores_pdf = \
         opinion_sentiment_scores_pdf.merge(opinion_subjectivity_scores_pdf, on="word")
-    opinion_sentiment_subjectivity_scores_pdf["harmonic_mean"] = hmean(opinion_sentiment_subjectivity_scores_pdf, axis=1)
+    opinion_sentiment_subjectivity_scores_pdf["hmean_score"] = hmean(opinion_sentiment_subjectivity_scores_pdf,
+                                                                       axis=1)
     save_pdf(opinion_sentiment_subjectivity_scores_pdf, opinion_sentiment_subjectivity_scores_filepath, csv_index=True)

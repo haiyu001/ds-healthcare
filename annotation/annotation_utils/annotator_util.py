@@ -25,7 +25,7 @@ def load_blank_nlp(lang: str, package: str, whitespace_tokenizer: bool = False) 
     spacy_model_pipes = get_spacy_model_pipes(spacy_model_path)
     blank_nlp = spacy.load(spacy_model_path, exclude=spacy_model_pipes)
     if whitespace_tokenizer:
-        blank_nlp.tokenizer = Tokenizer(blank_nlp.vocab, token_match=re.compile(r'\S+').match)
+        blank_nlp.tokenizer = Tokenizer(blank_nlp.vocab, token_match=re.compile(r"\S+").match)
     return blank_nlp
 
 

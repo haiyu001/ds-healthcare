@@ -21,7 +21,7 @@ if __name__ == "__main__":
         "merge_norm": {
             "battery life": {
                 "key": "battery life",
-                "value": "batterylife",
+                "value": "battery_life",
                 "case_insensitive": True,
             }
         },

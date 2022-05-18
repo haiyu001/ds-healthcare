@@ -16,7 +16,7 @@ class PhraseDetector(object):
 
     def _is_not_valid_token(self, token: Token) -> bool:
         return token.is_punct or token.is_space or token.is_stop or token.like_num or \
-               token.pos_ == 'ADP' or token.pos_ == 'DET' or token.pos_ == 'CONJ'
+               token.pos_ == "ADP" or token.pos_ == "DET" or token.pos_ == "CONJ"
 
     def get_phrases(self, doc: Doc) -> List[Dict[str, Any]]:
         text_rank = BaseTextRank(doc,
