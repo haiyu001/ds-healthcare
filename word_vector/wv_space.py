@@ -27,10 +27,9 @@ class WordVec(object):
         return words
 
     def _get_oov_vec(self, word: str) -> pd.Series:
-        words = self._get_prefix_words(word)
-        if not words and self.mwe_delimiter in word:
+        if self.mwe_delimiter in word:
             word = word.split(self.mwe_delimiter)[-1]
-            words = self._get_prefix_words(word)
+        words = self._get_prefix_words(word)
         if words:
             return self.vecs_pdf.loc[words].mean()
         else:

@@ -1,4 +1,4 @@
-from annotation.annotation_utils.annotator_util import read_nlp_model_config, get_canonicalization_nlp_model_config
+from annotation.annotation_utils.annotator_util import read_nlp_model_config
 from annotation.components.annotator import doc_to_dict, get_nlp_model, get_nlp_model_config_str
 from utils.resource_util import get_repo_dir
 from utils.general_util import setup_logger

@@ -13,6 +13,8 @@ class RelCategory(Enum):
     SUBJ = [
         "nsubj",       # nominal subject
         "nsubjpass",   # passive nominal subject
+        "csubj",       # clausal subject
+        "csubjpass",   # passive clausal subject
     ]
     MOD = [
         "amod",        # adjective modifier

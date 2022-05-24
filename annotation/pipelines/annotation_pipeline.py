@@ -79,11 +79,11 @@ def build_extraction_and_canonicalization_candidates(canonicalization_annotation
                                           annotation_config["spell_canonicalization_suggestion_filter_min_count"])
 
 
-def build_word_vector_corpus(canonicalization_annotation_sdf: DataFrame,
-                             bigram_canonicalization_candidates_filepath: str,
-                             wv_corpus_filepath: str,
-                             canonicalization_nlp_model_config: str,
-                             annotation_config: Dict[str, Any]):
+def build_wv_corpus(canonicalization_annotation_sdf: DataFrame,
+                    bigram_canonicalization_candidates_filepath: str,
+                    wv_corpus_filepath: str,
+                    canonicalization_nlp_model_config: str,
+                    annotation_config: Dict[str, Any]):
     logging.info(f"\n{'=' * 100}\nbuild word vector corpus\n{'=' * 100}\n")
     match_lowercase = annotation_config["wv_corpus_match_lowercase"]
     ngram_match_dict = get_bigram_canonicalization_candidates_match_dict(
@@ -226,14 +226,14 @@ def main(spark: SparkSession,
                                                      annotation_config)
 
     # build word vector corpus
-    build_word_vector_corpus(canonicalization_annotation_sdf,
-                             bigram_canonicalization_candidates_filepath,
-                             wv_corpus_filepath,
-                             canonicalization_nlp_model_config,
-                             annotation_config)
+    build_wv_corpus(canonicalization_annotation_sdf,
+                    bigram_canonicalization_candidates_filepath,
+                    wv_corpus_filepath,
+                    canonicalization_nlp_model_config,
+                    annotation_config)
 
     # build fastText model
-    build_word2vec(vector_size=annotation_config["word_vector_size"],
+    build_word2vec(vector_size=annotation_config["wv_size"],
                    use_char_ngram=True,
                    wv_corpus_filepath=wv_corpus_filepath,
                    wv_model_filepath=wv_model_filepath)

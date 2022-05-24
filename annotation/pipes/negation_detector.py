@@ -1,5 +1,5 @@
 from typing import Optional, Tuple, Dict, List
-from annotation.annotation_utils.negation_util import proposition_pseudo, proposition_preceding, proposition_following, \
+from lexicon.negation_lexicon import proposition_pseudo, proposition_preceding, proposition_following, \
     proposition_termination, pseudo_clinical, proposition_preceding_clinical, proposition_following_clinical, \
     proposition_termination_clinical, proposition_preceding_clinical_sensitive, proposition_chunk_prefix
 from spacy.tokens import Doc, Span

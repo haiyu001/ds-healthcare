@@ -7,15 +7,10 @@ from double_propagation.absa.extraction_rules import rule_O_O, rule_O_X_O, rule_
     rule_A_X_O, rule_A_X_A
 from double_propagation.absa.data_types import RelationTerm, Relation, AspectTerm, candidates_schema
 from double_propagation.absa_utils.extractor_util import load_absa_stop_words, load_absa_seed_opinions, norm_pos, \
-    VALID_OPINION_REX, VALID_ASPECT_REX, get_sentence_sentiment, load_word_to_lemma
-from double_propagation.sentiment_subjectivity.model_building import get_sentiment_features_pdf, \
-    get_model_prediction_pdf
-from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
+    VALID_OPINION_REX, VALID_ASPECT_REX, get_sentence_sentiment
 import pandas as pd
 from pyspark.sql import DataFrame
-from scipy.stats import hmean
 from collections import Counter
-import random
 import string
 import logging
 import json
@@ -143,14 +138,6 @@ def udf_get_opinion_aspects(rules: Column, sources: Column, threshold: int) -> C
     return F.udf(get_opinion_aspects, MapType(StringType(), IntegerType(), False))(rules, sources)
 
 
-def _normalize_underscore_ampersand_lower_lemma(lower_lemma: str, word_to_lemma: Dict[str, str]) -> str:
-    if "_" in lower_lemma or "&" in lower_lemma:
-        words = re.split(r"_|&", lower_lemma)
-        separator = "_" if "_" in lower_lemma else "&"
-        lower_lemma = separator.join([word_to_lemma.get(word, word) for word in words])
-    return lower_lemma
-
-
 def load_absa_sdf(annotation_sdf: DataFrame) -> DataFrame:
     absa_columns = [F.col("text").alias("doc_text"),
                     F.col("tokens").alias("doc_tokens"),
@@ -274,11 +261,12 @@ def get_opinion_candidates_pdf(opinion_candidates_sdfs: List[DataFrame],
                                opinion_aspects_num_samples: int = 10) -> pd.DataFrame:
     opinion_candidates_sdf = union_sdfs(*opinion_candidates_sdfs)
     opinion_candidates_sdf = filter_opinion_candidates(opinion_candidates_sdf, stop_words, [])
-    opinion_candidates_sdf = opinion_candidates_sdf.groupby(["text"]).agg(F.collect_list("polarity").alias("polarities"),
-                                                          F.collect_list("rule").alias("rules"),
-                                                          F.collect_list("source").alias("sources"),
-                                                          F.collect_set("sentence").alias("sentences"),
-                                                          F.count("*").alias("count"))
+    opinion_candidates_sdf = opinion_candidates_sdf.groupby(["text"]).agg(
+        F.collect_list("polarity").alias("polarities"),
+        F.collect_list("rule").alias("rules"),
+        F.collect_list("source").alias("sources"),
+        F.collect_set("sentence").alias("sentences"),
+        F.count("*").alias("count"))
     opinion_candidates_sdf = opinion_candidates_sdf.filter(F.col("count") >= opinion_threshold)
     opinion_candidates_sdf = opinion_candidates_sdf.select(
         "text",
@@ -291,68 +279,6 @@ def get_opinion_candidates_pdf(opinion_candidates_sdfs: List[DataFrame],
     opinion_candidates_pdf["samples"] = opinion_candidates_pdf["samples"].apply(list) \
         .apply(json.dumps, ensure_ascii=False)
     return opinion_candidates_pdf
-
-
-def save_aspect_merge_pdf(aspect_candidates_filepath: str,
-                          aspect_merge_filepath: str,
-                          unigram_filepath: str,
-                          aspect_opinion_num_samples: int):
-    aspect_candidates_pdf = pd.read_csv(
-        aspect_candidates_filepath, encoding="utf-8", na_values="", keep_default_na=False)
-    aspect_candidates_pdf["samples"] = aspect_candidates_pdf["samples"].apply(json.loads)
-    aspect_candidates_pdf["lower_lemma"] = aspect_candidates_pdf["lemma"].str.lower()
-    aspect_candidates_pdf["lower_lemma"] = aspect_candidates_pdf["lower_lemma"].apply(
-        _normalize_underscore_ampersand_lower_lemma, word_to_lemma=load_word_to_lemma(unigram_filepath))
-    aspect_lemma_merge_list = []
-    for lower_lemma, aspect_group_pdf in aspect_candidates_pdf.groupby("lower_lemma"):
-        members = aspect_group_pdf["text"].tolist()
-        text = sorted(members, key=len)[0]
-        count = sum(aspect_group_pdf["count"])
-        samples = sum(aspect_group_pdf["samples"].tolist(), [])
-        samples = random.sample(samples, min(aspect_opinion_num_samples, len(samples)))
-        non_lower_lemmas = [lemma for lemma in aspect_group_pdf["lemma"] if not lemma.islower()]
-        lemma = non_lower_lemmas[0] if non_lower_lemmas else lower_lemma
-        aspect_lemma_merge_list.append({"text": text,
-                                        "members": json.dumps(members, ensure_ascii=False),
-                                        "count": count,
-                                        "lemma": lemma,
-                                        "samples": json.dumps(samples, ensure_ascii=False)})
-    aspect_lemma_merge_pdf = pd.DataFrame(aspect_lemma_merge_list).sort_values(by="count", ascending=False)
-    save_pdf(aspect_lemma_merge_pdf, aspect_merge_filepath)
-
-
-def save_opinion_rank_pdf(opinion_candidates_filepath: str,
-                          opinion_vecs_filepath: str,
-                          opinion_rank_filepath: str):
-    opinion_candidates_pdf = pd.read_csv(opinion_candidates_filepath, index_col="text", encoding="utf-8",
-                                         keep_default_na=False, na_values="")
-    opinions = opinion_candidates_pdf.index.tolist()
-    # extract opinion vecs
-    conceptnet_vecs_filepath = get_model_filepath("model", "conceptnet", "numberbatch-en-19.08.txt")
-    conceptnet_wordvec = ConceptNetWordVec(conceptnet_vecs_filepath, use_oov_strategy=True)
-    conceptnet_wordvec.extract_txt_vecs(opinions, opinion_vecs_filepath)
-    # run sentiment model prediction
-    sentiment_features_pdf = get_sentiment_features_pdf(opinion_vecs_filepath)
-    sentiment_model_filepath = get_model_filepath("model", "sentiment", "sentiment.hdf5")
-    opinion_sentiment_scores_pdf = get_model_prediction_pdf(sentiment_features_pdf, sentiment_model_filepath,
-                                                            predicted_score_col="sentiment_score")
-    # run subjectivity model prediction
-    subjectivity_features_pdf = load_txt_vecs_to_pdf(opinion_vecs_filepath)
-    subjectivity_model_filepath = get_model_filepath("model", "subjectivity", "subjectivity.hdf5")
-    opinion_subjectivity_scores_pdf = get_model_prediction_pdf(subjectivity_features_pdf, subjectivity_model_filepath,
-                                                               predicted_score_col="subjectivity_score")
-    # get opinion sentiment subjectivity scores
-    opinion_sentiment_subjectivity_scores_pdf = \
-        opinion_sentiment_scores_pdf.merge(opinion_subjectivity_scores_pdf, on="word").rename(columns={"word": "text"})
-    opinion_sentiment_subjectivity_scores_pdf["hmean_score"] = hmean(opinion_sentiment_subjectivity_scores_pdf, axis=1)
-
-    opinion_rank_pdf = pd.concat([opinion_sentiment_subjectivity_scores_pdf,
-                                  sentiment_features_pdf[["neg_avg", "pos_avg"]],
-                                  opinion_candidates_pdf], axis=1)
-    opinion_rank_pdf = opinion_rank_pdf[
-        ["count", "polarity", "neg_avg", "pos_avg", "sentiment_score", "subjectivity_score", "hmean_score", "samples"]]
-    opinion_rank_pdf = opinion_rank_pdf.sort_values(by="hmean_score", ascending=False)
-    save_pdf(opinion_rank_pdf, opinion_rank_filepath, csv_index_label="text", csv_index=True)
 
 
 def iter_sentences(doc_text: str,
@@ -466,10 +392,6 @@ if __name__ == "__main__":
     absa_opinion_dir = make_dir(os.path.join(absa_dir, "opinion"))
     aspect_candidates_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_candidates_filename"])
     opinion_candidates_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_candidates_filename"])
-    aspect_merge_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_merge_filename"])
-    opinion_vecs_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_vecs_filename"])
-    opinion_rank_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_rank_filename"])
-    unigram_filepath = os.path.join(extraction_dir, absa_config["unigram_filename"])
 
     spark_cores = 4
     spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="Warn")
@@ -486,12 +408,3 @@ if __name__ == "__main__":
                        aspect_opinion_filter_min_count=absa_config["aspect_opinion_filter_min_count"],
                        aspect_opinion_num_samples=absa_config["aspect_opinion_num_samples"],
                        max_iterations=absa_config["max_iterations"])
-
-    save_aspect_merge_pdf(aspect_candidates_filepath,
-                          aspect_merge_filepath,
-                          unigram_filepath,
-                          absa_config["aspect_opinion_num_samples"])
-
-    save_opinion_rank_pdf(opinion_candidates_filepath,
-                          opinion_vecs_filepath,
-                          opinion_rank_filepath)

@@ -1,4 +1,7 @@
+import collections
 from typing import List, Optional
+
+from utils.general_util import dump_json_file
 from utils.spark_util import extract_topn_common, write_sdf_to_file, pudf_get_most_common_text
 from pyspark.sql.types import ArrayType, StringType, Row, BooleanType
 from pyspark.sql import DataFrame, Column
@@ -125,3 +128,36 @@ def extract_umls_concept(annotation_sdf: DataFrame,
         umls_concept_sdf = umls_concept_sdf.filter(F.col("count") >= umls_concept_filter_min_count)
     umls_concept_sdf = umls_concept_sdf.select("text", "count", "negation_count", "concepts")
     write_sdf_to_file(umls_concept_sdf, umls_concept_filepath, num_partitions)
+
+
+def _get_multi_noun_or_propn_ids(pos_list: List[str], max_sequence_count: int) -> List[Tuple[int, int]]:
+    res = []
+    start = -1
+    for i, pos in enumerate(pos_list):
+        if pos == "NOUN" or pos == "PROPN":
+            if start >= 0:
+                continue
+            else:
+                start = i
+        else:
+            if start >= 0 and 2 <= i - start <= max_sequence_count:
+                res.append((start, i))
+            start = -1
+    return res
+
+
+def filter_phrase(phrase_filepath: str,
+                  filtered_phrase_filepath: str,
+                  phrase_words_max_count: int = 4,
+                  filter_min_count: int = 5):
+    phrase_pdf = pd.read_csv(phrase_filepath, encoding="utf-8", na_values="", keep_default_na=False)
+    phrase_pdf["phrase_words"] = phrase_pdf["phrase"].str.split()
+    phrase_pdf["phrase_poses"] = phrase_pdf["phrase_poses"].apply(json.loads)
+    phrase_pdf = phrase_pdf[phrase_pdf["count"] >= filter_min_count]
+    phrase_to_count = collections.defaultdict(lambda: int)
+    for _, row in phrase_pdf.iterrows():
+        phrase_words, phrase_poses, count = phrase_pdf["phrase_words"], phrase_pdf["phrase_poses"], phrase_pdf["count"]
+        for start, end in _get_multi_noun_or_propn_ids(phrase_poses, phrase_words_max_count):
+            phrase_to_count[" ".join(phrase_words[start: end])] += count
+    phrase_to_count = dict(sorted(phrase_to_count.items(), key=lambda item: item[1]))
+    dump_json_file(phrase_to_count, filtered_phrase_filepath)

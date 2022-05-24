@@ -1,22 +1,15 @@
-from typing import Set, Dict
+from typing import Set, Dict, Tuple
 from double_propagation.absa.enumerations import POS, Polarity
 from utils.general_util import load_json_file
 from utils.resource_util import get_model_filepath
 import pandas as pd
+import operator
 import json
 
 
 VALID_OPINION_REX = r"^[a-z][a-z&_]+$"
 
 VALID_ASPECT_REX = r"^[a-z0-9][a-z0-9&_ ]+$"
-
-
-def load_word_to_lemma(unigram_filepath: str) -> Dict[str, str]:
-    unigram_pdf = pd.read_csv(unigram_filepath, encoding="utf-8", na_values="", keep_default_na=False)
-    unigram_pdf["top_three_lemma"] = unigram_pdf["top_three_lemma"].apply(json.loads)
-    unigram_pdf["lemma"] = unigram_pdf["top_three_lemma"].apply(
-        lambda x: [k for k, v in sorted(x.items(), key=lambda item: item[1], reverse=True)][0])
-    return dict(zip(unigram_pdf["word"], unigram_pdf["lemma"]))
 
 
 def load_absa_stop_words() -> Set[str]:
