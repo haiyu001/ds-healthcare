@@ -12,8 +12,8 @@ def get_result_pdf(tuple_list: List[Tuple[str, float, int]]) -> pd.DataFrame:
         result_json.append({"word": " ".join(neighbour.split("_")),
                             "similarity": round(similarity, 3),
                             "count": count, })
-    result_df = pd.DataFrame(result_json)
-    return result_df
+    result_pdf = pd.DataFrame(result_json)
+    return result_pdf
 
 
 def query_word(word: str,
@@ -41,5 +41,5 @@ def query_words(words: List[str],
                 min_count: int = 5):
     for word in words:
         print(f"{'=' * 10} {word} {'=' * 10}")
-        result_df = query_word(word, wv_model, topn=topn, min_count=min_count)
-        display(result_df)
+        result_pdf = query_word(word, wv_model, topn=topn, min_count=min_count)
+        display(result_pdf)

@@ -76,7 +76,7 @@ def write_sdf_to_file(sdf: DataFrame, save_filepath: str, num_partitions: Option
             pdf_list = []
             for part_filepath in part_filepaths:
                 if file_format == "csv":
-                    pdf = pd.read_csv(part_filepath, keep_default_na=False, na_values="", encoding="utf-8")
+                    pdf = pd.read_csv(part_filepath, encoding="utf-8", keep_default_na=False, na_values="")
                 elif file_format == "json":
                     pdf = pd.read_json(part_filepath, orient="records", lines=True, encoding="utf-8")
                 else:

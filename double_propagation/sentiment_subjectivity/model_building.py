@@ -22,8 +22,8 @@ def get_sentiment_features_pdf(sentiment_vecs_filepath: str) -> pd.DataFrame:
     opinion_neg = WordVec(os.path.join(sentiment_model_dir, "absa_seed_opinions_neg_vecs.txt"))
     opinion_pos = WordVec(os.path.join(sentiment_model_dir, "absa_seed_opinions_pos_vecs.txt"))
     sentiment_vecs = WordVec(sentiment_vecs_filepath)
-    sentiment_neg_similarity_pdf = sentiment_vecs.vecs_pdf.dot(opinion_neg.vecs_pdf.T)
-    sentiment_pos_similarity_pdf = sentiment_vecs.vecs_pdf.dot(opinion_pos.vecs_pdf.T)
+    sentiment_neg_similarity_pdf = sentiment_vecs.norm_vecs_pdf.dot(opinion_neg.norm_vecs_pdf.T)
+    sentiment_pos_similarity_pdf = sentiment_vecs.norm_vecs_pdf.dot(opinion_pos.norm_vecs_pdf.T)
     neg_stats_features_pdf = get_similarity_stats_pdf(sentiment_neg_similarity_pdf, "neg")
     pos_stats_features_pdf = get_similarity_stats_pdf(sentiment_pos_similarity_pdf, "pos")
     sentiment_vecs_features_pdf = load_txt_vecs_to_pdf(sentiment_vecs_filepath)
@@ -53,7 +53,7 @@ def get_concreteness_training_pdf():
     concreteness_dict = {k: v for k, v in concreteness_dict.items() if k in conceptnet_vocab}
     concreteness_words = list(concreteness_dict.keys())
     concreteness_vecs_txt_filepath = "/Users/haiyang/Desktop/concreteness_vecs.txt"
-    conceptnet_vecs.extract_txt_vecs(concreteness_words, concreteness_vecs_txt_filepath)
+    conceptnet_vecs.extract_txt_vecs(concreteness_words, concreteness_vecs_txt_filepath, l2_norm=False)
     concreteness_vecs_pdf = load_txt_vecs_to_pdf(concreteness_vecs_txt_filepath)
     concreteness_vecs_pdf["label"] = list(concreteness_dict.values())
     concreteness_traning_pdf = concreteness_vecs_pdf[
@@ -61,7 +61,7 @@ def get_concreteness_training_pdf():
     abstractness_cnt = concreteness_traning_pdf[concreteness_traning_pdf["label"] == 0].shape[0]
     concreteness_cnt = concreteness_traning_pdf[concreteness_traning_pdf["label"] == 1].shape[0]
     concreteness_training_filepath = get_model_filepath(
-        "model", "concreteness", "training", f"concreteness_no-{abstractness_cnt}_yes-{concreteness_cnt}_training.csv")
+        "model", "concreteness", "training", f"concreteness_no-{abstractness_cnt}_yes-{concreteness_cnt}_training_tmp.csv")
     save_pdf(concreteness_traning_pdf, concreteness_training_filepath, csv_index_label="word", csv_index=True)
 
 
@@ -132,27 +132,27 @@ if __name__ == "__main__":
 
     # # ============================================== subjectivity model ==============================================
 
-    # get_concreteness_training_pdf()
+    get_concreteness_training_pdf()
 
-    concreteness_model_dir = get_model_filepath("model", "concreteness", "training")
-    concreteness_model_training_data_filepath = os.path.join(concreteness_model_dir,
-                                                             "concreteness_no-4766_yes-6058_training.csv")
-    features_pdf = pd.read_csv(concreteness_model_training_data_filepath, index_col="word", encoding="utf-8")
-
-    for i in range(1, 6):
-        print("=" * 50, i, "=" * 50)
-        features_pdf = features_pdf.sample(frac=1.0)
-        subjectivity_i_dir = os.path.join(concreteness_model_dir, f"subjectivity_{i}")
-        model = BinaryModel(make_dir(subjectivity_i_dir),
-                            input_dimension=300,
-                            class_names=["abstractness", "concreteness"],
-                            learning_rate=0.0001,
-                            dropout_rate=0.5,
-                            first_hidden_layer_size=64,
-                            second_hidden_layer_size=32,
-                            epochs=200,
-                            batch_size=16)
-        X_train, y_train, X_val, y_val, X_test, y_test = get_train_val_test(features_pdf, val_size=0.05, test_size=0.05)
-        model.train_model(X_train, y_train, X_val, y_val, X_test, y_test, class_weight={0: 0.6, 1: 0.4})
+    # concreteness_model_dir = get_model_filepath("model", "concreteness", "training")
+    # concreteness_model_training_data_filepath = os.path.join(concreteness_model_dir,
+    #                                                          "concreteness_no-4766_yes-6058_training.csv")
+    # features_pdf = pd.read_csv(concreteness_model_training_data_filepath, index_col="word", encoding="utf-8")
+    #
+    # for i in range(1, 6):
+    #     print("=" * 50, i, "=" * 50)
+    #     features_pdf = features_pdf.sample(frac=1.0)
+    #     subjectivity_i_dir = os.path.join(concreteness_model_dir, f"concreteness_{i}")
+    #     model = BinaryModel(make_dir(subjectivity_i_dir),
+    #                         input_dimension=300,
+    #                         class_names=["abstractness", "concreteness"],
+    #                         learning_rate=0.0001,
+    #                         dropout_rate=0.5,
+    #                         first_hidden_layer_size=64,
+    #                         second_hidden_layer_size=32,
+    #                         epochs=200,
+    #                         batch_size=16)
+    #     X_train, y_train, X_val, y_val, X_test, y_test = get_train_val_test(features_pdf, val_size=0.05, test_size=0.05)
+    #     model.train_model(X_train, y_train, X_val, y_val, X_test, y_test, class_weight={0: 0.6, 1: 0.4})
 
 

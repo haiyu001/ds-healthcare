@@ -44,7 +44,7 @@ def _get_noun_phrases_ids(pos_list: List[str], noun_phrase_max_words_count: int 
 
 
 def load_word_to_dom_lemma_and_pos(unigram_filepath: str) -> Tuple[Dict[str, str], Dict[str, str]]:
-    unigram_pdf = pd.read_csv(unigram_filepath, encoding="utf-8", na_values="", keep_default_na=False)
+    unigram_pdf = pd.read_csv(unigram_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     unigram_pdf["top_three_lemma"] = unigram_pdf["top_three_lemma"].apply(json.loads)
     unigram_pdf["lemma"] = unigram_pdf["top_three_lemma"].apply(lambda x: max(x.items(), key=operator.itemgetter(1))[0])
     unigram_pdf["top_three_pos"] = unigram_pdf["top_three_pos"].apply(json.loads)
@@ -55,7 +55,7 @@ def load_word_to_dom_lemma_and_pos(unigram_filepath: str) -> Tuple[Dict[str, str
 
 
 def get_noun_phrases_pdf(phrase_filepath: str, noun_phrase_words_max_count: int = 4) -> pd.DataFrame:
-    phrase_pdf = pd.read_csv(phrase_filepath, encoding="utf-8", na_values="", keep_default_na=False)
+    phrase_pdf = pd.read_csv(phrase_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     phrase_pdf["phrase_words"] = phrase_pdf["phrase"].str.split()
     phrase_pdf["phrase_poses"] = phrase_pdf["phrase_poses"].apply(json.loads)
     phrase_pdf["phrase_lemmas"] = phrase_pdf["phrase_lemmas"].apply(json.loads)
@@ -101,12 +101,12 @@ def get_noun_phrases_pdf(phrase_filepath: str, noun_phrase_words_max_count: int 
 
 
 def get_aspect_merge_pdf(aspect_candidates_filepath: str,
-                         aspect_vecs_filepath: str,
+                         aspect_ranking_vecs_filepath: str,
                          word_to_dom_lemma: Dict[str, str],
                          word_to_dom_pos: Dict[str, str],
                          aspect_opinion_num_samples: int) -> pd.DataFrame:
     aspect_candidates_pdf = pd.read_csv(
-        aspect_candidates_filepath, encoding="utf-8", na_values="", keep_default_na=False)
+        aspect_candidates_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     aspect_candidates_pdf["samples"] = aspect_candidates_pdf["samples"].apply(json.loads)
     aspect_candidates_pdf["lower_lemma"] = aspect_candidates_pdf["lemma"].str.lower()
     aspect_candidates_pdf["lower_lemma"] = aspect_candidates_pdf["lower_lemma"].apply(
@@ -134,8 +134,8 @@ def get_aspect_merge_pdf(aspect_candidates_filepath: str,
     conceptnet_vecs_filepath = get_model_filepath("model", "conceptnet", "numberbatch-en-19.08.txt")
     conceptnet_wordvec = ConceptNetWordVec(conceptnet_vecs_filepath, use_oov_strategy=True)
     aspects = aspect_lemma_merge_pdf.index.tolist()
-    conceptnet_wordvec.extract_txt_vecs(aspects, aspect_vecs_filepath)
-    concreteness_features_pdf = load_txt_vecs_to_pdf(aspect_vecs_filepath)
+    conceptnet_wordvec.extract_txt_vecs(aspects, aspect_ranking_vecs_filepath)
+    concreteness_features_pdf = load_txt_vecs_to_pdf(aspect_ranking_vecs_filepath)
     concreteness_model_filepath = get_model_filepath("model", "concreteness", "concreteness.hdf5")
     aspect_subjectivity_scores_pdf = get_model_prediction_pdf(concreteness_features_pdf, concreteness_model_filepath,
                                                               predicted_score_col="concreteness_score")
@@ -145,30 +145,30 @@ def get_aspect_merge_pdf(aspect_candidates_filepath: str,
     return aspect_merge_pdf
 
 
-def save_aspect_rank_pdf(aspect_candidates_filepath: str,
-                         aspect_vecs_filepath: str,
-                         aspect_rank_filepath: str,
-                         phrase_filepath: str,
-                         word_to_dom_lemma: Dict[str, str],
-                         word_to_dom_pos: Dict[str, str],
-                         aspect_opinion_num_samples: int,
-                         noun_phrase_min_count: int,
-                         noun_phrase_max_words_count: int):
+def save_aspect_ranking_pdf(aspect_candidates_filepath: str,
+                            aspect_ranking_vecs_filepath: str,
+                            aspect_ranking_filepath: str,
+                            phrase_filepath: str,
+                            word_to_dom_lemma: Dict[str, str],
+                            word_to_dom_pos: Dict[str, str],
+                            aspect_opinion_num_samples: int,
+                            noun_phrase_min_count: int,
+                            noun_phrase_max_words_count: int):
     noun_phrases_pdf = get_noun_phrases_pdf(phrase_filepath, noun_phrase_max_words_count)
     noun_phrases_pdf = noun_phrases_pdf[noun_phrases_pdf["count"] >= noun_phrase_min_count]
     noun_phrase_lemma_to_noun_phrase = dict(zip(noun_phrases_pdf["lemma"], noun_phrases_pdf["noun_phrase"]))
 
     aspect_merge_pdf = get_aspect_merge_pdf(aspect_candidates_filepath,
-                                            aspect_vecs_filepath,
+                                            aspect_ranking_vecs_filepath,
                                             word_to_dom_lemma,
                                             word_to_dom_pos,
                                             aspect_opinion_num_samples)
-    aspect_rank_pdf = aspect_merge_pdf.reset_index()
-    aspect_rank_pdf["members"] = aspect_rank_pdf["members"].apply(json.loads)
-    all_members = {member.lower() for members in aspect_rank_pdf["members"] for member in members}
+    aspect_ranking_pdf = aspect_merge_pdf.reset_index()
+    aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.loads)
+    all_members = {member.lower() for members in aspect_ranking_pdf["members"] for member in members}
     expanded_noun_phrases = set()
     aspect_noun_phrases_list = []
-    for i, row in aspect_rank_pdf.iterrows():
+    for i, row in aspect_ranking_pdf.iterrows():
         aspect_noun_phrases = []
         for noun_phrase_lemma, noun_phrase in noun_phrase_lemma_to_noun_phrase.items():
             if noun_phrase_lemma.endswith(row["lemma"]) and noun_phrase.lower() not in all_members and \
@@ -177,20 +177,20 @@ def save_aspect_rank_pdf(aspect_candidates_filepath: str,
                 expanded_noun_phrases.add(noun_phrase)
         aspect_noun_phrases_list.append(json.dumps(aspect_noun_phrases, ensure_ascii=False)
                                         if aspect_noun_phrases else None)
-    aspect_rank_pdf["noun_phrases"] = pd.Series(aspect_noun_phrases_list)
-    aspect_rank_pdf["members"] = aspect_rank_pdf["members"].apply(json.dumps, ensure_ascii=False)
-    aspect_rank_pdf = aspect_rank_pdf[["text", "count", "concreteness_score", "pos",
+    aspect_ranking_pdf["noun_phrases"] = pd.Series(aspect_noun_phrases_list)
+    aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.dumps, ensure_ascii=False)
+    aspect_ranking_pdf = aspect_ranking_pdf[["text", "count", "concreteness_score", "pos",
                                         "lemma", "members", "noun_phrases", "samples"]]
-    save_pdf(aspect_rank_pdf, aspect_rank_filepath)
+    save_pdf(aspect_ranking_pdf, aspect_ranking_filepath)
 
 
-def save_opinion_rank_pdf(opinion_candidates_filepath: str,
-                          opinion_vecs_filepath: str,
-                          opinion_rank_filepath: str,
-                          word_to_dom_lemma: Dict[str, str],
-                          word_to_dom_pos: Dict[str, str]):
-    opinion_candidates_pdf = pd.read_csv(opinion_candidates_filepath, encoding="utf-8",
-                                         keep_default_na=False, na_values="")
+def save_opinion_ranking_pdf(opinion_candidates_filepath: str,
+                             opinion_ranking_vecs_filepath: str,
+                             opinion_ranking_filepath: str,
+                             word_to_dom_lemma: Dict[str, str],
+                             word_to_dom_pos: Dict[str, str]):
+    opinion_candidates_pdf = pd.read_csv(
+        opinion_candidates_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     opinion_candidates_pdf["lemma"] = opinion_candidates_pdf["text"].apply(lambda x: word_to_dom_lemma[x])
     opinion_candidates_pdf["pos"] = opinion_candidates_pdf["text"].apply(lambda x: word_to_dom_pos[x])
     opinion_candidates_pdf = opinion_candidates_pdf.set_index("text")
@@ -198,14 +198,14 @@ def save_opinion_rank_pdf(opinion_candidates_filepath: str,
     # extract opinion vecs
     conceptnet_vecs_filepath = get_model_filepath("model", "conceptnet", "numberbatch-en-19.08.txt")
     conceptnet_wordvec = ConceptNetWordVec(conceptnet_vecs_filepath, use_oov_strategy=True)
-    conceptnet_wordvec.extract_txt_vecs(opinions, opinion_vecs_filepath)
+    conceptnet_wordvec.extract_txt_vecs(opinions, opinion_ranking_vecs_filepath)
     # run sentiment model prediction
-    sentiment_features_pdf = get_sentiment_features_pdf(opinion_vecs_filepath)
+    sentiment_features_pdf = get_sentiment_features_pdf(opinion_ranking_vecs_filepath)
     sentiment_model_filepath = get_model_filepath("model", "sentiment", "sentiment.hdf5")
     opinion_sentiment_scores_pdf = get_model_prediction_pdf(sentiment_features_pdf, sentiment_model_filepath,
                                                             predicted_score_col="sentiment_score")
     # run subjectivity model prediction
-    subjectivity_features_pdf = load_txt_vecs_to_pdf(opinion_vecs_filepath)
+    subjectivity_features_pdf = load_txt_vecs_to_pdf(opinion_ranking_vecs_filepath)
     subjectivity_model_filepath = get_model_filepath("model", "subjectivity", "subjectivity.hdf5")
     opinion_subjectivity_scores_pdf = get_model_prediction_pdf(subjectivity_features_pdf, subjectivity_model_filepath,
                                                                predicted_score_col="subjectivity_score")
@@ -214,14 +214,14 @@ def save_opinion_rank_pdf(opinion_candidates_filepath: str,
         opinion_sentiment_scores_pdf.merge(opinion_subjectivity_scores_pdf, on="word").rename(columns={"word": "text"})
     opinion_sentiment_subjectivity_scores_pdf["hmean_score"] = hmean(opinion_sentiment_subjectivity_scores_pdf, axis=1)
 
-    opinion_rank_pdf = pd.concat([opinion_sentiment_subjectivity_scores_pdf,
+    opinion_ranking_pdf = pd.concat([opinion_sentiment_subjectivity_scores_pdf,
                                   sentiment_features_pdf[["neg_avg", "pos_avg"]],
                                   opinion_candidates_pdf], axis=1)
-    opinion_rank_pdf = opinion_rank_pdf[
+    opinion_ranking_pdf = opinion_ranking_pdf[
         ["count", "polarity", "neg_avg", "pos_avg", "sentiment_score", "subjectivity_score", "hmean_score",
          "lemma", "pos", "samples"]]
-    opinion_rank_pdf = opinion_rank_pdf.sort_values(by="hmean_score", ascending=False)
-    save_pdf(opinion_rank_pdf, opinion_rank_filepath, csv_index_label="text", csv_index=True)
+    opinion_ranking_pdf = opinion_ranking_pdf.sort_values(by="hmean_score", ascending=False)
+    save_pdf(opinion_ranking_pdf, opinion_ranking_filepath, csv_index_label="text", csv_index=True)
 
 
 if __name__ == "__main__":
@@ -243,27 +243,27 @@ if __name__ == "__main__":
     absa_opinion_dir = make_dir(os.path.join(absa_dir, "opinion"))
     aspect_candidates_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_candidates_filename"])
     opinion_candidates_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_candidates_filename"])
-    aspect_vecs_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_vecs_filename"])
-    aspect_rank_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_rank_filename"])
-    opinion_vecs_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_vecs_filename"])
-    opinion_rank_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_rank_filename"])
+    aspect_ranking_vecs_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_vecs_filename"])
+    aspect_ranking_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_filename"])
+    opinion_ranking_vecs_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_ranking_vecs_filename"])
+    opinion_ranking_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_ranking_filename"])
     unigram_filepath = os.path.join(extraction_dir, absa_config["unigram_filename"])
     phrase_filepath = os.path.join(extraction_dir, absa_config["phrase_filename"])
 
     word_to_dom_lemma, word_to_dom_pos = load_word_to_dom_lemma_and_pos(unigram_filepath)
 
-    save_aspect_rank_pdf(aspect_candidates_filepath,
-                         aspect_vecs_filepath,
-                         aspect_rank_filepath,
-                         phrase_filepath,
-                         word_to_dom_lemma,
-                         word_to_dom_pos,
-                         absa_config["aspect_opinion_num_samples"],
-                         absa_config["noun_phrase_min_count"],
-                         absa_config["noun_phrase_max_words_count"])
+    save_aspect_ranking_pdf(aspect_candidates_filepath,
+                            aspect_ranking_vecs_filepath,
+                            aspect_ranking_filepath,
+                            phrase_filepath,
+                            word_to_dom_lemma,
+                            word_to_dom_pos,
+                            absa_config["aspect_opinion_num_samples"],
+                            absa_config["noun_phrase_min_count"],
+                            absa_config["noun_phrase_max_words_count"])
 
-    save_opinion_rank_pdf(opinion_candidates_filepath,
-                          opinion_vecs_filepath,
-                          opinion_rank_filepath,
-                          word_to_dom_lemma,
-                          word_to_dom_pos)
+    save_opinion_ranking_pdf(opinion_candidates_filepath,
+                             opinion_ranking_vecs_filepath,
+                             opinion_ranking_filepath,
+                             word_to_dom_lemma,
+                             word_to_dom_pos)

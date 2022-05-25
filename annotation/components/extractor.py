@@ -150,7 +150,7 @@ def filter_phrase(phrase_filepath: str,
                   filtered_phrase_filepath: str,
                   phrase_words_max_count: int = 4,
                   filter_min_count: int = 5):
-    phrase_pdf = pd.read_csv(phrase_filepath, encoding="utf-8", na_values="", keep_default_na=False)
+    phrase_pdf = pd.read_csv(phrase_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     phrase_pdf["phrase_words"] = phrase_pdf["phrase"].str.split()
     phrase_pdf["phrase_poses"] = phrase_pdf["phrase_poses"].apply(json.loads)
     phrase_pdf = phrase_pdf[phrase_pdf["count"] >= filter_min_count]

@@ -50,8 +50,8 @@ def _get_bigram_canonicalization_canonical(unigram: str, bigram: str, unigram_co
 
 def get_bigram_canonicalization_candidates_match_dict(bigram_canonicalization_candidates_filepath: str,
                                                       match_lowercase: bool = True) -> Dict[str, str]:
-    bigram_canonicalization_candidates_pdf = pd.read_csv(bigram_canonicalization_candidates_filepath, encoding="utf-8",
-                                                         keep_default_na=False, na_values="")
+    bigram_canonicalization_candidates_pdf = pd.read_csv(
+        bigram_canonicalization_candidates_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     bigrams = bigram_canonicalization_candidates_pdf["bigram"].str.lower().tolist() if match_lowercase \
         else bigram_canonicalization_candidates_pdf["bigram"].tolist()
     bigram_match_dict = {bigram: "_".join(bigram.strip().split()) for bigram in bigrams}
@@ -81,8 +81,8 @@ def get_bigram_canonicalization(bigram_canonicalization_candidates_filepath: str
                                 wv_model_filepath: str,
                                 bigram_canonicalization_filepath: str,
                                 wv_bigram_canonicalization_filter_min_similarity: float = 0.8):
-    pdf = pd.read_csv(bigram_canonicalization_candidates_filepath, encoding="utf-8", keep_default_na=False,
-                      na_values="")
+    pdf = pd.read_csv(
+        bigram_canonicalization_candidates_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     wv_model = FastText.load(wv_model_filepath).wv
     pdf["similarity"] = pdf.apply(lambda x: _get_unigram_bigram_similarity(x["unigram"], x["bigram"], wv_model), axis=1)
     pdf["max_count"] = pdf[["unigram_count", "bigram_count"]].max(axis=1)

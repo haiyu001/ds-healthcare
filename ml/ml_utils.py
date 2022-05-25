@@ -94,11 +94,11 @@ def get_train_val_test(features_pdf: pd.DataFrame,
     label_pdf_list = []
     label_groups = features_pdf.groupby(by=label_col)
     for label, label_pdf in label_groups:
-        label_train_df, label_val_df, label_test_df = _split_train_val_test(label_pdf, val_size, test_size)
-        label_train_df["type"] = "train"
-        label_val_df["type"] = "val"
-        label_test_df["type"] = "test"
-        label_pdf_list.extend([label_train_df, label_val_df, label_test_df])
+        label_train_pdf, label_val_pdf, label_test_pdf = _split_train_val_test(label_pdf, val_size, test_size)
+        label_train_pdf["type"] = "train"
+        label_val_pdf["type"] = "val"
+        label_test_pdf["type"] = "test"
+        label_pdf_list.extend([label_train_pdf, label_val_pdf, label_test_pdf])
     train_val_test_pdf = pd.concat(label_pdf_list).sample(frac=1.0)
 
     feature_cols = [i for i in features_pdf.columns if i != label_col]
