@@ -1,6 +1,6 @@
 from typing import Tuple, Dict, List
 from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
-from double_propagation.sentiment_subjectivity.model_building import get_sentiment_features_pdf, \
+from double_propagation.binary_model.model_building import get_sentiment_features_pdf, \
     get_model_prediction_pdf
 from scipy.stats import hmean
 import pandas as pd
@@ -145,6 +145,36 @@ def get_aspect_merge_pdf(aspect_candidates_filepath: str,
     return aspect_merge_pdf
 
 
+def merge_by_root_lemma(aspect_ranking_pdf: pd.DataFrame) -> pd.DataFrame:
+    aspect_ranking_pdf["root_lemma"] = aspect_ranking_pdf["lemma"].str.lower().str.split().str[-1]
+    aspect_ranking_pdf["noun_phrases"] = aspect_ranking_pdf["noun_phrases"].apply(
+        lambda x: json.loads(x) if isinstance(x, str) else [])
+    aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.loads)
+    aspect_ranking_pdf["samples"] = aspect_ranking_pdf["samples"].apply(json.loads)
+    aspect_pdf_list = []
+    for root_lemma, root_lemma_pdf in aspect_ranking_pdf.groupby("root_lemma"):
+        lemmas = set(root_lemma_pdf["lemma"].tolist())
+        if root_lemma not in lemmas:
+            aspect_pdf_list.append(root_lemma_pdf.drop(columns=["root_lemma"]))
+        else:
+            aspect_pdf_list.append(pd.DataFrame({
+                "text": [sorted(root_lemma_pdf["text"], key=len)[0]],
+                "count": [root_lemma_pdf["count"].sum()],
+                "concreteness_score": [root_lemma_pdf["concreteness_score"].mean()],
+                "pos": [root_lemma_pdf["pos"].value_counts().idxmax()],
+                "lemma": [sorted(root_lemma_pdf["lemma"], key=len)[0]],
+                "members": [root_lemma_pdf["members"].sum()],
+                "noun_phrases": [root_lemma_pdf["noun_phrases"].sum()],
+                "samples": [root_lemma_pdf["samples"].sum()],
+            }))
+    aspect_ranking_pdf = pd.concat(aspect_pdf_list)
+    aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.dumps, ensure_ascii=False)
+    aspect_ranking_pdf["samples"] = aspect_ranking_pdf["samples"].apply(json.dumps, ensure_ascii=False)
+    aspect_ranking_pdf["noun_phrases"] = aspect_ranking_pdf["noun_phrases"].apply(
+        lambda x: json.dumps(x, ensure_ascii=False) if x else None)
+    return aspect_ranking_pdf
+
+
 def save_aspect_ranking_pdf(aspect_candidates_filepath: str,
                             aspect_ranking_vecs_filepath: str,
                             aspect_ranking_filepath: str,
@@ -171,7 +201,7 @@ def save_aspect_ranking_pdf(aspect_candidates_filepath: str,
     for i, row in aspect_ranking_pdf.iterrows():
         aspect_noun_phrases = []
         for noun_phrase_lemma, noun_phrase in noun_phrase_lemma_to_noun_phrase.items():
-            if noun_phrase_lemma.endswith(row["lemma"]) and noun_phrase.lower() not in all_members and \
+            if noun_phrase_lemma.endswith(f" {row['lemma']}") and noun_phrase.lower() not in all_members and \
                     noun_phrase not in expanded_noun_phrases:
                 aspect_noun_phrases.append(noun_phrase)
                 expanded_noun_phrases.add(noun_phrase)
@@ -181,6 +211,7 @@ def save_aspect_ranking_pdf(aspect_candidates_filepath: str,
     aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.dumps, ensure_ascii=False)
     aspect_ranking_pdf = aspect_ranking_pdf[["text", "count", "concreteness_score", "pos",
                                         "lemma", "members", "noun_phrases", "samples"]]
+    aspect_ranking_pdf = merge_by_root_lemma(aspect_ranking_pdf)
     save_pdf(aspect_ranking_pdf, aspect_ranking_filepath)
 
 

@@ -1,4 +1,4 @@
-from double_propagation.sentiment_subjectivity.model_building import get_sentiment_features_pdf, get_model_prediction_pdf
+from double_propagation.binary_model.model_building import get_sentiment_features_pdf, get_model_prediction_pdf
 from utils.general_util import setup_logger, save_pdf
 from utils.resource_util import get_model_filepath
 from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
