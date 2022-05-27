@@ -1,12 +1,13 @@
 from typing import Dict
 from double_propagation.absa_utils.extractor_util import load_absa_seed_opinions
+from double_propagation.absa_utils.grouping_util import create_hierarchies_in_csv
 from word_vector.wv_corpus import extact_wv_corpus_from_annotation
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf
 from word_vector.wv_model import build_word2vec
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 from scipy.spatial.distance import pdist
 import matplotlib.pyplot as plt
-from collections import Counter
+from collections import Counter, OrderedDict
 from pyspark.sql import DataFrame
 import pandas as pd
 import json
@@ -112,7 +113,7 @@ def aspect_grouping(aspect_ranking_filepath: str,
     else:
         aspect_grouping_pdf["top"] = aspect_grouping_pdf["top"].apply(lambda x: f"Top Category {x}")
 
-    aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.dumps, ensure_ascii=False)
+    aspect_grouping_pdf["members"] = aspect_grouping_pdf["members"].apply(json.dumps, ensure_ascii=False)
     aspect_grouping_pdf.columns = ["top_category", "mid_category", "btm_category", "aspect", "members"]
     save_pdf(aspect_grouping_pdf, aspect_grouping_filepath)
 
@@ -167,6 +168,42 @@ def opinion_grouping(opinion_grouping_vecs_filepath: str,
     save_pdf(opinion_grouping_pdf, opinion_grouping_filepath)
 
 
+def get_aspect_hierarchy(aspect_grouping_filepath: str, aspect_hierarchy_filepath: str):
+    aspect_grouping_pdf = pd.read_csv(aspect_grouping_filepath, encoding="utf-8", keep_default_na=False, na_values="")
+    aspect_grouping_pdf["members"] = aspect_grouping_pdf["members"].apply(json.loads)
+    child_parent_dict = {}
+
+    for i, row in aspect_grouping_pdf.iterrows():
+        top_category, mid_category, btm_category = row["top_category"], row["mid_category"], row["btm_category"]
+        btm_category_aspects_count = aspect_grouping_pdf[aspect_grouping_pdf["btm_category"] == btm_category].shape[0]
+        aspect, members = row["aspect"], row["members"]
+        if len(members) > 1:
+            members_category = aspect.title()
+            if btm_category_aspects_count == 1:
+                child_parent_dict.update({member: btm_category for member in members})
+            else:
+                child_parent_dict.update({member: members_category for member in members})
+                child_parent_dict.update({members_category: btm_category})
+        else:
+            child_parent_dict.update({aspect: btm_category})
+
+        if not isinstance(top_category, str):
+            top_category = None
+        if not isinstance(mid_category, str):
+            mid_category = None
+
+        if not mid_category:
+            child_parent_dict.update({btm_category: top_category})
+        else:
+            child_parent_dict.update({btm_category: mid_category})
+            child_parent_dict.update({mid_category: top_category})
+
+        if top_category:
+            child_parent_dict.update({top_category: None})
+    child_to_parent = OrderedDict(sorted(child_parent_dict.items()))
+    create_hierarchies_in_csv(child_to_parent, aspect_hierarchy_filepath)
+
+
 if __name__ == "__main__":
     from utils.general_util import setup_logger, save_pdf, make_dir, dump_json_file
     from annotation.components.annotator import load_annotation
@@ -199,6 +236,7 @@ if __name__ == "__main__":
     opinion_grouping_dendrogram_filepath = \
         os.path.join(absa_opinion_dir, absa_config["opinion_grouping_dendrogram_filename"])
     opinion_grouping_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_grouping_filename"])
+    aspect_hierarchy_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_hierarchy_filename"])
 
     # spark_cores = 4
     # spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
@@ -219,24 +257,26 @@ if __name__ == "__main__":
     #                wv_corpus_filepath=grouping_wv_corpus_filepath,
     #                wv_model_filepath=grouping_wv_model_filepath)
 
-    get_aspect_grouping_vecs(aspect_ranking_filepath,
-                             grouping_wv_model_filepath,
-                             aspect_grouping_vecs_filepath)
+    # get_aspect_grouping_vecs(aspect_ranking_filepath,
+    #                          grouping_wv_model_filepath,
+    #                          aspect_grouping_vecs_filepath)
+    #
+    # aspect_grouping(aspect_ranking_filepath,
+    #                 aspect_grouping_vecs_filepath,
+    #                 aspect_grouping_dendrogram_filepath,
+    #                 aspect_grouping_filepath,
+    #                 btm_threshold=0.3,
+    #                 mid_threshold=0.8,
+    #                 top_threshold=1.5)
+    #
+    # get_opinion_grouping_vecs(opinion_ranking_filepath,
+    #                           grouping_wv_model_filepath,
+    #                           opinion_grouping_vecs_filepath)
+    #
+    # opinion_grouping(opinion_grouping_vecs_filepath,
+    #                  aspect_ranking_filepath,
+    #                  opinion_grouping_dendrogram_filepath,
+    #                  opinion_grouping_filepath,
+    #                  grouping_threshold=0.3)
 
-    aspect_grouping(aspect_ranking_filepath,
-                    aspect_grouping_vecs_filepath,
-                    aspect_grouping_dendrogram_filepath,
-                    aspect_grouping_filepath,
-                    btm_threshold=0.3,
-                    mid_threshold=0.8,
-                    top_threshold=1.5)
-
-    get_opinion_grouping_vecs(opinion_ranking_filepath,
-                              grouping_wv_model_filepath,
-                              opinion_grouping_vecs_filepath)
-
-    opinion_grouping(opinion_grouping_vecs_filepath,
-                     aspect_ranking_filepath,
-                     opinion_grouping_dendrogram_filepath,
-                     opinion_grouping_filepath,
-                     grouping_threshold=0.3)
+    get_aspect_hierarchy(aspect_grouping_filepath, aspect_hierarchy_filepath)
