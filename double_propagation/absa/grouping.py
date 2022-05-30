@@ -1,6 +1,6 @@
 from typing import Dict
 from double_propagation.absa_utils.extractor_util import load_absa_seed_opinions
-from double_propagation.absa_utils.grouping_util import create_hierarchies_in_csv
+from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
 from word_vector.wv_corpus import extact_wv_corpus_from_annotation
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf
 from word_vector.wv_model import build_word2vec
@@ -201,7 +201,7 @@ def get_aspect_hierarchy(aspect_grouping_filepath: str, aspect_hierarchy_filepat
         if top_category:
             child_parent_dict.update({top_category: None})
     child_to_parent = OrderedDict(sorted(child_parent_dict.items()))
-    create_hierarchies_in_csv(child_to_parent, aspect_hierarchy_filepath)
+    get_hierarchies_in_csv(child_to_parent, aspect_hierarchy_filepath)
 
 
 if __name__ == "__main__":

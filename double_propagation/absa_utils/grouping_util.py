@@ -32,7 +32,7 @@ def _write_in_csv(hierarchies: Dict[str, Any], depth: int, output: TextIOWrapper
             _write_in_csv(hierarchies[k], depth + 1, output)
 
 
-def create_hierarchies_in_csv(child_to_parent: Dict[str, str], csv_output_filepath: str):
+def get_hierarchies_in_csv(child_to_parent: Dict[str, str], csv_output_filepath: str):
     hierarchies = _get_hierarchies(child_to_parent)
     with open(csv_output_filepath, "w") as output:
         _write_in_csv(hierarchies, 0, output)
