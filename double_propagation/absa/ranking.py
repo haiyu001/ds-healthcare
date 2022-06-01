@@ -175,15 +175,16 @@ def merge_by_root_lemma(aspect_ranking_pdf: pd.DataFrame) -> pd.DataFrame:
     return aspect_ranking_pdf
 
 
-def save_aspect_ranking_pdf(aspect_candidates_filepath: str,
-                            aspect_ranking_vecs_filepath: str,
-                            aspect_ranking_filepath: str,
-                            phrase_filepath: str,
-                            word_to_dom_lemma: Dict[str, str],
-                            word_to_dom_pos: Dict[str, str],
-                            aspect_opinion_num_samples: int,
-                            noun_phrase_min_count: int,
-                            noun_phrase_max_words_count: int):
+def save_aspect_ranking(aspect_candidates_filepath: str,
+                        aspect_ranking_vecs_filepath: str,
+                        aspect_ranking_filepath: str,
+                        phrase_filepath: str,
+                        word_to_dom_lemma: Dict[str, str],
+                        word_to_dom_pos: Dict[str, str],
+                        aspect_filter_min_count: int,
+                        aspect_opinion_num_samples: int,
+                        noun_phrase_min_count: int,
+                        noun_phrase_max_words_count: int):
     noun_phrases_pdf = get_noun_phrases_pdf(phrase_filepath, noun_phrase_max_words_count)
     noun_phrases_pdf = noun_phrases_pdf[noun_phrases_pdf["count"] >= noun_phrase_min_count]
     noun_phrase_lemma_to_noun_phrase = dict(zip(noun_phrases_pdf["lemma"], noun_phrases_pdf["noun_phrase"]))
@@ -210,16 +211,18 @@ def save_aspect_ranking_pdf(aspect_candidates_filepath: str,
     aspect_ranking_pdf["noun_phrases"] = pd.Series(aspect_noun_phrases_list)
     aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.dumps, ensure_ascii=False)
     aspect_ranking_pdf = aspect_ranking_pdf[["text", "count", "concreteness_score", "pos",
-                                        "lemma", "members", "noun_phrases", "samples"]]
+                                             "lemma", "members", "noun_phrases", "samples"]]
     aspect_ranking_pdf = merge_by_root_lemma(aspect_ranking_pdf)
+    aspect_ranking_pdf = aspect_ranking_pdf[aspect_ranking_pdf["count"] >= aspect_filter_min_count]
     save_pdf(aspect_ranking_pdf, aspect_ranking_filepath)
 
 
-def save_opinion_ranking_pdf(opinion_candidates_filepath: str,
-                             opinion_ranking_vecs_filepath: str,
-                             opinion_ranking_filepath: str,
-                             word_to_dom_lemma: Dict[str, str],
-                             word_to_dom_pos: Dict[str, str]):
+def save_opinion_ranking(opinion_candidates_filepath: str,
+                         opinion_ranking_vecs_filepath: str,
+                         opinion_ranking_filepath: str,
+                         word_to_dom_lemma: Dict[str, str],
+                         word_to_dom_pos: Dict[str, str],
+                         opinion_filter_min_count: int):
     opinion_candidates_pdf = pd.read_csv(
         opinion_candidates_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     opinion_candidates_pdf["lemma"] = opinion_candidates_pdf["text"].apply(lambda x: word_to_dom_lemma[x])
@@ -242,16 +245,16 @@ def save_opinion_ranking_pdf(opinion_candidates_filepath: str,
                                                                predicted_score_col="subjectivity_score")
     # get opinion sentiment subjectivity scores
     opinion_sentiment_subjectivity_scores_pdf = \
-        opinion_sentiment_scores_pdf.merge(opinion_subjectivity_scores_pdf, on="word").rename(columns={"word": "text"})
-    opinion_sentiment_subjectivity_scores_pdf["hmean_score"] = hmean(opinion_sentiment_subjectivity_scores_pdf, axis=1)
+        opinion_sentiment_scores_pdf.merge(opinion_subjectivity_scores_pdf, left_index=True, right_index=True)
+    opinion_sentiment_subjectivity_scores_pdf["max_score"] = opinion_sentiment_subjectivity_scores_pdf.max(axis=1)
 
     opinion_ranking_pdf = pd.concat([opinion_sentiment_subjectivity_scores_pdf,
-                                  sentiment_features_pdf[["neg_avg", "pos_avg"]],
-                                  opinion_candidates_pdf], axis=1)
+                                     sentiment_features_pdf[["neg_avg", "pos_avg"]],
+                                     opinion_candidates_pdf], axis=1)
     opinion_ranking_pdf = opinion_ranking_pdf[
-        ["count", "polarity", "neg_avg", "pos_avg", "sentiment_score", "subjectivity_score", "hmean_score",
-         "lemma", "pos", "samples"]]
-    opinion_ranking_pdf = opinion_ranking_pdf.sort_values(by="hmean_score", ascending=False)
+        ["count", "polarity", "neg_avg", "pos_avg", "sentiment_score", "subjectivity_score", "max_score",
+         "lemma", "pos", "samples"]].sort_values(by="max_score", ascending=False)
+    opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["count"] >= opinion_filter_min_count]
     save_pdf(opinion_ranking_pdf, opinion_ranking_filepath, csv_index_label="text", csv_index=True)
 
 
@@ -283,18 +286,20 @@ if __name__ == "__main__":
 
     word_to_dom_lemma, word_to_dom_pos = load_word_to_dom_lemma_and_pos(unigram_filepath)
 
-    save_aspect_ranking_pdf(aspect_candidates_filepath,
-                            aspect_ranking_vecs_filepath,
-                            aspect_ranking_filepath,
-                            phrase_filepath,
-                            word_to_dom_lemma,
-                            word_to_dom_pos,
-                            absa_config["aspect_opinion_num_samples"],
-                            absa_config["noun_phrase_min_count"],
-                            absa_config["noun_phrase_max_words_count"])
+    # save_aspect_ranking(aspect_candidates_filepath,
+    #                     aspect_ranking_vecs_filepath,
+    #                     aspect_ranking_filepath,
+    #                     phrase_filepath,
+    #                     word_to_dom_lemma,
+    #                     word_to_dom_pos,
+    #                     absa_config["aspect_filter_min_count"],
+    #                     absa_config["aspect_opinion_num_samples"],
+    #                     absa_config["noun_phrase_min_count"],
+    #                     absa_config["noun_phrase_max_words_count"])
 
-    save_opinion_ranking_pdf(opinion_candidates_filepath,
-                             opinion_ranking_vecs_filepath,
-                             opinion_ranking_filepath,
-                             word_to_dom_lemma,
-                             word_to_dom_pos)
+    save_opinion_ranking(opinion_candidates_filepath,
+                         opinion_ranking_vecs_filepath,
+                         opinion_ranking_filepath,
+                         word_to_dom_lemma,
+                         word_to_dom_pos,
+                         absa_config["opinion_filter_min_count"])

@@ -1,4 +1,6 @@
-from typing import Dict
+from typing import Dict, Optional
+
+from double_propagation.absa.enumerations import Polarity
 from double_propagation.absa_utils.extractor_util import load_absa_seed_opinions
 from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
 from word_vector.wv_corpus import extact_wv_corpus_from_annotation
@@ -52,13 +54,13 @@ def get_aspect_grouping_vecs(aspect_ranking_filepath: str,
     grouping_vecs.extract_txt_vecs(aspect_words, aspect_grouping_vecs_filepath, l2_norm=False)
 
 
-def aspect_grouping(aspect_ranking_filepath: str,
-                    aspect_grouping_vecs_filepath: str,
-                    aspect_grouping_dendrogram_filepath: str,
-                    aspect_grouping_filepath: str,
-                    btm_threshold: float,
-                    mid_threshold: float,
-                    top_threshold: float):
+def save_aspect_grouping(aspect_ranking_filepath: str,
+                         aspect_grouping_vecs_filepath: str,
+                         aspect_grouping_dendrogram_filepath: str,
+                         aspect_grouping_filepath: str,
+                         btm_threshold: float,
+                         mid_threshold: float,
+                         top_threshold: float):
     aspect_ranking_pdf = pd.read_csv(aspect_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.loads)
     aspect_ranking_pdf["noun_phrases"] = aspect_ranking_pdf["noun_phrases"].apply(
@@ -83,7 +85,8 @@ def aspect_grouping(aspect_ranking_filepath: str,
     top_labels = fcluster(Z, t=top_threshold, criterion="distance")
     aspect_ranking_pdf["top"] = pd.Series(top_labels, aspect_ranking_pdf.index)
 
-    aspect_grouping_pdf = aspect_ranking_pdf[["top", "mid", "btm", "text", "members"]].sort_values(["top", "mid", "btm"])
+    aspect_grouping_pdf = aspect_ranking_pdf[["top", "mid", "btm", "text", "members"]].sort_values(
+        ["top", "mid", "btm"])
     aspect_vecs = WordVec(aspect_grouping_vecs_filepath, use_oov_strategy=True)
 
     # btm group naming
@@ -130,12 +133,11 @@ def get_opinion_grouping_vecs(opinion_ranking_filepath: str,
     grouping_vecs.extract_txt_vecs(opinion_words, opinion_grouping_vecs_filepath, l2_norm=False)
 
 
-def opinion_grouping(opinion_grouping_vecs_filepath: str,
-                     aspect_ranking_filepath: str,
-                     opinion_grouping_dendrogram_filepath: str,
-                     opinion_grouping_filepath: str,
-                     grouping_threshold: float):
-
+def save_opinion_grouping(opinion_grouping_vecs_filepath: str,
+                          aspect_ranking_filepath: str,
+                          opinion_grouping_dendrogram_filepath: str,
+                          opinion_grouping_filepath: str,
+                          grouping_threshold: float):
     aspect_rankning_pdf = pd.read_csv(aspect_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     aspects = set(aspect_rankning_pdf["text"].str.lower().tolist())
     seed_opinions = load_absa_seed_opinions().keys()
@@ -163,12 +165,12 @@ def opinion_grouping(opinion_grouping_vecs_filepath: str,
             opinion_types.append("generic_opinion")
     opinion_grouping_pdf = pd.DataFrame({"category": categories,
                                          "opinion": opinions,
-                                         "types": opinion_types}).sort_values(by="category")
+                                         "type": opinion_types}).sort_values(by="category")
     opinion_grouping_pdf["category"] = opinion_grouping_pdf["category"].apply(lambda x: f"Category {x}")
     save_pdf(opinion_grouping_pdf, opinion_grouping_filepath)
 
 
-def get_aspect_hierarchy(aspect_grouping_filepath: str, aspect_hierarchy_filepath: str):
+def save_aspect(aspect_grouping_filepath: str, aspect_filepath: str, aspect_hierarchy_filepath: str):
     aspect_grouping_pdf = pd.read_csv(aspect_grouping_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     aspect_grouping_pdf["members"] = aspect_grouping_pdf["members"].apply(json.loads)
     child_parent_dict = {}
@@ -178,7 +180,7 @@ def get_aspect_hierarchy(aspect_grouping_filepath: str, aspect_hierarchy_filepat
         btm_category_aspects_count = aspect_grouping_pdf[aspect_grouping_pdf["btm_category"] == btm_category].shape[0]
         aspect, members = row["aspect"], row["members"]
         if len(members) > 1:
-            members_category = aspect.title()
+            members_category = aspect if aspect.isupper else aspect.title()
             if btm_category_aspects_count == 1:
                 child_parent_dict.update({member: btm_category for member in members})
             else:
@@ -201,7 +203,34 @@ def get_aspect_hierarchy(aspect_grouping_filepath: str, aspect_hierarchy_filepat
         if top_category:
             child_parent_dict.update({top_category: None})
     child_to_parent = OrderedDict(sorted(child_parent_dict.items()))
+    dump_json_file(child_to_parent, aspect_filepath)
     get_hierarchies_in_csv(child_to_parent, aspect_hierarchy_filepath)
+
+
+def save_opinion(opinion_grouping_filepath: str,
+                 opinion_ranking_filepath: str,
+                 opinion_filepath: str,
+                 filter_min_score: Optional[float] = None):
+    opinion_grouping_pdf = pd.read_csv(opinion_grouping_filepath, encoding="utf-8", keep_default_na=False, na_values="")
+    opinion_ranking_pdf = pd.read_csv(opinion_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
+    opinion_grouping_pdf["opinion"] = opinion_grouping_pdf["opinion"].str.lower()
+    opinion_ranking_pdf["opinion"] = opinion_ranking_pdf["text"].str.lower()
+    opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["polarity"] != Polarity.UNK.name]
+    if filter_min_score:
+        opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["max_score"] >= filter_min_score]
+    opinion_to_score = dict(zip(opinion_ranking_pdf["opinion"], opinion_ranking_pdf["max_score"]))
+    opinion_to_polarity = dict(zip(opinion_ranking_pdf["opinion"], opinion_ranking_pdf["polarity"]))
+    opinion_to_type = dict(zip(opinion_grouping_pdf["opinion"], opinion_grouping_pdf["type"]))
+    seed_opinions = load_absa_seed_opinions()
+    opinion_to_sentiment_score = dict()
+    for opinion, opinion_type in opinion_to_type.items():
+        if opinion_type.startswith("generic"):
+            opinion_to_sentiment_score[opinion] = -1.0 if seed_opinions[opinion] == "NEG" else 1.0
+        elif opinion_type.startswith("specific") and opinion in opinion_to_score:
+            opinion_to_sentiment_score[opinion] = opinion_to_score[opinion] * \
+                                                  (-1.0 if opinion_to_polarity[opinion] == "NEG" else 1.0)
+    opinion_to_sentiment_score = OrderedDict(sorted(opinion_to_sentiment_score.items()))
+    dump_json_file(opinion_to_sentiment_score, opinion_filepath)
 
 
 if __name__ == "__main__":
@@ -236,47 +265,56 @@ if __name__ == "__main__":
     opinion_grouping_dendrogram_filepath = \
         os.path.join(absa_opinion_dir, absa_config["opinion_grouping_dendrogram_filename"])
     opinion_grouping_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_grouping_filename"])
-    aspect_hierarchy_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_hierarchy_filename"])
+    aspect_hierarchy_filepath = os.path.join(absa_dir, absa_config["aspect_hierarchy_filename"])
+    aspect_filepath = os.path.join(absa_dir, absa_config["aspect_filename"])
+    opinion_filepath = os.path.join(absa_dir, absa_config["opinion_filename"])
 
-    # spark_cores = 4
-    # spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
-    #
-    # annotation_sdf = load_annotation(spark,
-    #                                  annotation_dir,
-    #                                  absa_config["drop_non_english"])
-    #
-    # build_grouping_wv_corpus(annotation_sdf,
-    #                          aspect_ranking_filepath,
-    #                          grouping_wv_corpus_filepath,
-    #                          absa_config["lang"],
-    #                          absa_config["spacy_package"],
-    #                          absa_config["wv_corpus_match_lowercase"])
-    #
-    # build_word2vec(absa_config["wv_size"],
-    #                use_char_ngram=False,
-    #                wv_corpus_filepath=grouping_wv_corpus_filepath,
-    #                wv_model_filepath=grouping_wv_model_filepath)
+    spark_cores = 4
+    spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
 
-    # get_aspect_grouping_vecs(aspect_ranking_filepath,
-    #                          grouping_wv_model_filepath,
-    #                          aspect_grouping_vecs_filepath)
-    #
-    # aspect_grouping(aspect_ranking_filepath,
-    #                 aspect_grouping_vecs_filepath,
-    #                 aspect_grouping_dendrogram_filepath,
-    #                 aspect_grouping_filepath,
-    #                 btm_threshold=0.3,
-    #                 mid_threshold=0.8,
-    #                 top_threshold=1.5)
-    #
-    # get_opinion_grouping_vecs(opinion_ranking_filepath,
-    #                           grouping_wv_model_filepath,
-    #                           opinion_grouping_vecs_filepath)
-    #
-    # opinion_grouping(opinion_grouping_vecs_filepath,
-    #                  aspect_ranking_filepath,
-    #                  opinion_grouping_dendrogram_filepath,
-    #                  opinion_grouping_filepath,
-    #                  grouping_threshold=0.3)
+    annotation_sdf = load_annotation(spark,
+                                     annotation_dir,
+                                     absa_config["drop_non_english"])
 
-    get_aspect_hierarchy(aspect_grouping_filepath, aspect_hierarchy_filepath)
+    build_grouping_wv_corpus(annotation_sdf,
+                             aspect_ranking_filepath,
+                             grouping_wv_corpus_filepath,
+                             absa_config["lang"],
+                             absa_config["spacy_package"],
+                             absa_config["wv_corpus_match_lowercase"])
+
+    build_word2vec(absa_config["wv_size"],
+                   use_char_ngram=False,
+                   wv_corpus_filepath=grouping_wv_corpus_filepath,
+                   wv_model_filepath=grouping_wv_model_filepath)
+
+    get_aspect_grouping_vecs(aspect_ranking_filepath,
+                             grouping_wv_model_filepath,
+                             aspect_grouping_vecs_filepath)
+
+    save_aspect_grouping(aspect_ranking_filepath,
+                         aspect_grouping_vecs_filepath,
+                         aspect_grouping_dendrogram_filepath,
+                         aspect_grouping_filepath,
+                         btm_threshold=0.3,
+                         mid_threshold=0.8,
+                         top_threshold=1.5)
+
+    get_opinion_grouping_vecs(opinion_ranking_filepath,
+                              grouping_wv_model_filepath,
+                              opinion_grouping_vecs_filepath)
+
+    save_opinion_grouping(opinion_grouping_vecs_filepath,
+                          aspect_ranking_filepath,
+                          opinion_grouping_dendrogram_filepath,
+                          opinion_grouping_filepath,
+                          grouping_threshold=0.3)
+
+    save_aspect(aspect_grouping_filepath,
+                aspect_filepath,
+                aspect_hierarchy_filepath)
+
+    save_opinion(opinion_grouping_filepath,
+                 opinion_ranking_filepath,
+                 opinion_filepath,
+                 filter_min_score=0.5)

@@ -5,6 +5,7 @@ from double_propagation.absa_utils.extraction_rules_util import expand_aspect, m
     is_equivalent_relation, is_valid_relation, get_conj_polarity
 
 
+# DEP: O -> O
 def rule_O_O(relation: Relation,
              relations: List[Relation],
              gov_polarity: Optional[str],
@@ -23,6 +24,7 @@ def rule_O_O(relation: Relation,
                              mark_candidate_in_sentence(opinion_candidate_relation_term.text, sentence_text))
 
 
+# DEP: A -> O
 def rule_O_A(relation: Relation, relations: List[Relation], sentence_text: str) -> Optional[CandidateTerm]:
     if relation.gov.pos in ["NN", "NNP"] and is_valid_relation(relation):
         aspect_candidate_relation_term = expand_aspect(relation, relations, "gov")
@@ -36,6 +38,7 @@ def rule_O_A(relation: Relation, relations: List[Relation], sentence_text: str) 
                              mark_candidate_in_sentence(aspect_candidate_relation_term.text, sentence_text))
 
 
+# DEP: A -> O
 def rule_A_O(relation: Relation, sentence_sentiment: str, sentence_text: str) -> Optional[CandidateTerm]:
     opinion_candidate_relation_term = relation.dep
     aspect_source_relation_term = relation.gov
@@ -49,6 +52,7 @@ def rule_A_O(relation: Relation, sentence_sentiment: str, sentence_text: str) ->
                              mark_candidate_in_sentence(opinion_candidate_relation_term.text, sentence_text))
 
 
+# DEP: A -> A
 def rule_A_A(relation: Relation, relations: List[Relation], gov_in_aspect_sources: bool, sentence_text: str) \
         -> Optional[CandidateTerm]:
     aspect_candidate_relation_term = relation.dep if gov_in_aspect_sources else relation.gov
@@ -65,6 +69,7 @@ def rule_A_A(relation: Relation, relations: List[Relation], gov_in_aspect_source
                              mark_candidate_in_sentence(aspect_candidate_relation_term.text, sentence_text))
 
 
+# DEP: O <- X -> O
 def rule_O_X_O(relation: Relation, relations: List[Relation], polarity: str, sentence_text: str) \
         -> Optional[CandidateTerm]:
     for candidate_relation in relations:
@@ -81,6 +86,7 @@ def rule_O_X_O(relation: Relation, relations: List[Relation], polarity: str, sen
                                  mark_candidate_in_sentence(opinion_candidate_relation_term.text, sentence_text))
 
 
+# DEP: 0 <- X -> A
 def rule_O_X_A(relation: Relation, relations: List[Relation], sentence_text: str) -> Optional[CandidateTerm]:
     for candidate_relation in relations:
         if candidate_relation.gov is relation.gov and candidate_relation.dep.pos in ["NN", "NNP"] and \
@@ -97,6 +103,7 @@ def rule_O_X_A(relation: Relation, relations: List[Relation], sentence_text: str
                                  mark_candidate_in_sentence(aspect_candidate_relation_term.text, sentence_text))
 
 
+# DEP: 0 <- X -> A
 def rule_A_X_O(relation: Relation, relations: List[Relation], sentence_sentiment: str, sentence_text: str) \
         -> Optional[CandidateTerm]:
     for candidate_relation in relations:
@@ -116,6 +123,7 @@ def rule_A_X_O(relation: Relation, relations: List[Relation], sentence_sentiment
                                  mark_candidate_in_sentence(opinion_candidate_relation_term.text, sentence_text))
 
 
+# DEP: A <- X -> A
 def rule_A_X_A(relation: Relation, relations: List[Relation], sentence_text: str) -> Optional[CandidateTerm]:
     for candidate_relation in relations:
         if candidate_relation.gov is relation.gov and candidate_relation.dep.pos in ["NN", "NNP"] and \
