@@ -2,7 +2,7 @@ from pyspark.pandas import DataFrame
 
 
 def extract_triplet(annotation_sdf: DataFrame):
-
+    pass
 
 
 if __name__ == "__main__":
@@ -24,8 +24,8 @@ if __name__ == "__main__":
     extraction_dir = os.path.join(domain_dir, absa_config["extraction_folder"])
     absa_aspect_dir = make_dir(os.path.join(absa_dir, "aspect"))
     absa_opinion_dir = make_dir(os.path.join(absa_dir, "opinion"))
-    aspect_grouping_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_grouping_filename"])
-    opinion_grouping_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_grouping_filename"])
+    aspect_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_filename"])
+    opinion_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_filename"])
 
     spark_cores = 4
     spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="Warn")

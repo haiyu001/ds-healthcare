@@ -172,7 +172,7 @@ def save_opinion_grouping(opinion_grouping_vecs_filepath: str,
 
 def save_aspect(aspect_grouping_filepath: str, aspect_filepath: str, aspect_hierarchy_filepath: str):
     aspect_grouping_pdf = pd.read_csv(aspect_grouping_filepath, encoding="utf-8", keep_default_na=False, na_values="")
-    aspect_grouping_pdf["members"] = aspect_grouping_pdf["members"].apply(json.loads)
+    aspect_grouping_pdf["members"] = aspect_grouping_pdf["members"].str.lower().apply(json.loads)
     child_parent_dict = {}
 
     for i, row in aspect_grouping_pdf.iterrows():
@@ -180,14 +180,14 @@ def save_aspect(aspect_grouping_filepath: str, aspect_filepath: str, aspect_hier
         btm_category_aspects_count = aspect_grouping_pdf[aspect_grouping_pdf["btm_category"] == btm_category].shape[0]
         aspect, members = row["aspect"], row["members"]
         if len(members) > 1:
-            members_category = aspect if aspect.isupper else aspect.title()
+            members_category = aspect if aspect.isupper() else aspect.title()
             if btm_category_aspects_count == 1:
                 child_parent_dict.update({member: btm_category for member in members})
             else:
                 child_parent_dict.update({member: members_category for member in members})
                 child_parent_dict.update({members_category: btm_category})
         else:
-            child_parent_dict.update({aspect: btm_category})
+            child_parent_dict.update({aspect.lower(): btm_category})
 
         if not isinstance(top_category, str):
             top_category = None
@@ -269,24 +269,24 @@ if __name__ == "__main__":
     aspect_filepath = os.path.join(absa_dir, absa_config["aspect_filename"])
     opinion_filepath = os.path.join(absa_dir, absa_config["opinion_filename"])
 
-    spark_cores = 4
-    spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
-
-    annotation_sdf = load_annotation(spark,
-                                     annotation_dir,
-                                     absa_config["drop_non_english"])
-
-    build_grouping_wv_corpus(annotation_sdf,
-                             aspect_ranking_filepath,
-                             grouping_wv_corpus_filepath,
-                             absa_config["lang"],
-                             absa_config["spacy_package"],
-                             absa_config["wv_corpus_match_lowercase"])
-
-    build_word2vec(absa_config["wv_size"],
-                   use_char_ngram=False,
-                   wv_corpus_filepath=grouping_wv_corpus_filepath,
-                   wv_model_filepath=grouping_wv_model_filepath)
+    # spark_cores = 4
+    # spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
+    #
+    # annotation_sdf = load_annotation(spark,
+    #                                  annotation_dir,
+    #                                  absa_config["drop_non_english"])
+    #
+    # build_grouping_wv_corpus(annotation_sdf,
+    #                          aspect_ranking_filepath,
+    #                          grouping_wv_corpus_filepath,
+    #                          absa_config["lang"],
+    #                          absa_config["spacy_package"],
+    #                          absa_config["wv_corpus_match_lowercase"])
+    #
+    # build_word2vec(absa_config["wv_size"],
+    #                use_char_ngram=False,
+    #                wv_corpus_filepath=grouping_wv_corpus_filepath,
+    #                wv_model_filepath=grouping_wv_model_filepath)
 
     get_aspect_grouping_vecs(aspect_ranking_filepath,
                              grouping_wv_model_filepath,
@@ -296,9 +296,9 @@ if __name__ == "__main__":
                          aspect_grouping_vecs_filepath,
                          aspect_grouping_dendrogram_filepath,
                          aspect_grouping_filepath,
-                         btm_threshold=0.3,
-                         mid_threshold=0.8,
-                         top_threshold=1.5)
+                         btm_threshold=0.25,
+                         mid_threshold=0.75,
+                         top_threshold=1.25)
 
     get_opinion_grouping_vecs(opinion_ranking_filepath,
                               grouping_wv_model_filepath,
@@ -308,7 +308,7 @@ if __name__ == "__main__":
                           aspect_ranking_filepath,
                           opinion_grouping_dendrogram_filepath,
                           opinion_grouping_filepath,
-                          grouping_threshold=0.3)
+                          grouping_threshold=0.25)
 
     save_aspect(aspect_grouping_filepath,
                 aspect_filepath,
