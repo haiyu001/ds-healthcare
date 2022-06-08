@@ -1,59 +1,56 @@
-sentiment_negation = {
-    "barely": "both",
-    "hardly": "after",
-    "lack": "before",
-    "least": "before",
-    "neither": "before",
-    "never": "before",
-    "nor": "before",
-    "not": "before",
-    "n't": "before",
-    "without": "before",
-    "non": "before",
-    "no": "before",
-    "nt": "before",
-    "aint": "before",
-    "cannot": "before",
-    "cant": "before",
-    "dont": "before",
-    "arent": "before",
-    "couldnt": "before",
-    "didnt": "before",
-    "darent": "before",
-    "hadnt": "before",
-    "hasnt": "before",
-    "isnt": "before",
-    "mightnt": "before",
-    "mustnt": "before",
-    "neednt": "before",
-    "oughtnt": "before",
-    "shant": "before",
-    "shouldnt": "before",
-    "wasnt": "before",
-    "werent": "before",
-    "wont": "before",
-    "wouldnt": "before",
-}
+sentiment_negations = [
+    "aint",
+    "arent",
+    "cannot",
+    "cant",
+    "couldnt",
+    "darent",
+    "didnt",
+    "dont",
+    "hadnt",
+    "hasnt",
+    "isnt",
+    "lack",
+    "mightnt",
+    "mustnt",
+    "n't",
+    "neednt",
+    "neither",
+    "never",
+    "no",
+    "non",
+    "nor",
+    "not",
+    "nt",
+    "oughtnt",
+    "shant",
+    "shouldnt",
+    "wasnt",
+    "werent",
+    "without",
+    "wont",
+    "wouldnt",
+    # "least",
+]
 
-sentiment_negation_social = {**sentiment_negation, **{
-    "none": "before",
-    "nope": "before",
-    "nothing": "before",
-    "nowhere": "before",
-    "uhuh": "before",
-    "uh-uh": "before",
-    "rarely": "before",
-    "seldom": "before",
-    "despite": "before",
-}}
+sentiment_negations_social = sentiment_negations + [
+    "none",
+    "nope",
+    "nothing",
+    "nowhere",
+    "uhuh",
+    "rarely",
+    "seldom",
+    "despite",
+]
 
-sentiment_pseudo = {
-    "never so": "before",
-    "never this": "before",
-    "without doubt": "before",
-    "at least": "before",
-    "very least": "before",
-    "not only": "before",
+sentiment_negations_pseudo = {
+    "never so": 1.25,
+    "never this": 1.25,
+    "without doubt": 1.0,
+    "at least": 1.0,
+    "very least": 1.0,
+    "not only": 1.0,
 }
 
 proposition_pseudo = [
@@ -183,21 +180,21 @@ proposition_preceding_clinical = proposition_preceding + [
     "ruled the patient out",
     "r/o",
     "ro",
-    "lack of",           # from UMLS NEG LEXICON
-    "exclude",           # from UMLS NEG LEXICON
-    "excluding",         # from UMLS NEG LEXICON
-    "nonexistence",      # from UMLS NEG LEXICON
-    "inexistent",        # from UMLS NEG LEXICON
-    "infeasible",        # from UMLS NEG LEXICON
+    "lack of",  # from UMLS NEG LEXICON
+    "exclude",  # from UMLS NEG LEXICON
+    "excluding",  # from UMLS NEG LEXICON
+    "nonexistence",  # from UMLS NEG LEXICON
+    "inexistent",  # from UMLS NEG LEXICON
+    "infeasible",  # from UMLS NEG LEXICON
 ]
 
 proposition_following_clinical = proposition_following + [
     "was ruled out",
     "were ruled out",
     "free",
-    "disappear",         # from UMLS NEG LEXICON
-    "disappears",        # from UMLS NEG LEXICON
-    "disappeared",       # from UMLS NEG LEXICON
+    "disappear",  # from UMLS NEG LEXICON
+    "disappears",  # from UMLS NEG LEXICON
+    "disappeared",  # from UMLS NEG LEXICON
 ]
 
 proposition_termination_clinical = proposition_termination + [

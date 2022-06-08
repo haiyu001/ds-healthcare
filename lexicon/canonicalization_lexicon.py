@@ -55,7 +55,7 @@ hyphen_trigram_two_words_pos = [
     ("NOUN", "ADJ"),
     ("ADJ", "ADJ"),
     ("ADV", "ADJ"),
-    ("ADV", "VERB")
+    ("ADV", "VERB"),
 ]
 
 hyphen_trigram_blacklist = [
@@ -70,20 +70,20 @@ hyphen_trigram_blacklist = [
 ]
 
 intensifiers = {
+    "kind of": -0.3,
+    "sort of": -0.3,
+    "just enough": -0.3,
     "bit": -0.3,
     "less": -0.3,
     "little": -0.3,
     "slight": -0.3,
     "slightly": -0.3,
     "somewhat": -0.3,
-    "kind of": -0.3,
     "almost": -0.3,
     "barely": -0.3,
     "hardly": -0.3,
-    "just enough": -0.3,
     "kinda": -0.3,
     "kindof": -0.3,
-    "kind-of": -0.3,
     "marginal": -0.3,
     "marginally": -0.3,
     "occasional": -0.3,
@@ -91,10 +91,8 @@ intensifiers = {
     "partly": -0.3,
     "scarce": -0.3,
     "scarcely": -0.3,
-    "sort of": -0.3,
     "sorta": -0.3,
     "sortof": -0.3,
-    "sort-of": -0.3,
     "absolutely": 0.3,
     "absurdly": 0.3,
     "amazingly": 0.3,
@@ -115,7 +113,6 @@ intensifiers = {
     "intensely": 0.3,
     "most": 0.3,
     "much": 0.3,
-    "much more": 0.3,
     "particularly": 0.3,
     "perfectly": 0.3,
     "pretty": 0.3,
@@ -139,7 +136,6 @@ intensifiers = {
     "unusually": 0.3,
     "utterly": 0.3,
     "very": 0.3,
-    "very very": 0.3,
     "considerable": 0.3,
     "considerably": 0.3,
     "decidedly": 0.3,
@@ -172,6 +168,5 @@ intensifiers = {
     "substantially": 0.3,
     "total": 0.3,
     "tremendous": 0.3,
-    "uber": 0.3,
-    "utter": 0.3
+    "utter": 0.3,
 }

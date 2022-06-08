@@ -43,7 +43,7 @@ if __name__ == "__main__":
     nlp = get_nlp_model(**nlp_model_config)
     logging.info(f"nlp model config (use_gpu = {nlp_model_config['use_gpu']}):\n{get_nlp_model_config_str(nlp)}")
 
-    sample_1 = "Thesr  autonomouscars have good battery life if not in China. I hatte that laptop in 5yrs and cool."
+    sample_1 = "Thesr  autonomouscars have kind-of good battery life if not in China. uh-uh I sort-of hatte that laptop in 5yrs and cool."
     sample_2 = "I don't struggle with depression, anxiety and panic attacks in 3 month."
     sample_3 = json.dumps({"record_id": "001", "source": "dummy", "content": "He had no sign of huge heart attack."})
 

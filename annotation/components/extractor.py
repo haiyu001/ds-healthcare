@@ -1,6 +1,4 @@
-import collections
 from typing import List, Optional
-
 from utils.general_util import dump_json_file
 from utils.spark_util import extract_topn_common, write_sdf_to_file, pudf_get_most_common_text
 from pyspark.sql.types import ArrayType, StringType, Row, BooleanType
@@ -9,6 +7,7 @@ import pyspark.sql.functions as F
 from pyspark.ml.feature import NGram
 from string import punctuation
 import pandas as pd
+import collections
 
 
 def pudf_is_valid_ngram(ngrams: Column) -> Column:
