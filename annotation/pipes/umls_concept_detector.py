@@ -1,10 +1,10 @@
+from typing import Optional, List, Tuple
 from collections import defaultdict
-from typing import Optional, List, Tuple, Dict, Any
 from utils.general_util import load_json_file
 from utils.resource_util import get_model_filepath
-from quickumls import QuickUMLS
 from spacy import Language
 from spacy.tokens import Doc, Span
+from quickumls import QuickUMLS
 
 
 class UMLSConceptDetector(object):
@@ -26,7 +26,7 @@ class UMLSConceptDetector(object):
         self.keep_uppercase = keep_uppercase
         self.quickumls_filepath = quickumls_filepath or get_model_filepath("UMLS", "QuickUMLS")
         self.accepted_semtypes = self._set_accepted_semtypes(accepted_semtypes)
-        self.quickumls = QuickUMLS(quickumls_fp=self.quickumls_filepath,
+        self.quick_umls = QuickUMLS(quickumls_fp=self.quickumls_filepath,
                                    accepted_semtypes=self.accepted_semtypes,
                                    overlapping_criteria=overlapping_criteria,
                                    similarity_name=similarity_name,
@@ -50,7 +50,7 @@ class UMLSConceptDetector(object):
         return accepted_semtypes
 
     def __call__(self, doc: Doc) -> Doc:
-        matches = self.quickumls._match(doc, best_match=self.best_match, ignore_syntax=False)
+        matches = self.quick_umls._match(doc, best_match=self.best_match, ignore_syntax=False)
         umls_concepts_dict = defaultdict(list)
         for match in matches:
             for ngram_match_dict in match:

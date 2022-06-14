@@ -1,8 +1,7 @@
-from typing import Union, Dict
 from pathlib import Path
 from subprocess import call
-import stanza
 import os
+from typing import List
 
 MODELS_HOME = os.environ["MODELS_HOME"]
 
@@ -50,5 +49,26 @@ def get_stanza_model_dir() -> str:
     return model_dir
 
 
-def download_stanza_model(lang: str, package: str = "default", processors: Union[str, Dict[str, str]] = {}):
+def load_nltk_stop_words(lang: str) -> List[str]:
+    stop_words_dir = get_model_filepath("NLTK", "corpora", "stopwords")
+    language_filepath = {lang: os.path.join(stop_words_dir, lang) for lang in os.listdir(stop_words_dir)}
+    if lang not in language_filepath:
+        raise Exception(f"NLTK stop words does not exist for language {lang}")
+    else:
+        stop_words = []
+        with open(language_filepath[lang], "r") as input:
+            for line in input:
+                stop_words.append(line.strip())
+        return stop_words
+
+
+if __name__ == "__main__":
+    import stanza
+    import nltk
+
+    lang = "en"
+    package = "mimic"
+    processors = {"ner": "i2b2"}
     stanza.download(lang, get_model_filepath("stanza"), package, processors)
+
+    nltk.download("stopwords")

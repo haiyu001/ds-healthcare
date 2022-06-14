@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional
-from annotation.annotation_utils.annotator_util import get_nlp_model_config, get_canonicalization_nlp_model_config
-from annotation.components.annotator import pudf_annotate, load_annotation, get_nlp_model, get_nlp_model_config_str
+from annotation.annotation_utils.annotator_util import get_canonicalization_nlp_model_config, get_nlp_model_config
+from annotation.annotation_utils.annotator_spark_util import pudf_annotate, load_annotation
+from annotation.components.annotator import get_nlp_model, get_nlp_model_config_str
 from annotation.components.canonicalizer import get_canonicalization
 from annotation.components.canonicalizer_bigram import get_bigram_canonicalization_candidates, \
     get_bigram_canonicalization_candidates_match_dict, get_bigram_canonicalization
@@ -52,8 +53,8 @@ def build_annotation(input_sdf: DataFrame,
     nlp_model = get_nlp_model(**nlp_model_config)
     logging.info(f"nlp model config (use_gpu = {nlp_model_config['use_gpu']}):\n{get_nlp_model_config_str(nlp_model)}")
     del nlp_model
-    canonicalization_annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), nlp_model_config))
-    write_sdf_to_dir(canonicalization_annotation_sdf, save_folder_dir, save_folder_name, file_format="txt")
+    annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), nlp_model_config))
+    write_sdf_to_dir(annotation_sdf, save_folder_dir, save_folder_name, file_format="txt")
 
 
 def build_extraction_and_canonicalization_candidates(canonicalization_annotation_sdf: DataFrame,

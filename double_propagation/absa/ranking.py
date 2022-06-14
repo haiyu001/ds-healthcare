@@ -2,7 +2,6 @@ from typing import Tuple, Dict, List
 from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
 from double_propagation.absa.binary_model import get_sentiment_features_pdf, \
     get_model_prediction_pdf
-from scipy.stats import hmean
 import pandas as pd
 import collections
 import operator
@@ -56,7 +55,7 @@ def load_word_to_dom_lemma_and_pos(unigram_filepath: str) -> Tuple[Dict[str, str
 
 def get_noun_phrases_pdf(phrase_filepath: str, noun_phrase_words_max_count: int = 4) -> pd.DataFrame:
     phrase_pdf = pd.read_csv(phrase_filepath, encoding="utf-8", keep_default_na=False, na_values="")
-    phrase_pdf["phrase_words"] = phrase_pdf["phrase"].str.split()
+    phrase_pdf["phrase_words"] = phrase_pdf["text"].str.lower().str.split()
     phrase_pdf["phrase_poses"] = phrase_pdf["phrase_poses"].apply(json.loads)
     phrase_pdf["phrase_lemmas"] = phrase_pdf["phrase_lemmas"].apply(json.loads)
     phrase_pdf["phrase_deps"] = phrase_pdf["phrase_deps"].apply(json.loads)
@@ -286,16 +285,16 @@ if __name__ == "__main__":
 
     word_to_dom_lemma, word_to_dom_pos = load_word_to_dom_lemma_and_pos(unigram_filepath)
 
-    # save_aspect_ranking(aspect_candidates_filepath,
-    #                     aspect_ranking_vecs_filepath,
-    #                     aspect_ranking_filepath,
-    #                     phrase_filepath,
-    #                     word_to_dom_lemma,
-    #                     word_to_dom_pos,
-    #                     absa_config["aspect_filter_min_count"],
-    #                     absa_config["aspect_opinion_num_samples"],
-    #                     absa_config["noun_phrase_min_count"],
-    #                     absa_config["noun_phrase_max_words_count"])
+    save_aspect_ranking(aspect_candidates_filepath,
+                        aspect_ranking_vecs_filepath,
+                        aspect_ranking_filepath,
+                        phrase_filepath,
+                        word_to_dom_lemma,
+                        word_to_dom_pos,
+                        absa_config["aspect_filter_min_count"],
+                        absa_config["aspect_opinion_num_samples"],
+                        absa_config["noun_phrase_min_count"],
+                        absa_config["noun_phrase_max_words_count"])
 
     save_opinion_ranking(opinion_candidates_filepath,
                          opinion_ranking_vecs_filepath,

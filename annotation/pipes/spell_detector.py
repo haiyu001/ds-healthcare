@@ -1,8 +1,7 @@
 from typing import Tuple, Dict, Any, List, Set
 from utils.general_util import load_json_file
 from utils.resource_util import get_model_filepath
-from hunspell.hunspell import HunspellWrap
-from hunspell import Hunspell
+from spellchecker import SpellChecker
 from collections import defaultdict
 from spacy.tokens import Token, Doc
 import re
@@ -13,7 +12,7 @@ class SpellDetector(object):
 
     def __init__(self, attrs: Tuple[str, str, str] = ("spell_is_correct", "suggest_spellings", "misspellings")):
         self._spell_is_correct, self._suggest_spellings, self._misspellings = attrs
-        self.hunspell_checker = get_hunspell_checker()
+        self.spell_checker = SpellChecker(language="en", case_sensitive=False)
         self.common_misspellings = self._load_common_misspellings()
         self.enwiktionary_words = self._load_enwiktionary_words()
         self.umls_lexicon_words = self._load_umls_lexicon_words()
@@ -45,11 +44,7 @@ class SpellDetector(object):
     def spell_is_correct(self, token: Token) -> bool:
         if not self._need_spell_checking(token):
             return True
-        try:
-            spell = self.hunspell_checker.spell(token.text)
-        except UnicodeEncodeError:
-            spell = True
-        return spell
+        return token.text in self.spell_checker
 
     def get_suggest_spellings(self, token: Token) -> List[str]:
         if not self._need_spell_checking(token):
@@ -57,10 +52,7 @@ class SpellDetector(object):
         if token.lower_ in self.common_misspellings:
             suggestions = [self.common_misspellings[token.lower_]]
         else:
-            try:
-                suggestions = self.hunspell_checker.suggest(token.text)
-            except UnicodeEncodeError:
-                suggestions = []
+            suggestions = list(self.spell_checker.candidates(token.text))
         return suggestions
 
     def get_misspellings(self, doc: Doc) -> List[Dict[str, Any]]:
@@ -81,8 +73,3 @@ class SpellDetector(object):
                          "ids": misspelled_text_ids[misspelled_text], }
                         for misspelled_text in misspelled_texts]
         return misspellings
-
-
-def get_hunspell_checker() -> HunspellWrap:
-    hunspell_dictionary_dir = get_model_filepath("model", "hunspell")
-    return Hunspell(hunspell_data_dir=hunspell_dictionary_dir)

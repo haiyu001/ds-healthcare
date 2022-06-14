@@ -1,5 +1,6 @@
+from pyspark.sql import SparkSession
 from annotation.annotation_utils.annotator_util import get_canonicalization_nlp_model_config, get_nlp_model_config
-from annotation.components.annotator import pudf_annotate
+from annotation.annotation_utils.annotator_spark_util import pudf_annotate
 from utils.config_util import read_config_to_dict
 from utils.general_util import setup_logger
 from utils.resource_util import get_data_filepath, get_repo_dir
@@ -17,13 +18,12 @@ if __name__ == "__main__":
     domain_dir = get_data_filepath(annotation_config["domain"])
     canonicalization_dir = os.path.join(domain_dir, annotation_config["canonicalization_folder"])
 
-    input_file_name = "small_drug_reviews.json"
-    spark_cores = 2
+    input_filepath = "/Users/haiyang/data/small_drug_reviews.json"
+    spark_cores = 4
 
     # config_updates = {"spark.archives": "/Users/haiyang/github/datascience.tar.gz"}
-    spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
+    spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="WARN")
     add_repo_pyfile(spark)
-    input_filepath = os.path.join(domain_dir, "input", input_file_name)
 
     # ======================================== canonicalizer =========================================
 

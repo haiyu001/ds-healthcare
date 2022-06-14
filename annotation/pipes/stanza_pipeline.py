@@ -173,4 +173,10 @@ def get_stanza_load_list(lang: str = "en",
         resources = json.load(infile)
     lang, _, package, processors = process_pipeline_parameters(lang, stanza_dir, package, processors)
     stanza_load_list = maintain_processor_list(resources, lang, package, processors)
+    stanza_load_list = [[processor, model_specification[0].package]
+                        for processor, model_specification in stanza_load_list]  # for stanza 1.4
     return stanza_load_list
+
+
+if __name__ == "__main__":
+    print(get_stanza_load_list())

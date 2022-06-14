@@ -1,16 +1,12 @@
-from typing import Any, Iterator, Dict, Union
+from typing import Any, Dict, Union
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
 from annotation.annotation_utils.annotator_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE
 from annotation.pipes.stanza_pipeline import get_stanza_load_list
 from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetadataTokenizer
-from utils.general_util import get_filepaths_recursively
 from annotation.pipes.factories import *
 from spacy.tokens import Doc
-from pyspark.sql.types import StringType
-from pyspark.sql import Column, functions as F, SparkSession, DataFrame
-import pandas as pd
 import json
 import warnings
 import spacy
@@ -19,13 +15,15 @@ import spacy
 def _get_umls_concepts(doc):
     umls_concepts = []
     for concept_span in doc._.umls_concepts:
-        umls_concepts.append({
+        umls_concept = {
             "start_id": concept_span.start,
             "end_id": concept_span.end,
             "text": concept_span.text,
-            "negation": concept_span._.negation,
             "concepts": concept_span._.concepts,
-        })
+        }
+        if concept_span.has_extension("negation"):
+            umls_concept["negation"] = concept_span._.negation
+        umls_concepts.append(umls_concept)
     return umls_concepts
 
 
@@ -38,7 +36,7 @@ def get_nlp_model(use_gpu: bool = False,
                   normalizer_config: Optional[Dict[str, Any]] = None,
                   stanza_pipeline_config: Optional[Dict[str, Any]] = None,
                   spacy_pipeline_config: Optional[Dict[str, Any]] = None,
-                  custom_pipes_config: Optional[List[Tuple[str, Dict[str, Any]]]] = None):
+                  custom_pipes_config: Optional[List[Tuple[str, Dict[str, Any]]]] = None) -> Language:
     """
     :param use_gpu: run annotation on GPU
     :param lang: model language
@@ -165,11 +163,15 @@ def doc_to_dict(doc: Doc) -> Dict[str, Any]:
                               "end_id": sent.end, } for sent in doc.sents]
 
     if doc.has_annotation("ENT_IOB"):
-        data["entities"] = [{"start_id": ent.start,
-                             "end_id": ent.end,
-                             "entity": ent.label_,
-                             "text": ent.text,
-                             "negation": ent._.negation} for ent in doc.ents]
+        data["entities"] = []
+        for ent in doc.ents:
+            entity = {"start_id": ent.start,
+                      "end_id": ent.end,
+                      "entity": ent.label_,
+                      "text": ent.text}
+            if ent.has_extension("negation"):
+                entity["negation"] = ent._.negation
+            data["entities"].append(entity)
 
     for i, token in enumerate(doc):
         token_data = {
@@ -216,27 +218,3 @@ def doc_to_json_str(doc: Doc) -> str:
     doc_dict = doc_to_dict(doc)
     doc_json_str = json.dumps(doc_dict, ensure_ascii=False)
     return doc_json_str
-
-
-def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column:
-    def annotate(text_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
-        nlp = get_nlp_model(**nlp_model_config)
-        for text in text_iter:
-            doc = text.apply(nlp)
-            doc_json_str = doc.apply(doc_to_json_str)
-            yield doc_json_str
-
-    return F.pandas_udf(annotate, StringType())(text_iter)
-
-
-def load_annotation(spark: SparkSession,
-                    annotation_dir: str,
-                    drop_non_english: bool = True,
-                    num_partitions: Optional[int] = None) -> DataFrame:
-    annotation_filepaths = get_filepaths_recursively(annotation_dir, ["json", "txt"])
-    annotation_sdf = spark.read.json(annotation_filepaths)
-    if drop_non_english:
-        annotation_sdf = annotation_sdf.filter(annotation_sdf["_"]["language"]["lang"] == "en")
-    if num_partitions is not None:
-        annotation_sdf = annotation_sdf.repartion(num_partitions)
-    return annotation_sdf

@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Set, List, Tuple
 from pyspark.sql.types import StringType, Row
 from annotation.annotation_utils.annotator_util import load_blank_nlp
+from annotation.annotation_utils.annotator_spark_util import load_annotation
 from double_propagation.absa.data_types import InferenceOpinionTerm, InferenceAspectTerm, InferenceTriplet, InferenceDoc
 from double_propagation.absa_utils.triplet_inference_util import load_aspect_hierarchy, get_aspect_matcher, \
     get_mark_sign
@@ -295,7 +296,6 @@ def extract_triplet(annotation_sdf: DataFrame,
 
 if __name__ == "__main__":
     from utils.general_util import setup_logger, load_json_file
-    from annotation.components.annotator import load_annotation
     from utils.config_util import read_config_to_dict
     from utils.resource_util import get_repo_dir, get_data_filepath
     from utils.spark_util import get_spark_session, write_sdf_to_dir

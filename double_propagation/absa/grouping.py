@@ -1,5 +1,4 @@
 from typing import Dict, Optional
-
 from double_propagation.absa.enumerations import Polarity
 from double_propagation.absa_utils.extractor_util import load_absa_seed_opinions
 from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
@@ -235,7 +234,7 @@ def save_opinion(opinion_grouping_filepath: str,
 
 if __name__ == "__main__":
     from utils.general_util import setup_logger, save_pdf, make_dir, dump_json_file
-    from annotation.components.annotator import load_annotation
+    from annotation.annotation_utils.annotator_spark_util import load_annotation
     from utils.config_util import read_config_to_dict
     from utils.resource_util import get_repo_dir, get_data_filepath, get_model_filepath
     from utils.spark_util import get_spark_session, union_sdfs, pudf_get_most_common_text
@@ -269,24 +268,24 @@ if __name__ == "__main__":
     aspect_filepath = os.path.join(absa_dir, absa_config["aspect_filename"])
     opinion_filepath = os.path.join(absa_dir, absa_config["opinion_filename"])
 
-    # spark_cores = 4
-    # spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
-    #
-    # annotation_sdf = load_annotation(spark,
-    #                                  annotation_dir,
-    #                                  absa_config["drop_non_english"])
-    #
-    # build_grouping_wv_corpus(annotation_sdf,
-    #                          aspect_ranking_filepath,
-    #                          grouping_wv_corpus_filepath,
-    #                          absa_config["lang"],
-    #                          absa_config["spacy_package"],
-    #                          absa_config["wv_corpus_match_lowercase"])
-    #
-    # build_word2vec(absa_config["wv_size"],
-    #                use_char_ngram=False,
-    #                wv_corpus_filepath=grouping_wv_corpus_filepath,
-    #                wv_model_filepath=grouping_wv_model_filepath)
+    spark_cores = 4
+    spark = get_spark_session("test", master_config=f"local[{spark_cores}]", log_level="INFO")
+
+    annotation_sdf = load_annotation(spark,
+                                     annotation_dir,
+                                     absa_config["drop_non_english"])
+
+    build_grouping_wv_corpus(annotation_sdf,
+                             aspect_ranking_filepath,
+                             grouping_wv_corpus_filepath,
+                             absa_config["lang"],
+                             absa_config["spacy_package"],
+                             absa_config["wv_corpus_match_lowercase"])
+
+    build_word2vec(absa_config["wv_size"],
+                   use_char_ngram=False,
+                   wv_corpus_filepath=grouping_wv_corpus_filepath,
+                   wv_model_filepath=grouping_wv_model_filepath)
 
     get_aspect_grouping_vecs(aspect_ranking_filepath,
                              grouping_wv_model_filepath,

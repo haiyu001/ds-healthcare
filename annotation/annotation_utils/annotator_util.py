@@ -9,7 +9,7 @@ import json
 import os
 import re
 
-DEFAULT_SPACY_PACKAGE = "en_core_web_md-3.2.0"
+DEFAULT_SPACY_PACKAGE = "en_core_web_md-3.3.0"
 
 
 def get_spacy_model_pipes(spacy_model_path: str) -> List[str]:
@@ -122,5 +122,3 @@ def get_nlp_model_config(nlp_model_config_filepath: str, canonicalization_filepa
     if nlp_model_config["normalizer_config"] is not None:
         nlp_model_config["normalizer_config"].update({"canonicalization_filepath": canonicalization_filepath})
     return nlp_model_config
-
-

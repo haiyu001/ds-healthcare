@@ -3,7 +3,6 @@ from utils.general_util import save_pdf
 from utils.spark_util import write_sdf_to_file
 from gensim.models import KeyedVectors
 from gensim.models.fasttext import FastTextKeyedVectors, FastText
-from hunspell.hunspell import HunspellWrap
 from pyspark.sql.types import BooleanType, ArrayType, StringType
 from pyspark.sql import DataFrame, Column
 import pyspark.sql.functions as F
@@ -35,17 +34,6 @@ def _get_unigram_bigram_similarity(unigram: str,
     if unigram in wv_model.key_to_index and concat_bigram in wv_model.key_to_index:
         similarity = wv_model.similarity(unigram, concat_bigram)
     return similarity
-
-
-def _get_bigram_canonicalization_canonical(unigram: str, bigram: str, unigram_count: int, bigram_count: int,
-                                           hunspell_checker: HunspellWrap) -> str:
-    if unigram_count > bigram_count:
-        canonical = unigram
-    elif unigram_count < bigram_count:
-        canonical = bigram
-    else:
-        canonical = unigram if hunspell_checker.spell(unigram) else bigram
-    return canonical
 
 
 def get_bigram_canonicalization_candidates_match_dict(bigram_canonicalization_candidates_filepath: str,
