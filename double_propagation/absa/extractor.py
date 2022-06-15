@@ -16,6 +16,9 @@ import logging
 import json
 import re
 
+from utils.general_util import save_pdf
+from utils.spark_util import union_sdfs, pudf_get_most_common_text
+
 
 def udf_extract_opinions_and_aspects(doc_text: Column,
                                      doc_sentences: Column,
@@ -372,11 +375,11 @@ def extract_candidates(annotation_sdf: DataFrame,
 
 
 if __name__ == "__main__":
-    from utils.general_util import setup_logger, save_pdf, make_dir
+    from utils.general_util import setup_logger, make_dir
     from annotation.annotation_utils.annotator_spark_util import load_annotation
     from utils.config_util import read_config_to_dict
     from utils.resource_util import get_repo_dir, get_data_filepath, get_model_filepath
-    from utils.spark_util import get_spark_session, union_sdfs, pudf_get_most_common_text
+    from utils.spark_util import get_spark_session
     import os
 
     setup_logger()
@@ -407,4 +410,4 @@ if __name__ == "__main__":
                        polarity_filter_min_ratio=absa_config["polarity_filter_min_ratio"],
                        aspect_opinion_filter_min_count=absa_config["aspect_opinion_filter_min_count"],
                        aspect_opinion_num_samples=absa_config["aspect_opinion_num_samples"],
-                       max_iterations=absa_config["max_iterations"])
+                       max_iterations=max_iterationsabsa_config["max_iterations"])

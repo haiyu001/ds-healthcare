@@ -1,4 +1,7 @@
 from typing import Tuple, Dict, List
+
+from utils.general_util import save_pdf
+from utils.resource_util import get_model_filepath
 from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
 from double_propagation.absa.binary_model import get_sentiment_features_pdf, \
     get_model_prediction_pdf
@@ -258,9 +261,9 @@ def save_opinion_ranking(opinion_candidates_filepath: str,
 
 
 if __name__ == "__main__":
-    from utils.general_util import setup_logger, save_pdf, make_dir
+    from utils.general_util import setup_logger, make_dir
     from utils.config_util import read_config_to_dict
-    from utils.resource_util import get_repo_dir, get_data_filepath, get_model_filepath
+    from utils.resource_util import get_repo_dir, get_data_filepath
     import os
 
     setup_logger()

@@ -1,7 +1,8 @@
-from typing import Dict, Optional
+from typing import Dict
 from double_propagation.absa.enumerations import Polarity
 from double_propagation.absa_utils.extractor_util import load_absa_seed_opinions
 from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
+from utils.general_util import save_pdf, dump_json_file
 from word_vector.wv_corpus import extact_wv_corpus_from_annotation
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf
 from word_vector.wv_model import build_word2vec
@@ -10,6 +11,7 @@ from scipy.spatial.distance import pdist
 import matplotlib.pyplot as plt
 from collections import Counter, OrderedDict
 from pyspark.sql import DataFrame
+import collections
 import pandas as pd
 import json
 import logging
@@ -57,9 +59,9 @@ def save_aspect_grouping(aspect_ranking_filepath: str,
                          aspect_grouping_vecs_filepath: str,
                          aspect_grouping_dendrogram_filepath: str,
                          aspect_grouping_filepath: str,
-                         btm_threshold: float,
-                         mid_threshold: float,
-                         top_threshold: float):
+                         aspect_grouping_btm_threshold: float,
+                         aspect_grouping_mid_threshold: float,
+                         aspect_grouping_top_threshold: float):
     aspect_ranking_pdf = pd.read_csv(aspect_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].apply(json.loads)
     aspect_ranking_pdf["noun_phrases"] = aspect_ranking_pdf["noun_phrases"].apply(
@@ -77,11 +79,11 @@ def save_aspect_grouping(aspect_ranking_filepath: str,
     dendrogram(Z)
     plt.savefig(aspect_grouping_dendrogram_filepath)
 
-    btm_labels = fcluster(Z, t=btm_threshold, criterion="distance")
+    btm_labels = fcluster(Z, t=aspect_grouping_btm_threshold, criterion="distance")
     aspect_ranking_pdf["btm"] = pd.Series(btm_labels, aspect_ranking_pdf.index)
-    mid_labels = fcluster(Z, t=mid_threshold, criterion="distance")
+    mid_labels = fcluster(Z, t=aspect_grouping_mid_threshold, criterion="distance")
     aspect_ranking_pdf["mid"] = pd.Series(mid_labels, aspect_ranking_pdf.index)
-    top_labels = fcluster(Z, t=top_threshold, criterion="distance")
+    top_labels = fcluster(Z, t=aspect_grouping_top_threshold, criterion="distance")
     aspect_ranking_pdf["top"] = pd.Series(top_labels, aspect_ranking_pdf.index)
 
     aspect_grouping_pdf = aspect_ranking_pdf[["top", "mid", "btm", "text", "members"]].sort_values(
@@ -110,7 +112,7 @@ def save_aspect_grouping(aspect_ranking_filepath: str,
     aspect_grouping_pdf["mid"] = aspect_grouping_pdf["mid"].replace(mid_group_id_mapping)
 
     # top group naming
-    if btm_threshold == mid_threshold and mid_threshold == top_threshold:
+    if aspect_grouping_btm_threshold == aspect_grouping_mid_threshold and aspect_grouping_mid_threshold == aspect_grouping_top_threshold:
         aspect_grouping_pdf["top"] = None
     else:
         aspect_grouping_pdf["top"] = aspect_grouping_pdf["top"].apply(lambda x: f"Top Category {x}")
@@ -209,31 +211,37 @@ def save_aspect(aspect_grouping_filepath: str, aspect_filepath: str, aspect_hier
 def save_opinion(opinion_grouping_filepath: str,
                  opinion_ranking_filepath: str,
                  opinion_filepath: str,
-                 filter_min_score: Optional[float] = None):
+                 opinion_filter_min_score: float,
+                 drop_unknown_polarity_opinion: bool):
     opinion_grouping_pdf = pd.read_csv(opinion_grouping_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     opinion_ranking_pdf = pd.read_csv(opinion_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     opinion_grouping_pdf["opinion"] = opinion_grouping_pdf["opinion"].str.lower()
     opinion_ranking_pdf["opinion"] = opinion_ranking_pdf["text"].str.lower()
-    opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["polarity"] != Polarity.UNK.name]
-    if filter_min_score:
-        opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["max_score"] >= filter_min_score]
+    if drop_unknown_polarity_opinion:
+        opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["polarity"] != Polarity.UNK.name]
+    if opinion_filter_min_score:
+        opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["max_score"] >= opinion_filter_min_score]
+
     opinion_to_score = dict(zip(opinion_ranking_pdf["opinion"], opinion_ranking_pdf["max_score"]))
     opinion_to_polarity = dict(zip(opinion_ranking_pdf["opinion"], opinion_ranking_pdf["polarity"]))
+    opinion_to_category = dict(zip(opinion_grouping_pdf["opinion"], opinion_grouping_pdf["category"]))
     opinion_to_type = dict(zip(opinion_grouping_pdf["opinion"], opinion_grouping_pdf["type"]))
     seed_opinions = load_absa_seed_opinions()
-    opinion_to_sentiment_score = dict()
+    opinion_dict = collections.defaultdict(dict)
     for opinion, opinion_type in opinion_to_type.items():
         if opinion_type.startswith("generic"):
-            opinion_to_sentiment_score[opinion] = -1.0 if seed_opinions[opinion] == "NEG" else 1.0
+            sentiment_score = -1.0 if seed_opinions[opinion] == "NEG" else 1.0
         elif opinion_type.startswith("specific") and opinion in opinion_to_score:
-            opinion_to_sentiment_score[opinion] = opinion_to_score[opinion] * \
-                                                  (-1.0 if opinion_to_polarity[opinion] == "NEG" else 1.0)
-    opinion_to_sentiment_score = OrderedDict(sorted(opinion_to_sentiment_score.items()))
+            sentiment_score = opinion_to_score[opinion] * (-1.0 if opinion_to_polarity[opinion] == "NEG" else 1.0)
+        opinion_dict[opinion]["category"] = opinion_to_category[opinion]
+        opinion_dict[opinion]["type"] = opinion_to_type[opinion]
+        opinion_dict[opinion]["sentiment_score"] = sentiment_score
+    opinion_to_sentiment_score = OrderedDict(sorted(opinion_dict.items()))
     dump_json_file(opinion_to_sentiment_score, opinion_filepath)
 
 
 if __name__ == "__main__":
-    from utils.general_util import setup_logger, save_pdf, make_dir, dump_json_file
+    from utils.general_util import setup_logger, make_dir
     from annotation.annotation_utils.annotator_spark_util import load_annotation
     from utils.config_util import read_config_to_dict
     from utils.resource_util import get_repo_dir, get_data_filepath, get_model_filepath
@@ -295,9 +303,9 @@ if __name__ == "__main__":
                          aspect_grouping_vecs_filepath,
                          aspect_grouping_dendrogram_filepath,
                          aspect_grouping_filepath,
-                         btm_threshold=0.25,
-                         mid_threshold=0.75,
-                         top_threshold=1.25)
+                         absa_config["aspect_grouping_btm_threshold"],
+                         absa_config["aspect_grouping_mid_threshold"],
+                         absa_config["aspect_grouping_top_threshold"])
 
     get_opinion_grouping_vecs(opinion_ranking_filepath,
                               grouping_wv_model_filepath,
@@ -307,7 +315,7 @@ if __name__ == "__main__":
                           aspect_ranking_filepath,
                           opinion_grouping_dendrogram_filepath,
                           opinion_grouping_filepath,
-                          grouping_threshold=0.25)
+                          absa_config["opinion_grouping_threshold"])
 
     save_aspect(aspect_grouping_filepath,
                 aspect_filepath,
@@ -316,4 +324,5 @@ if __name__ == "__main__":
     save_opinion(opinion_grouping_filepath,
                  opinion_ranking_filepath,
                  opinion_filepath,
-                 filter_min_score=0.5)
+                 absa_config["opinion_filter_min_score"],
+                 absa_config["drop_unknown_polarity_opinionown_polarity_opinion"])
