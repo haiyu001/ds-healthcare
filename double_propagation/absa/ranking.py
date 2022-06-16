@@ -1,10 +1,8 @@
 from typing import Tuple, Dict, List
-
 from utils.general_util import save_pdf
 from utils.resource_util import get_model_filepath
 from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
-from double_propagation.absa.binary_model import get_sentiment_features_pdf, \
-    get_model_prediction_pdf
+from double_propagation.absa.binary_model import get_sentiment_features_pdf, get_model_prediction_pdf
 import pandas as pd
 import collections
 import operator
@@ -258,50 +256,3 @@ def save_opinion_ranking(opinion_candidates_filepath: str,
          "lemma", "pos", "samples"]].sort_values(by="max_score", ascending=False)
     opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["count"] >= opinion_filter_min_count]
     save_pdf(opinion_ranking_pdf, opinion_ranking_filepath, csv_index_label="text", csv_index=True)
-
-
-if __name__ == "__main__":
-    from utils.general_util import setup_logger, make_dir
-    from utils.config_util import read_config_to_dict
-    from utils.resource_util import get_repo_dir, get_data_filepath
-    import os
-
-    setup_logger()
-
-    absa_config_filepath = os.path.join(get_repo_dir(), "double_propagation", "pipelines", "conf/absa_template.cfg")
-    absa_config = read_config_to_dict(absa_config_filepath)
-
-    domain_dir = get_data_filepath(absa_config["domain"])
-    absa_dir = os.path.join(domain_dir, absa_config["absa_folder"])
-    annotation_dir = os.path.join(domain_dir, absa_config["annotation_folder"])
-    extraction_dir = os.path.join(domain_dir, absa_config["extraction_folder"])
-    absa_aspect_dir = make_dir(os.path.join(absa_dir, "aspect"))
-    absa_opinion_dir = make_dir(os.path.join(absa_dir, "opinion"))
-    aspect_candidates_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_candidates_filename"])
-    opinion_candidates_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_candidates_filename"])
-    aspect_ranking_vecs_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_vecs_filename"])
-    aspect_ranking_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_filename"])
-    opinion_ranking_vecs_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_ranking_vecs_filename"])
-    opinion_ranking_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_ranking_filename"])
-    unigram_filepath = os.path.join(extraction_dir, absa_config["unigram_filename"])
-    phrase_filepath = os.path.join(extraction_dir, absa_config["phrase_filename"])
-
-    word_to_dom_lemma, word_to_dom_pos = load_word_to_dom_lemma_and_pos(unigram_filepath)
-
-    save_aspect_ranking(aspect_candidates_filepath,
-                        aspect_ranking_vecs_filepath,
-                        aspect_ranking_filepath,
-                        phrase_filepath,
-                        word_to_dom_lemma,
-                        word_to_dom_pos,
-                        absa_config["aspect_filter_min_count"],
-                        absa_config["aspect_opinion_num_samples"],
-                        absa_config["noun_phrase_min_count"],
-                        absa_config["noun_phrase_max_words_count"])
-
-    save_opinion_ranking(opinion_candidates_filepath,
-                         opinion_ranking_vecs_filepath,
-                         opinion_ranking_filepath,
-                         word_to_dom_lemma,
-                         word_to_dom_pos,
-                         absa_config["opinion_filter_min_count"])
