@@ -3,7 +3,7 @@ from double_propagation.absa.enumerations import Polarity
 from double_propagation.absa_utils.extractor_util import load_absa_seed_opinions
 from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
 from utils.general_util import save_pdf, dump_json_file
-from word_vector.wv_corpus import extact_wv_corpus_from_annotation
+from word_vector.wv_corpus import build_wv_corpus_by_annotation
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf
 from word_vector.wv_model import build_word2vec
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
@@ -17,10 +17,11 @@ import json
 import logging
 
 
-def get_aspect_match_dict(aspect_ranking_filepath: str) -> Dict[str, str]:
+def get_aspect_match_dict(aspect_ranking_filepath: str, match_lowercase: bool = True) -> Dict[str, str]:
     aspect_ranking_pdf = pd.read_csv(
         aspect_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
-    aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].str.lower().apply(json.loads)
+    aspect_ranking_pdf["members"] = aspect_ranking_pdf["members"].str.lower().apply(json.loads) if match_lowercase \
+        else aspect_ranking_pdf["members"].apply(json.loads)
     aspect_match_dict = {}
     for _, row in aspect_ranking_pdf.iterrows():
         aspect_match_dict.update({member: "_".join(member.split()) for member in row["members"] if " " in member})
@@ -36,14 +37,14 @@ def build_grouping_wv_corpus(annotation_sdf: DataFrame,
                              spacy_package: str,
                              match_lowercase: bool):
     logging.info(f"\n{'=' * 100}\nbuild word vector corpus\n{'=' * 100}\n")
-    ngram_match_dict = get_aspect_match_dict(aspect_ranking_filepath)
-    extact_wv_corpus_from_annotation(annotation_sdf=annotation_sdf,
-                                     lang=lang,
-                                     spacy_package=spacy_package,
-                                     wv_corpus_filepath=wv_corpus_filepath,
-                                     ngram_match_dict=ngram_match_dict,
-                                     match_lowercase=match_lowercase,
-                                     num_partitions=4)
+    ngram_match_dict = get_aspect_match_dict(aspect_ranking_filepath, match_lowercase)
+    build_wv_corpus_by_annotation(annotation_sdf=annotation_sdf,
+                                  lang=lang,
+                                  spacy_package=spacy_package,
+                                  wv_corpus_filepath=wv_corpus_filepath,
+                                  ngram_match_dict=ngram_match_dict,
+                                  match_lowercase=match_lowercase,
+                                  num_partitions=4)
 
 
 def get_aspect_grouping_vecs(aspect_ranking_filepath: str,
@@ -134,8 +135,8 @@ def get_opinion_grouping_vecs(opinion_ranking_filepath: str,
     grouping_vecs.extract_txt_vecs(opinion_words, opinion_grouping_vecs_filepath, l2_norm=False)
 
 
-def save_opinion_grouping(opinion_grouping_vecs_filepath: str,
-                          aspect_ranking_filepath: str,
+def save_opinion_grouping(aspect_ranking_filepath: str,
+                          opinion_grouping_vecs_filepath: str,
                           opinion_grouping_dendrogram_filepath: str,
                           opinion_grouping_filepath: str,
                           grouping_threshold: float):
@@ -208,8 +209,8 @@ def save_aspect(aspect_grouping_filepath: str, aspect_filepath: str, aspect_hier
     get_hierarchies_in_csv(child_to_parent, aspect_hierarchy_filepath)
 
 
-def save_opinion(opinion_grouping_filepath: str,
-                 opinion_ranking_filepath: str,
+def save_opinion(opinion_ranking_filepath: str,
+                 opinion_grouping_filepath: str,
                  opinion_filepath: str,
                  opinion_filter_min_score: float,
                  drop_unknown_polarity_opinion: bool):
@@ -259,11 +260,11 @@ if __name__ == "__main__":
     extraction_dir = os.path.join(domain_dir, absa_config["extraction_folder"])
     absa_aspect_dir = os.path.join(absa_dir, "aspect")
     absa_opinion_dir = os.path.join(absa_dir, "opinion")
-    grouping_wv_dir = os.path.join(absa_dir, absa_config["grouping_wv_folder"])
-    grouping_wv_corpus_filepath = os.path.join(grouping_wv_dir, absa_config["grouping_wv_corpus_filename"])
-    grouping_wv_model_filepath = os.path.join(grouping_wv_dir, absa_config["grouping_wv_model_filename"])
     aspect_ranking_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_filename"])
     opinion_ranking_filepath = os.path.join(absa_opinion_dir, absa_config["opinion_ranking_filename"])
+    absa_grouping_wv_dir = os.path.join(absa_dir, absa_config["grouping_wv_folder"])
+    absa_grouping_wv_corpus_filepath = os.path.join(absa_grouping_wv_dir, absa_config["grouping_wv_corpus_filename"])
+    absa_grouping_wv_model_filepath = os.path.join(absa_grouping_wv_dir, absa_config["grouping_wv_model_filename"])
     aspect_grouping_vecs_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_grouping_vecs_filename"])
     aspect_grouping_dendrogram_filepath = \
         os.path.join(absa_aspect_dir, absa_config["aspect_grouping_dendrogram_filename"])
@@ -285,19 +286,23 @@ if __name__ == "__main__":
 
     build_grouping_wv_corpus(annotation_sdf,
                              aspect_ranking_filepath,
-                             grouping_wv_corpus_filepath,
+                             absa_grouping_wv_corpus_filepath,
                              absa_config["lang"],
                              absa_config["spacy_package"],
                              absa_config["wv_corpus_match_lowercase"])
 
     build_word2vec(absa_config["wv_size"],
                    use_char_ngram=False,
-                   wv_corpus_filepath=grouping_wv_corpus_filepath,
-                   wv_model_filepath=grouping_wv_model_filepath)
+                   wv_corpus_filepath=absa_grouping_wv_corpus_filepath,
+                   wv_model_filepath=absa_grouping_wv_model_filepath)
 
     get_aspect_grouping_vecs(aspect_ranking_filepath,
-                             grouping_wv_model_filepath,
+                             absa_grouping_wv_model_filepath,
                              aspect_grouping_vecs_filepath)
+
+    get_opinion_grouping_vecs(opinion_ranking_filepath,
+                              absa_grouping_wv_model_filepath,
+                              opinion_grouping_vecs_filepath)
 
     save_aspect_grouping(aspect_ranking_filepath,
                          aspect_grouping_vecs_filepath,
@@ -307,12 +312,8 @@ if __name__ == "__main__":
                          absa_config["aspect_grouping_mid_threshold"],
                          absa_config["aspect_grouping_top_threshold"])
 
-    get_opinion_grouping_vecs(opinion_ranking_filepath,
-                              grouping_wv_model_filepath,
-                              opinion_grouping_vecs_filepath)
-
-    save_opinion_grouping(opinion_grouping_vecs_filepath,
-                          aspect_ranking_filepath,
+    save_opinion_grouping(aspect_ranking_filepath,
+                          opinion_grouping_vecs_filepath,
                           opinion_grouping_dendrogram_filepath,
                           opinion_grouping_filepath,
                           absa_config["opinion_grouping_threshold"])
@@ -321,8 +322,8 @@ if __name__ == "__main__":
                 aspect_filepath,
                 aspect_hierarchy_filepath)
 
-    save_opinion(opinion_grouping_filepath,
-                 opinion_ranking_filepath,
+    save_opinion(opinion_ranking_filepath,
+                 opinion_grouping_filepath,
                  opinion_filepath,
                  absa_config["opinion_filter_min_score"],
                  absa_config["drop_unknown_polarity_opinionown_polarity_opinion"])

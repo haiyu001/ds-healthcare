@@ -1,5 +1,7 @@
 from collections import Counter
+from sys import platform
 from typing import Optional, Dict, List
+from utils.config_util import read_config_to_dict
 from utils.general_util import split_filepath, save_pdf
 from utils.resource_util import zip_repo
 from pyspark import SparkConf
@@ -13,6 +15,12 @@ import pandas as pd
 import logging
 import shutil
 import os
+
+
+def get_spark_master_config(config_filepath: str, num_partitions_field_name: str = "num_partitions") -> Optional[str]:
+    annotation_config = read_config_to_dict(config_filepath)
+    num_partitions = annotation_config[num_partitions_field_name]
+    return f"local[{num_partitions}]" if platform == "darwin" else None
 
 
 def get_spark_session(app_name: str = "spark_app",
@@ -33,6 +41,11 @@ def get_spark_session(app_name: str = "spark_app",
     spark_session = spark_session_builder.getOrCreate()
     spark_session.sparkContext.setLogLevel(log_level)
     return spark_session
+
+
+def add_repo_pyfile(spark: SparkSession, repo_zip_dir: str = "/tmp"):
+    repo_zip_filepath = zip_repo(repo_zip_dir)
+    spark.sparkContext.addPyFile(repo_zip_filepath)
 
 
 def write_sdf_to_dir(sdf: DataFrame,
@@ -109,11 +122,6 @@ def convert_to_orc(spark: SparkSession,
     write_sdf_to_file(sdf, output_filepath)
 
 
-def add_repo_pyfile(spark: SparkSession, repo_zip_dir: str = "/tmp"):
-    repo_zip_filepath = zip_repo(repo_zip_dir)
-    spark.sparkContext.addPyFile(repo_zip_filepath)
-
-
 def extract_topn_common(sdf: DataFrame,
                         partition_by: str,
                         key_by: str,
@@ -141,4 +149,3 @@ def pudf_get_most_common_text(texts: Column) -> Column:
         return most_common_text
 
     return F.pandas_udf(get_most_common_text, StringType())(texts)
-

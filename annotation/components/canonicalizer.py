@@ -1,4 +1,5 @@
 from typing import Tuple, Dict
+
 from lexicon.canonicalization_lexicon import prefixes, hyphen_trigram_blacklist, \
     prefix_trigram_base_word_pos, hyphen_trigram_two_words_pos, ampersand_trigram_word_pos, intensifiers
 from annotation.tokenization.preprocessor import REPLACE_EMAIL, REPLACE_URL, REPLACE_HASHTAG, REPLACE_HANDLE

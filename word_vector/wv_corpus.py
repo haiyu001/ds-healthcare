@@ -1,8 +1,8 @@
 from typing import Optional, Dict, List, Iterator
 from annotation.annotation_utils.annotator_util import load_blank_nlp
-from utils.spark_util import write_sdf_to_file
 from pyspark import Row
-from pyspark.sql import DataFrame, Column
+from utils.spark_util import write_sdf_to_file
+from pyspark.sql import Column, DataFrame
 from pyspark.sql.types import StringType
 import pyspark.sql.functions as F
 from spacy import Language
@@ -76,13 +76,13 @@ def get_ngram_matcher(nlp: Language, ngrams: List[str], match_lowercase: bool = 
     return ngram_matcher
 
 
-def extact_wv_corpus_from_annotation(annotation_sdf: DataFrame,
-                                     lang: str,
-                                     spacy_package: str,
-                                     wv_corpus_filepath: str,
-                                     ngram_match_dict: Optional[Dict[str, str]] = None,
-                                     match_lowercase: bool = True,
-                                     num_partitions: Optional[int] = None):
+def build_wv_corpus_by_annotation(annotation_sdf: DataFrame,
+                                  lang: str,
+                                  spacy_package: str,
+                                  wv_corpus_filepath: str,
+                                  ngram_match_dict: Optional[Dict[str, str]] = None,
+                                  match_lowercase: bool = True,
+                                  num_partitions: Optional[int] = None):
     text_sdf = annotation_sdf.select(udf_get_text(F.col("tokens"), match_lowercase).alias("text"))
     wv_corpus_sdf = text_sdf.select(pudf_get_wv_corpus_line(F.col("text"),
                                                             lang,

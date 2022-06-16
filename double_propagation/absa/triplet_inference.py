@@ -260,19 +260,19 @@ def udf_inference(tokens: Column,
     return F.udf(inference, StringType())(tokens, sentences, metadata)
 
 
-def infer_triplet(annotation_sdf: DataFrame,
-                  aspect_filepath: str,
-                  opinion_filepath: str,
-                  save_folder_dir: str,
-                  save_folder_name: str,
-                  lang: str,
-                  spacy_package: str,
-                  social: bool,
-                  intensifier_negation_max_distance: int,
-                  cap_scalar: float,
-                  neg_scalar: float,
-                  metadata_fields_to_keep: Optional[str] = None,
-                  infer_aspect_without_opinion: bool = True):
+def extract_triplet(annotation_sdf: DataFrame,
+                    aspect_filepath: str,
+                    opinion_filepath: str,
+                    save_folder_dir: str,
+                    save_folder_name: str,
+                    lang: str,
+                    spacy_package: str,
+                    social: bool,
+                    intensifier_negation_max_distance: int,
+                    cap_scalar: float,
+                    neg_scalar: float,
+                    metadata_fields_to_keep: Optional[str] = None,
+                    infer_aspect_without_opinion: bool = True):
     nlp = load_blank_nlp(lang, spacy_package)
     opinion_dict = load_json_file(opinion_filepath)
     opinion_to_score = {opinion: values["sentiment_score"] for opinion, values in opinion_dict.items()}
@@ -350,9 +350,9 @@ def _extract_opinion_stats(aspect_opinions_sdf: DataFrame,
 
 def extract_triplet_stats(spark: SparkSession,
                           absa_inference_dir: str,
+                          opinion_filepath: str,
                           aspect_stats_filepath: str,
-                          opinion_stats_filepath: str,
-                          opinion_filepath: str):
+                          opinion_stats_filepath: str):
     absa_inference_sdf = spark.read.json(absa_inference_dir)
     absa_inference_sdf = absa_inference_sdf.select(F.explode(absa_inference_sdf.triplets).alias("triplets"))
     aspect_opinions_sdf = absa_inference_sdf.select(
@@ -393,22 +393,22 @@ if __name__ == "__main__":
 
     annotation_sdf = load_annotation(spark, annotation_dir, absa_config["drop_non_english"])
 
-    infer_triplet(annotation_sdf,
-                  aspect_filepath,
-                  opinion_filepath,
-                  inference_dir,
-                  absa_config["absa_inference_folder"],
-                  absa_config["lang"],
-                  absa_config["spacy_package"],
-                  absa_config["social"],
-                  absa_config["intensifier_negation_max_distance"],
-                  absa_config["cap_scalar"],
-                  absa_config["neg_scalar"],
-                  absa_config["metadata_fields_to_keep"],
-                  absa_config["infer_aspect_without_opinion"])
+    extract_triplet(annotation_sdf,
+                    aspect_filepath,
+                    opinion_filepath,
+                    inference_dir,
+                    absa_config["absa_inference_folder"],
+                    absa_config["lang"],
+                    absa_config["spacy_package"],
+                    absa_config["social"],
+                    absa_config["intensifier_negation_max_distance"],
+                    absa_config["cap_scalar"],
+                    absa_config["neg_scalar"],
+                    absa_config["metadata_fields_to_keep"],
+                    absa_config["infer_aspect_without_opinion"])
 
     extract_triplet_stats(spark,
                           absa_inference_dir,
+                          opinion_filepath,
                           aspect_stats_filepath,
-                          opinion_stats_filepath,
-                          opinion_filepath)
+                          opinion_stats_filepath)

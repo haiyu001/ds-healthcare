@@ -1,4 +1,5 @@
 from typing import Set, Dict, Union, Optional
+from word_vector.wv_corpus import build_wv_corpus_by_annotation
 from utils.general_util import save_pdf
 from utils.spark_util import write_sdf_to_file
 from gensim.models import KeyedVectors
@@ -6,6 +7,7 @@ from gensim.models.fasttext import FastTextKeyedVectors, FastText
 from pyspark.sql.types import BooleanType, ArrayType, StringType
 from pyspark.sql import DataFrame, Column
 import pyspark.sql.functions as F
+import logging
 import pandas as pd
 
 
@@ -44,6 +46,24 @@ def get_bigram_canonicalization_candidates_match_dict(bigram_canonicalization_ca
         else bigram_canonicalization_candidates_pdf["bigram"].tolist()
     bigram_match_dict = {bigram: "_".join(bigram.strip().split()) for bigram in bigrams}
     return bigram_match_dict
+
+
+def build_canonicalization_wv_corpus(canonicalization_annotation_sdf: DataFrame,
+                                     bigram_canonicalization_candidates_filepath: str,
+                                     wv_corpus_filepath: str,
+                                     lang: str,
+                                     spacy_package: str,
+                                     match_lowercase: True):
+    logging.info(f"\n{'=' * 100}\nbuild word vector corpus\n{'=' * 100}\n")
+    ngram_match_dict = get_bigram_canonicalization_candidates_match_dict(
+        bigram_canonicalization_candidates_filepath, match_lowercase)
+    build_wv_corpus_by_annotation(annotation_sdf=canonicalization_annotation_sdf,
+                                  lang=lang,
+                                  spacy_package=spacy_package,
+                                  wv_corpus_filepath=wv_corpus_filepath,
+                                  ngram_match_dict=ngram_match_dict,
+                                  match_lowercase=match_lowercase,
+                                  num_partitions=4)
 
 
 def get_bigram_canonicalization_candidates(unigram_sdf: DataFrame,

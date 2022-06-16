@@ -1,31 +1,23 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from annotation.annotation_utils.annotator_util import get_canonicalization_nlp_model_config, get_nlp_model_config
 from annotation.annotation_utils.annotator_spark_util import pudf_annotate, load_annotation
 from annotation.components.annotator import get_nlp_model, get_nlp_model_config_str
 from annotation.components.canonicalizer import get_canonicalization
 from annotation.components.canonicalizer_bigram import get_bigram_canonicalization_candidates, \
-    get_bigram_canonicalization_candidates_match_dict, get_bigram_canonicalization
+    get_bigram_canonicalization, build_canonicalization_wv_corpus
 from annotation.components.canonicalizer_spell import get_spell_canonicalization_candidates, get_spell_canonicalization
 from annotation.components.extractor import extract_unigram, extract_ngram, extract_phrase, extract_entity, \
     extract_umls_concept
 from utils.config_util import read_config_to_dict
-from word_vector.wv_corpus import extact_wv_corpus_from_annotation
 from word_vector.wv_model import build_word2vec
 from utils.resource_util import get_data_filepath
-from utils.spark_util import get_spark_session, add_repo_pyfile, write_sdf_to_dir
+from utils.spark_util import get_spark_session, add_repo_pyfile, write_sdf_to_dir, get_spark_master_config
 from utils.general_util import setup_logger
 from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as F
-from sys import platform
 import argparse
 import logging
 import os
-
-
-def get_master_config(annotation_config_filepath: str) -> Optional[str]:
-    annotation_config = read_config_to_dict(annotation_config_filepath)
-    num_partitions = annotation_config["num_partitions"]
-    return f"local[{num_partitions}]" if platform == "darwin" else None
 
 
 def load_input(spark: SparkSession,
@@ -33,10 +25,10 @@ def load_input(spark: SparkSession,
                input_dir: str,
                annotation_config: Dict[str, str]) -> DataFrame:
     if input_filepath:
-        logging.info(f"\n{'=' * 100}\nload input from {input_filepath}\n{'=' * 100}\n")
+        logging.info(f"\n{'=' * 100}\n* load input from {input_filepath}\n{'=' * 100}\n")
         input_sdf = spark.read.text(input_filepath)
     elif input_dir:
-        logging.info(f"\n{'=' * 100}\nload input from {input_dir}\n{'=' * 100}\n")
+        logging.info(f"\n{'=' * 100}\n* load input from {input_dir}\n{'=' * 100}\n")
         input_sdf = spark.read.text(os.path.join(input_dir, "*.json"))
     else:
         raise ValueError("set input_filepath or input_dir for annotation")
@@ -49,9 +41,11 @@ def build_annotation(input_sdf: DataFrame,
                      save_folder_dir: str,
                      save_folder_name: str,
                      nlp_model_config: Dict[str, Dict[str, Any]]):
-    logging.info(f"\n{'=' * 100}\nbuild annotation on {input_sdf.count()} records with following config\n{'=' * 100}\n")
+    logging.info(
+        f"\n{'=' * 100}\n* build annotation on {input_sdf.count()} records with following config\n{'=' * 100}\n")
     nlp_model = get_nlp_model(**nlp_model_config)
-    logging.info(f"nlp model config (use_gpu = {nlp_model_config['use_gpu']}):\n{get_nlp_model_config_str(nlp_model)}")
+    logging.info(
+        f"* nlp model config (use_gpu = {nlp_model_config['use_gpu']}):\n{get_nlp_model_config_str(nlp_model)}")
     del nlp_model
     annotation_sdf = input_sdf.select(pudf_annotate(F.col("value"), nlp_model_config))
     write_sdf_to_dir(annotation_sdf, save_folder_dir, save_folder_name, file_format="txt")
@@ -64,7 +58,7 @@ def build_extraction_and_canonicalization_candidates(canonicalization_annotation
                                                      bigram_canonicalization_candidates_filepath: str,
                                                      spell_canonicalization_candidates_filepath: str,
                                                      annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\nextract canonicalization unigram, bigram and trigram and "
+    logging.info(f"\n{'=' * 100}\n* extract canonicalization unigram, bigram and trigram and "
                  f"build bigram & spell canonicalization candidates\n{'=' * 100}\n")
     unigram_sdf = extract_unigram(canonicalization_annotation_sdf, canonicalization_unigram_filepath)
     bigram_sdf = extract_ngram(canonicalization_annotation_sdf, canonicalization_bigram_filepath,
@@ -80,22 +74,24 @@ def build_extraction_and_canonicalization_candidates(canonicalization_annotation
                                           annotation_config["spell_canonicalization_suggestion_filter_min_count"])
 
 
-def build_wv_corpus(canonicalization_annotation_sdf: DataFrame,
-                    bigram_canonicalization_candidates_filepath: str,
-                    wv_corpus_filepath: str,
-                    canonicalization_nlp_model_config: str,
-                    annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\nbuild word vector corpus\n{'=' * 100}\n")
-    match_lowercase = annotation_config["wv_corpus_match_lowercase"]
-    ngram_match_dict = get_bigram_canonicalization_candidates_match_dict(
-        bigram_canonicalization_candidates_filepath, match_lowercase)
-    extact_wv_corpus_from_annotation(annotation_sdf=canonicalization_annotation_sdf,
-                                     lang=canonicalization_nlp_model_config["lang"],
-                                     spacy_package=canonicalization_nlp_model_config["spacy_package"],
-                                     wv_corpus_filepath=wv_corpus_filepath,
-                                     ngram_match_dict=ngram_match_dict,
-                                     match_lowercase=match_lowercase,
-                                     num_partitions=4)
+def build_canonicalization_word2vec(canonicalization_annotation_sdf: DataFrame,
+                                    bigram_canonicalization_candidates_filepath: str,
+                                    wv_corpus_filepath: str,
+                                    wv_model_filepath: str,
+                                    canonicalization_nlp_model_config: str,
+                                    annotation_config: Dict[str, Any]):
+    logging.info(f"\n{'=' * 100}\n* build canonicalization word vector\n{'=' * 100}\n")
+    build_canonicalization_wv_corpus(canonicalization_annotation_sdf,
+                                     bigram_canonicalization_candidates_filepath,
+                                     wv_corpus_filepath,
+                                     canonicalization_nlp_model_config["lang"],
+                                     canonicalization_nlp_model_config["spacy_package"],
+                                     annotation_config["wv_corpus_match_lowercase"])
+
+    build_word2vec(vector_size=annotation_config["wv_size"],
+                   use_char_ngram=True,
+                   wv_corpus_filepath=wv_corpus_filepath,
+                   wv_model_filepath=wv_model_filepath)
 
 
 def build_canonicalization(spark: SparkSession,
@@ -109,7 +105,7 @@ def build_canonicalization(spark: SparkSession,
                            canonicalization_filepath: str,
                            wv_model_filepath: str,
                            annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\nbuild bigram, spell, prefix, hyphen and ampersand canonicalization\n{'=' * 100}\n")
+    logging.info(f"\n{'=' * 100}\n* build bigram, spell, prefix, hyphen and ampersand canonicalization\n{'=' * 100}\n")
     spell_canonicalization_candidates_sdf = spark.read.csv(
         spell_canonicalization_candidates_filepath, header=True, quote='"', escape='"', inferSchema=True)
     wv_model_filepath = os.path.join(wv_model_filepath.rsplit(".", 1)[0], "fasttext")
@@ -143,7 +139,7 @@ def build_extraction(annotation_sdf: DataFrame,
                      entity_filepath: str,
                      umls_concept_filepath: str,
                      annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\nextract unigram, bigram, trigram, phrase, entity and umls_concept\n{'=' * 100}\n")
+    logging.info(f"\n{'=' * 100}\n* extract unigram, bigram, trigram, phrase, entity and umls_concept\n{'=' * 100}\n")
     extract_unigram(annotation_sdf, unigram_filepath)
     extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_filter_min_count"])
     extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_filter_min_count"])
@@ -152,11 +148,7 @@ def build_extraction(annotation_sdf: DataFrame,
     extract_umls_concept(annotation_sdf, umls_concept_filepath, annotation_config["umls_concept_filter_min_count"])
 
 
-def main(spark: SparkSession,
-         nlp_model_config_filepath: str,
-         annotation_config_filepath: str,
-         input_filepath: str,
-         input_dir: str):
+def main(spark: SparkSession, nlp_model_config_filepath: str, annotation_config_filepath: str, ):
     # load annotation config
     annotation_config = read_config_to_dict(annotation_config_filepath)
     domain_dir = get_data_filepath(annotation_config["domain"])
@@ -195,6 +187,8 @@ def main(spark: SparkSession,
     phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
     entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
     umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
+    input_filepath = annotation_config["input_filepath"]
+    input_dir = annotation_config["input_dir"]
 
     # load nlp model config
     canonicalization_nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
@@ -226,18 +220,13 @@ def main(spark: SparkSession,
                                                      spell_canonicalization_candidates_filepath,
                                                      annotation_config)
 
-    # build word vector corpus
-    build_wv_corpus(canonicalization_annotation_sdf,
-                    bigram_canonicalization_candidates_filepath,
-                    wv_corpus_filepath,
-                    canonicalization_nlp_model_config,
-                    annotation_config)
-
-    # build fastText model
-    build_word2vec(vector_size=annotation_config["wv_size"],
-                   use_char_ngram=True,
-                   wv_corpus_filepath=wv_corpus_filepath,
-                   wv_model_filepath=wv_model_filepath)
+    # build canonicalization word vector
+    build_canonicalization_word2vec(canonicalization_annotation_sdf,
+                                    bigram_canonicalization_candidates_filepath,
+                                    wv_corpus_filepath,
+                                    wv_model_filepath,
+                                    canonicalization_nlp_model_config,
+                                    annotation_config)
 
     # build bigram, spell, prefix, hyphen and ampersand canonicalization
     build_canonicalization(spark,
@@ -279,15 +268,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--nlp_model_conf", default="conf/nlp_model_template.cfg", required=False)
     parser.add_argument("--annotation_conf", default="conf/annotation_template.cfg", required=False)
-    parser.add_argument("--input_filepath", default=None, required=False)
-    parser.add_argument("--input_dir", default=None, required=False)
 
     nlp_model_config_filepath = parser.parse_args().nlp_model_conf
     annotation_config_filepath = parser.parse_args().annotation_conf
-    input_filepath = parser.parse_args().input_filepath
-    input_dir = parser.parse_args().input_dir
 
-    spark = get_spark_session("annotation", {}, get_master_config(annotation_config_filepath), log_level="WARN")
+    spark = get_spark_session("annotation", {}, get_spark_master_config(annotation_config_filepath), log_level="WARN")
     add_repo_pyfile(spark)
 
-    main(spark, nlp_model_config_filepath, annotation_config_filepath, input_filepath, input_dir)
+    main(spark, nlp_model_config_filepath, annotation_config_filepath)

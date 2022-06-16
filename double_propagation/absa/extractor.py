@@ -390,7 +390,6 @@ if __name__ == "__main__":
     domain_dir = get_data_filepath(absa_config["domain"])
     absa_dir = os.path.join(domain_dir, absa_config["absa_folder"])
     annotation_dir = os.path.join(domain_dir, absa_config["annotation_folder"])
-    extraction_dir = os.path.join(domain_dir, absa_config["extraction_folder"])
     absa_aspect_dir = make_dir(os.path.join(absa_dir, "aspect"))
     absa_opinion_dir = make_dir(os.path.join(absa_dir, "opinion"))
     aspect_candidates_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_candidates_filename"])
@@ -410,4 +409,4 @@ if __name__ == "__main__":
                        polarity_filter_min_ratio=absa_config["polarity_filter_min_ratio"],
                        aspect_opinion_filter_min_count=absa_config["aspect_opinion_filter_min_count"],
                        aspect_opinion_num_samples=absa_config["aspect_opinion_num_samples"],
-                       max_iterations=max_iterationsabsa_config["max_iterations"])
+                       max_iterations=absa_config["max_iterations"])
