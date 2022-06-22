@@ -3,6 +3,7 @@ from utils.resource_util import get_stanza_model_dir
 from abc import ABC, abstractmethod
 from spacy import Language
 from spacy.tokens import Doc
+from stanza.pipeline.core import DownloadMethod
 import stanza
 import warnings
 
@@ -41,6 +42,7 @@ class StanzaBaseTokenizer(BaseTokenizer):
                                     dir=get_stanza_model_dir(),
                                     package=None,
                                     processors={"tokenize": tokenize_package},
+                                    download_method=DownloadMethod.NONE,
                                     verbose=False)
         self.vocab = nlp.vocab
 

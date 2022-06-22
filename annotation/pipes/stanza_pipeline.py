@@ -1,14 +1,15 @@
 from typing import Dict, Tuple, List, Optional, Union
-from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from utils.general_util import load_json_file
 from utils.resource_util import get_stanza_model_dir
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
 from spacy import Language
+from stanza.pipeline.core import DownloadMethod, Pipeline
+from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
 from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.vocab import UNK_ID
 from stanza.models.common.doc import Document, Word
-from stanza import Pipeline
+import stanza
 from numpy import ndarray
 import os
 
@@ -31,13 +32,14 @@ class StanzaPipeline(object):
         self.processors = get_stanza_processors(processors, processors_packages)
         self.vocab = nlp.vocab
         self.use_gpu = use_gpu
-        self.snlp = Pipeline(lang=self.lang,
-                             dir=get_stanza_model_dir(),
-                             package=self.package,
-                             processors=self.processors,
-                             use_gpu=self.use_gpu,
-                             tokenize_pretokenized=True,
-                             verbose=False)
+        self.snlp = stanza.Pipeline(lang=self.lang,
+                                    dir=get_stanza_model_dir(),
+                                    package=self.package,
+                                    processors=self.processors,
+                                    use_gpu=self.use_gpu,
+                                    tokenize_pretokenized=True,
+                                    download_method=DownloadMethod.NONE,
+                                    verbose=False)
         self.svecs = self._find_embeddings(self.snlp) if set_token_vector_hooks else None
         self._metadata, self._source_text, self._preprocessed_text, self._sentiment = attrs
         if "sentiment" in processors:
