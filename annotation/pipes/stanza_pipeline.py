@@ -1,5 +1,6 @@
 from typing import Dict, Tuple, List, Optional, Union
 from stanza.resources.common import process_pipeline_parameters, maintain_processor_list
+from utils.general_util import load_json_file
 from utils.resource_util import get_stanza_model_dir
 from annotation.pipes.sentence_detector import SentenceDetector
 from spacy.tokens import Doc, Token
@@ -9,7 +10,6 @@ from stanza.models.common.vocab import UNK_ID
 from stanza.models.common.doc import Document, Word
 from stanza import Pipeline
 from numpy import ndarray
-import json
 import os
 
 
@@ -38,8 +38,6 @@ class StanzaPipeline(object):
                              use_gpu=self.use_gpu,
                              tokenize_pretokenized=True,
                              verbose=False)
-        self.loaded_processors = {processor for processor, _ in
-                                  get_stanza_load_list(self.lang, self.package, self.processors)}
         self.svecs = self._find_embeddings(self.snlp) if set_token_vector_hooks else None
         self._metadata, self._source_text, self._preprocessed_text, self._sentiment = attrs
         if "sentiment" in processors:
@@ -51,23 +49,27 @@ class StanzaPipeline(object):
         snlp_doc = self.snlp(token_texts)
 
         tokens, heads, sent_starts, spaces = self.get_tokens_with_heads(snlp_doc, token_spaces)
-        pos, tags, morphs, lemmas, deps = [], [], [], [], []
+        poses, tags, morphs, lemmas, deps, heads = [], [], [], [], [], [head + i for i, head in enumerate(heads)]
         for token in tokens:
-            pos.append(token.upos or "")
-            tags.append(token.xpos or token.upos or "")
-            morphs.append(token.feats or "")
-            lemmas.append(token.lemma or "")
-            deps.append(token.deprel or "")
+            if token.upos:
+                poses.append(token.upos)
+            if token.xpos:
+                tags.append(token.xpos)
+            if token.feats:
+                morphs.append(token.feats)
+            if token.lemma:
+                lemmas.append(token.lemma)
+            if token.deprel:
+                deps.append(token.deprel)
 
         words = [t.text for t in tokens]
-        heads = [head + i for i, head in enumerate(heads)]
         doc = Doc(self.vocab, words=words, spaces=spaces, sent_starts=sent_starts,
-                  pos=pos if "pos" in self.loaded_processors else None,
-                  tags=tags if "pos" in self.loaded_processors else None,
-                  morphs=morphs if "pos" in self.loaded_processors else None,
-                  lemmas=lemmas if "lemma" in self.loaded_processors else None,
-                  deps=deps if "depparse" in self.loaded_processors else None,
-                  heads=heads if "depparse" in self.loaded_processors else None,
+                  pos=poses if poses else None,
+                  tags=tags if tags else None,
+                  morphs=morphs if morphs else None,
+                  lemmas=lemmas if lemmas else None,
+                  deps=deps if deps else None,
+                  heads=heads if deps else None,
                   user_data=spacy_doc.user_data)
 
         self.set_named_entities(doc, snlp_doc, token_texts, token_spaces)
@@ -169,14 +171,9 @@ def get_stanza_load_list(lang: str = "en",
                          processors: Union[str, Dict[str, str]] = {}) -> List[List[str]]:
     stanza_dir = get_stanza_model_dir()
     resources_filepath = os.path.join(stanza_dir, "resources.json")
-    with open(resources_filepath) as infile:
-        resources = json.load(infile)
+    resources = load_json_file(resources_filepath)
     lang, _, package, processors = process_pipeline_parameters(lang, stanza_dir, package, processors)
     stanza_load_list = maintain_processor_list(resources, lang, package, processors)
     stanza_load_list = [[processor, model_specification[0].package]
                         for processor, model_specification in stanza_load_list]  # for stanza 1.4
     return stanza_load_list
-
-
-if __name__ == "__main__":
-    print(get_stanza_load_list())

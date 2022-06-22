@@ -30,15 +30,15 @@ def zip_repo(repo_zip_dir: str) -> str:
     cwd = os.getcwd()
     repo_dir = get_repo_dir()
     repo_name = Path(repo_dir).stem
-    os.chdir(Path(repo_dir).parent)
+    os.chdir(repo_dir)
     repo_zip_filepath = os.path.join(repo_zip_dir, f"{repo_name}.zip")
-    zip_command = ["zip", "-r", repo_zip_filepath, repo_name]
+    zip_command = ["zip", "-r", repo_zip_filepath, "."]
     repo_ignore = ["-x",
-                   f"{repo_name}/logs/*",
-                   f"{repo_name}/test/*",
-                   f"{repo_name}/tmp/*",
-                   f"{repo_name}/notebooks/*",
-                   f"{repo_name}/.*"]
+                   f"logs/*",
+                   f"test/*",
+                   f"tmp/*",
+                   f"notebooks/*",
+                   f".*"]
     call(zip_command + repo_ignore)
     os.chdir(cwd)
     return repo_zip_filepath
@@ -76,4 +76,4 @@ if __name__ == "__main__":
     processors = {"ner": "i2b2"}
     stanza.download(lang, get_model_filepath("stanza"), package, processors)
 
-    nltk.download("stopwords")
+    # nltk.download("stopwords")

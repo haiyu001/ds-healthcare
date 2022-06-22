@@ -32,6 +32,7 @@ def get_spark_session(app_name: str = "spark_app",
         "spark.serializer": "org.apache.spark.serializer.KryoSerializer",
         "spark.kryoserializer.buffer": "512k",
         "spark.kryoserializer.buffer.max": "1024m",
+        "spark.hadoop.fs.s3a.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
     }
     default_config.update(config_updates)
     config = SparkConf().setAll(default_config.items())
