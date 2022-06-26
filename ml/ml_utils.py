@@ -103,9 +103,11 @@ def get_train_val_test(features_pdf: pd.DataFrame,
 
     feature_cols = [i for i in features_pdf.columns if i != label_col]
     Xtrain_ytrain_Xval_yval_Xtest_ytest = []
+    logging.info(f"\n{'=' * 100}\n")
     for t in ["train", "val", "test"]:
         type_df = train_val_test_pdf[train_val_test_pdf["type"] == t]
         logging.info(f"{t}: {type_df[feature_cols].shape}")
         Xtrain_ytrain_Xval_yval_Xtest_ytest.append(type_df[feature_cols])
         Xtrain_ytrain_Xval_yval_Xtest_ytest.append(type_df[label_col])
+    logging.info(f"\n{'=' * 100}\n")
     return tuple(Xtrain_ytrain_Xval_yval_Xtest_ytest)

@@ -69,19 +69,21 @@ def extract_phrase(annotation_sdf: DataFrame,
     phrase_sdf = annotation_sdf.select(F.explode(annotation_sdf._.phrases).alias("phrase"))
     phrase_sdf = phrase_sdf.select(F.lower(F.col("phrase").text).alias("phrase_lower"),
                                    F.col("phrase").text.alias("text"),
+                                   F.to_json(F.col("phrase").phrase_words).alias("phrase_words"),
                                    F.to_json(F.col("phrase").phrase_poses).alias("phrase_poses"),
                                    F.to_json(F.col("phrase").phrase_lemmas).alias("phrase_lemmas"),
                                    F.to_json(F.col("phrase").phrase_deps).alias("phrase_deps"))
     phrase_sdf = phrase_sdf.groupby(["phrase_lower"]).agg(
         pudf_get_most_common_text(F.collect_list("text")).alias("text"),
         F.count(F.col("text")).alias("count"),
+        pudf_get_most_common_text(F.collect_list("phrase_words")).alias("phrase_words"),
         pudf_get_most_common_text(F.collect_list("phrase_poses")).alias("phrase_poses"),
         pudf_get_most_common_text(F.collect_list("phrase_lemmas")).alias("phrase_lemmas"),
         pudf_get_most_common_text(F.collect_list("phrase_deps")).alias("phrase_deps"))\
         .orderBy(F.desc("count"))
     if phrase_filter_min_count:
         phrase_sdf = phrase_sdf.filter(F.col("count") >= phrase_filter_min_count)
-    phrase_sdf = phrase_sdf.select("text", "count", "phrase_poses", "phrase_lemmas", "phrase_deps")
+    phrase_sdf = phrase_sdf.select("text", "count", "phrase_words", "phrase_poses", "phrase_lemmas", "phrase_deps")
     write_sdf_to_file(phrase_sdf, phrase_filepath, num_partitions)
 
 

@@ -20,7 +20,7 @@ def extract_aspect_and_opinion(annotation_sdf: DataFrame,
                                aspect_candidates_filepath: str,
                                opinion_candidates_filepath: str,
                                absa_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* extract aspect and opinion candidates\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* extract aspect and opinion candidates\n{'*' * 150}\n")
     extract_candidates(annotation_sdf,
                        aspect_candidates_filepath,
                        opinion_candidates_filepath,
@@ -42,7 +42,7 @@ def rank_aspect_and_opinion(aspect_candidates_filepath: str,
                             unigram_filepath: str,
                             phrase_filepath: str,
                             absa_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* build aspect and opinion ranking \n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* build aspect and opinion ranking \n{'*' * 150}\n")
     word_to_dom_lemma, word_to_dom_pos = load_word_to_dom_lemma_and_pos(unigram_filepath)
 
     save_aspect_ranking(aspect_candidates_filepath,
@@ -69,7 +69,7 @@ def build_grouping_word2vec(annotation_sdf: DataFrame,
                             absa_grouping_wv_corpus_filepath: str,
                             absa_grouping_wv_model_filepath: str,
                             absa_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* build aspect and opinion grouping word vector\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* build aspect and opinion grouping word vector\n{'*' * 150}\n")
     build_grouping_wv_corpus(annotation_sdf,
                              aspect_ranking_filepath,
                              absa_grouping_wv_corpus_filepath,
@@ -88,7 +88,7 @@ def get_aspect_opinion_grouping_vecs(absa_grouping_wv_model_filepath: str,
                                      aspect_grouping_vecs_filepath: str,
                                      opinion_ranking_filepath: str,
                                      opinion_grouping_vecs_filepath: str):
-    logging.info(f"\n{'=' * 100}\n* extract aspect and opinion grouping vecs \n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* extract aspect and opinion grouping vecs \n{'*' * 150}\n")
     get_aspect_grouping_vecs(aspect_ranking_filepath,
                              absa_grouping_wv_model_filepath,
                              aspect_grouping_vecs_filepath)
@@ -122,10 +122,10 @@ def main(spark: SparkSession, absa_config_filepath: str):
 
     annotation_sdf = load_annotation(spark, annotation_dir, absa_config["drop_non_english"])
 
-    extract_aspect_and_opinion(annotation_sdf,
-                               aspect_candidates_filepath,
-                               opinion_candidates_filepath,
-                               absa_config)
+    # extract_aspect_and_opinion(annotation_sdf,
+    #                            aspect_candidates_filepath,
+    #                            opinion_candidates_filepath,
+    #                            absa_config)
 
     rank_aspect_and_opinion(aspect_candidates_filepath,
                             opinion_candidates_filepath,

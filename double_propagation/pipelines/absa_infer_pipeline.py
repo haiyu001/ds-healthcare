@@ -18,7 +18,7 @@ def build_absa_inference(annotation_sdf: DataFrame,
                          save_folder_dir: str,
                          save_folder_name: str,
                          absa_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* run absa inference\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* run absa inference\n{'*' * 150}\n")
     extract_triplet(annotation_sdf,
                     aspect_filepath,
                     opinion_filepath,
@@ -39,7 +39,7 @@ def build_absa_stats(spark: SparkSession,
                      opinion_filepath: str,
                      aspect_stats_filepath: str,
                      opinion_stats_filepath: str):
-    logging.info(f"\n{'=' * 100}\n* run absa stats\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* run absa stats\n{'*' * 150}\n")
     extract_triplet_stats(spark,
                           absa_inference_dir,
                           opinion_filepath,

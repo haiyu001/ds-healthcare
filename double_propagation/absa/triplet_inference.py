@@ -1,10 +1,10 @@
 from typing import Dict, Optional, Set, List, Tuple
 from utils.general_util import load_json_file
-from utils.spark_util import write_sdf_to_dir, write_sdf_to_file
+from utils.spark_util import write_sdf_to_dir, write_sdf_to_file, udf_get_top_common_values
 from annotation.annotation_utils.annotator_util import load_blank_nlp
 from double_propagation.absa.data_types import InferenceOpinionTerm, InferenceAspectTerm, InferenceTriplet, InferenceDoc
 from double_propagation.absa_utils.triplet_inference_util import load_aspect_hierarchy, get_aspect_matcher, \
-    get_mark_sign, pudf_score_to_polarity, udf_collect_opinions, udf_get_top_common_values
+    get_mark_sign, pudf_score_to_polarity, udf_collect_opinions
 from lexicon.negation_lexicon import sentiment_negations, sentiment_negations_social, sentiment_negations_pseudo
 from lexicon.canonicalization_lexicon import intensifiers
 from pyspark.sql.types import StringType, Row
@@ -193,7 +193,7 @@ def udf_inference(tokens: Column,
                   infer_aspect_without_opinion: bool = True) -> Column:
     def inference(tokens, sentences, metadata):
         doc_org_token_texts_with_ws = [token.org_text_with_ws for token in tokens]
-        doc_org_token_start_chars = [0] + list(accumulate([len(i) for i in doc_org_token_texts_with_ws]))[:-1]
+        doc_org_token_start_chars = [0] + list(accumulate([len(i) for i in doc_org_token_texts_with_ws]))
         doc_org_text = doc_org_marked_text = "".join(doc_org_token_texts_with_ws)
         sentence_start_ids = {sentence["start_id"] for sentence in sentences}
         doc = Doc(nlp.vocab,

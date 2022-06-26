@@ -30,11 +30,14 @@ class PhraseDetector(object):
                     phrase_span = phrase_span[1:]
                 if self._is_not_valid_token(phrase_span[-1]):
                     phrase_span = phrase_span[:-1]
-                if len(phrase_span) > 1:
+                phrase_span_length = len(phrase_span)
+                if phrase_span_length > 1:
                     phrases.append({
                         "start_id": phrase_span.start,
                         "end_id": phrase_span.end,
                         "text": phrase_span.text,
+                        "phrase_words": [token.text_with_ws if i != (phrase_span_length - 1) else token.text
+                                         for i, token in enumerate(phrase_span)],
                         "phrase_poses": [token.pos_ for token in phrase_span],
                         "phrase_lemmas": [token.lemma_ for token in phrase_span],
                         "phrase_deps": [token.dep_ for token in phrase_span],

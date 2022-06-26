@@ -1,10 +1,7 @@
-from typing import Set, Dict, Tuple
+from typing import Set, Dict
 from double_propagation.absa.enumerations import POS, Polarity
 from utils.general_util import load_json_file
 from utils.resource_util import get_model_filepath
-import pandas as pd
-import operator
-import json
 
 
 VALID_OPINION_REX = r"^[a-z][a-z&_]+$"

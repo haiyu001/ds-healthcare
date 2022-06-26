@@ -1,5 +1,5 @@
-from io import TextIOWrapper
 from typing import Dict, List, Any
+from io import TextIOWrapper
 
 
 def _generate_hierarchy(top_category: str, parent_to_child: Dict[str, str], leaves: List[str]) -> Dict[str, Any]:

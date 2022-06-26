@@ -76,7 +76,7 @@ class Normalizer(object):
         start_id = 0
         for split_word in split_words:
             original_split_word = orginal_text[start_id: start_id + len(split_word)]
-            original_split_words.append(self._match_case(original_split_word, split_word))
+            original_split_words.append(original_split_word)
             start_id += len(split_word)
         return original_split_words
 

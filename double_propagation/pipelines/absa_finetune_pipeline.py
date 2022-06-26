@@ -16,7 +16,7 @@ def group_aspect_and_opinion(aspect_ranking_filepath: str,
                              opinion_grouping_vecs_filepath: str,
                              opinion_grouping_dendrogram_filepath: str,
                              absa_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* build aspect and opinion grouping\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* build aspect and opinion grouping\n{'*' * 150}\n")
     save_aspect_grouping(aspect_ranking_filepath,
                          aspect_grouping_vecs_filepath,
                          aspect_grouping_dendrogram_filepath,
@@ -36,10 +36,11 @@ def finalize_aspect_and_opinion(aspect_grouping_filepath: str,
                                 opinion_ranking_filepath: str,
                                 opinion_grouping_filepath: str,
                                 aspect_hierarchy_filepath: str,
+                                opinion_hierarchy_filepath: str,
                                 aspect_filepath: str,
                                 opinion_filepath: str,
                                 absa_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* finalize aspect and opinion\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* finalize aspect and opinion\n{'*' * 150}\n")
     save_aspect(aspect_grouping_filepath,
                 aspect_filepath,
                 aspect_hierarchy_filepath)
@@ -47,6 +48,7 @@ def finalize_aspect_and_opinion(aspect_grouping_filepath: str,
     save_opinion(opinion_ranking_filepath,
                  opinion_grouping_filepath,
                  opinion_filepath,
+                 opinion_hierarchy_filepath,
                  absa_config["opinion_filter_min_score"],
                  absa_config["drop_unknown_polarity_opinion"])
 
@@ -68,6 +70,7 @@ def main(absa_config_filepath: str):
     opinion_grouping_dendrogram_filepath = \
         os.path.join(absa_opinion_dir, absa_config["opinion_grouping_dendrogram_filename"])
     aspect_hierarchy_filepath = os.path.join(absa_dir, absa_config["aspect_hierarchy_filename"])
+    opinion_hierarchy_filepath = os.path.join(absa_dir, absa_config["opinion_hierarchy_filename"])
     aspect_filepath = os.path.join(absa_dir, absa_config["aspect_filename"])
     opinion_filepath = os.path.join(absa_dir, absa_config["opinion_filename"])
 
@@ -84,6 +87,7 @@ def main(absa_config_filepath: str):
                                 opinion_ranking_filepath,
                                 opinion_grouping_filepath,
                                 aspect_hierarchy_filepath,
+                                opinion_hierarchy_filepath,
                                 aspect_filepath,
                                 opinion_filepath,
                                 absa_config)

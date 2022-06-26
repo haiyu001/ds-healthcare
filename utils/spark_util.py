@@ -14,6 +14,7 @@ from pprint import pformat
 import pandas as pd
 import logging
 import shutil
+import json
 import os
 
 
@@ -119,7 +120,7 @@ def convert_to_orc(spark: SparkSession,
     if type_casting:
         for col, cast_type in type_casting.items():
             sdf = sdf.withColumn(col, F.col(col).cast(cast_type))
-    logging.info(f"data types of orc file:\n{pformat(sdf.dtypes)}")
+    logging.info(f"\n{'=' * 100}\ndata types of orc file:\n{pformat(sdf.dtypes)}\n{'=' * 100}\n")
     write_sdf_to_file(sdf, output_filepath)
 
 
@@ -150,3 +151,12 @@ def pudf_get_most_common_text(texts: Column) -> Column:
         return most_common_text
 
     return F.pandas_udf(get_most_common_text, StringType())(texts)
+
+
+def udf_get_top_common_values(values_col, topn=3):
+    def get_top_common_values(values_col):
+        if len(values_col) == 0:
+            return None
+        else:
+            return json.dumps(dict(Counter(values_col).most_common(topn)), ensure_ascii=False)
+    return F.udf(get_top_common_values, StringType())(values_col)

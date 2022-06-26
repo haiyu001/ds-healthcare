@@ -25,10 +25,10 @@ def load_input(spark: SparkSession,
                input_dir: str,
                annotation_config: Dict[str, str]) -> DataFrame:
     if input_filepath:
-        logging.info(f"\n{'=' * 100}\n* load input from {input_filepath}\n{'=' * 100}\n")
+        logging.info(f"\n{'*' * 150}\n* load input from {input_filepath}\n{'*' * 150}\n")
         input_sdf = spark.read.text(input_filepath)
     elif input_dir:
-        logging.info(f"\n{'=' * 100}\n* load input from {input_dir}\n{'=' * 100}\n")
+        logging.info(f"\n{'*' * 150}\n* load input from {input_dir}\n{'*' * 150}\n")
         input_sdf = spark.read.text(os.path.join(input_dir, "*.json"))
     else:
         raise ValueError("set input_filepath or input_dir for annotation")
@@ -42,7 +42,7 @@ def build_annotation(input_sdf: DataFrame,
                      save_folder_name: str,
                      nlp_model_config: Dict[str, Dict[str, Any]]):
     logging.info(
-        f"\n{'=' * 100}\n* build annotation on {input_sdf.count()} records with following config\n{'=' * 100}\n")
+        f"\n{'*' * 150}\n* build annotation on {input_sdf.count()} records with following config\n{'*' * 150}\n")
     nlp_model = get_nlp_model(**nlp_model_config)
     logging.info(
         f"* nlp model config (use_gpu = {nlp_model_config['use_gpu']}):\n{get_nlp_model_config_str(nlp_model)}")
@@ -58,8 +58,8 @@ def build_extraction_and_canonicalization_candidates(canonicalization_annotation
                                                      bigram_canonicalization_candidates_filepath: str,
                                                      spell_canonicalization_candidates_filepath: str,
                                                      annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* extract canonicalization unigram, bigram and trigram and "
-                 f"build bigram & spell canonicalization candidates\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* extract canonicalization unigram, bigram and trigram and "
+                 f"build bigram & spell canonicalization candidates\n{'*' * 150}\n")
     unigram_sdf = extract_unigram(canonicalization_annotation_sdf, canonicalization_unigram_filepath)
     bigram_sdf = extract_ngram(canonicalization_annotation_sdf, canonicalization_bigram_filepath,
                                n=2, ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
@@ -80,7 +80,7 @@ def build_canonicalization_word2vec(canonicalization_annotation_sdf: DataFrame,
                                     wv_model_filepath: str,
                                     canonicalization_nlp_model_config: str,
                                     annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* build canonicalization word vector\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* build canonicalization word vector\n{'*' * 150}\n")
     build_canonicalization_wv_corpus(canonicalization_annotation_sdf,
                                      bigram_canonicalization_candidates_filepath,
                                      wv_corpus_filepath,
@@ -105,7 +105,7 @@ def build_canonicalization(spark: SparkSession,
                            canonicalization_filepath: str,
                            wv_model_filepath: str,
                            annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* build bigram, spell, prefix, hyphen and ampersand canonicalization\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* build bigram, spell, prefix, hyphen and ampersand canonicalization\n{'*' * 150}\n")
     spell_canonicalization_candidates_sdf = spark.read.csv(
         spell_canonicalization_candidates_filepath, header=True, quote='"', escape='"', inferSchema=True)
     wv_model_filepath = os.path.join(wv_model_filepath.rsplit(".", 1)[0], "fasttext")
@@ -139,7 +139,7 @@ def build_extraction(annotation_sdf: DataFrame,
                      entity_filepath: str,
                      umls_concept_filepath: str,
                      annotation_config: Dict[str, Any]):
-    logging.info(f"\n{'=' * 100}\n* extract unigram, bigram, trigram, phrase, entity and umls_concept\n{'=' * 100}\n")
+    logging.info(f"\n{'*' * 150}\n* extract unigram, bigram, trigram, phrase, entity and umls_concept\n{'*' * 150}\n")
     extract_unigram(annotation_sdf, unigram_filepath)
     extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_filter_min_count"])
     extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_filter_min_count"])

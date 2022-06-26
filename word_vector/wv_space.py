@@ -19,7 +19,7 @@ class WordVec(object):
         self.vocab_set = set(self.get_vocab())
         self.vocab_trie = marisa_trie.Trie(self.get_vocab())
 
-    def _get_prefix_words(self, prefix: str) -> List[str]:
+    def get_prefix_words(self, prefix: str) -> List[str]:
         words = []
         while len(prefix) >= 2:
             words = self.vocab_trie.keys(prefix)
@@ -28,23 +28,23 @@ class WordVec(object):
             prefix = prefix[:-1]
         return words
 
-    def _get_oov_vec(self, word: str, l2_norm: bool = True) -> pd.Series:
+    def get_oov_vec(self, word: str, l2_norm: bool = True) -> pd.Series:
         if self.mwe_delimiter in word:
             word = word.split(self.mwe_delimiter)[-1]
-        words = self._get_prefix_words(word)
+        words = self.get_prefix_words(word)
         if words:
             oov_vec = self.vecs_pdf.loc[words].mean()
             if l2_norm:
                 oov_vec = normalize(oov_vec.fillna(0).values.reshape(1, -1))[0]
             return oov_vec
         else:
-            raise ValueError(f'No any word in vocab starts with "{word}" prefixes.')
+            raise ValueError(f"No any word in vocab starts with '{word}' prefixes.")
 
     def get_word_vec(self, word: str, l2_norm: bool = True) -> pd.Series:
         if word in self.vocab_set:
             return self.norm_vecs_pdf.loc[word] if l2_norm else self.vecs_pdf.loc[word]
         elif self.use_oov_strategy:
-            return self._get_oov_vec(word, l2_norm)
+            return self.get_oov_vec(word, l2_norm)
         else:
             raise ValueError(f"{word} is out of vocabulary")
 
@@ -96,14 +96,32 @@ class WordVec(object):
                 word_vec = self.get_word_vec(word, l2_norm)
                 word_vec_str = " ".join([str(i) for i in word_vec])
                 output.write(word + " " + word_vec_str + "\n")
-        logging.info(f"the extracted word vecs dimension: ({num_rows}, {num_cols})")
+        logging.info(f"\n{'=' * 100}\nthe extracted word vecs dimension: ({num_rows}, {num_cols})\n{'=' * 100}\n")
 
 
 class ConceptNetWordVec(WordVec):
 
+    def __init__(self, txt_vecs_filepath: str, mwe_delimiter: str = "_",
+                 use_oov_strategy: bool = False, set_oov_to_zero: bool = False):
+        super().__init__(txt_vecs_filepath, mwe_delimiter, use_oov_strategy)
+        self.set_oov_to_zero = set_oov_to_zero
+
     def get_word_vec(self, word, use_norm_vecs: bool = True) -> pd.Series:
         word = re.sub(r"\d\d", "#", word)
         return super().get_word_vec(word, use_norm_vecs)
+
+    def get_oov_vec(self, word: str, l2_norm: bool = True) -> pd.Series:
+        try:
+            oov_vec = super().get_oov_vec(word, l2_norm)
+        except ValueError:
+            try:
+                oov_vec = super().get_oov_vec(word.strip("#"), l2_norm)
+            except ValueError as e:
+                if self.set_oov_to_zero:
+                    oov_vec = pd.Series([0.0] * self.norm_vecs_pdf.shape[1])
+                else:
+                    raise e
+        return oov_vec
 
 
 def load_txt_vecs_to_pdf(txt_vecs_filepath: str, l2_norm: bool = False) -> pd.DataFrame:

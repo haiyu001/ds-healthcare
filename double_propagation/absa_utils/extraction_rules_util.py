@@ -7,7 +7,9 @@ import re
 def mark_candidate_in_sentence(candidate_text: str, sentence_text: str) -> str:
     sentence_text = re.sub(r"[<>]", " ", sentence_text)
     sentence_text = " ".join(sentence_text.split())
-    marked_sentence = re.sub(r"\b{}\b".format(re.escape(candidate_text)), f"<{candidate_text}>", sentence_text)
+    marked_sentence = re.sub(r"\b{}\b".format(re.escape(candidate_text)),
+                             r"<{}>".format(candidate_text.replace("\\", "\\\\")),
+                             sentence_text)
     return marked_sentence
 
 
