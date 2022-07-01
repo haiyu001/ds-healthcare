@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from ml.ml_utils import get_callback_list, save_confusion_matrix, save_classification_report, get_confusion_matrix_array
+from machine_learning.ml_utils import get_callback_list, save_confusion_matrix, save_classification_report, get_confusion_matrix_array
 from utils.general_util import make_dir
 import pandas as pd
 import tensorflow as tf

@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from annotation.annotation_utils.annotator_spark_util import load_annotation
-from double_propagation.absa.extractor import extract_candidates
+from double_propagation.absa.training import extract_candidates
 from double_propagation.absa.grouping import build_grouping_wv_corpus, get_aspect_grouping_vecs, \
     get_opinion_grouping_vecs
 from word_vector.wv_model import build_word2vec
@@ -40,7 +40,7 @@ def rank_aspect_and_opinion(aspect_candidates_filepath: str,
                             aspect_ranking_filepath: str,
                             opinion_ranking_filepath: str,
                             unigram_filepath: str,
-                            phrase_filepath: str,
+                            filter_phrase_filepath: str,
                             absa_config: Dict[str, Any]):
     logging.info(f"\n{'*' * 150}\n* build aspect and opinion ranking \n{'*' * 150}\n")
     word_to_dom_lemma, word_to_dom_pos = load_word_to_dom_lemma_and_pos(unigram_filepath)
@@ -48,13 +48,12 @@ def rank_aspect_and_opinion(aspect_candidates_filepath: str,
     save_aspect_ranking(aspect_candidates_filepath,
                         aspect_ranking_vecs_filepath,
                         aspect_ranking_filepath,
-                        phrase_filepath,
+                        filter_phrase_filepath,
                         word_to_dom_lemma,
                         word_to_dom_pos,
                         absa_config["aspect_filter_min_count"],
                         absa_config["aspect_opinion_num_samples"],
-                        absa_config["noun_phrase_min_count"],
-                        absa_config["noun_phrase_max_words_count"])
+                        absa_config["noun_phrase_min_count"])
 
     save_opinion_ranking(opinion_candidates_filepath,
                          opinion_ranking_vecs_filepath,
@@ -110,7 +109,7 @@ def main(spark: SparkSession, absa_config_filepath: str):
     absa_grouping_wv_corpus_filepath = os.path.join(absa_grouping_wv_dir, absa_config["grouping_wv_corpus_filename"])
     absa_grouping_wv_model_filepath = os.path.join(absa_grouping_wv_dir, absa_config["grouping_wv_model_filename"])
     unigram_filepath = os.path.join(extraction_dir, absa_config["unigram_filename"])
-    phrase_filepath = os.path.join(extraction_dir, absa_config["phrase_filename"])
+    filter_phrase_filepath = os.path.join(extraction_dir, absa_config["filter_phrase_filename"])
     aspect_candidates_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_candidates_filename"])
     aspect_ranking_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_filename"])
     aspect_ranking_vecs_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_vecs_filename"])
@@ -134,7 +133,7 @@ def main(spark: SparkSession, absa_config_filepath: str):
                             aspect_ranking_filepath,
                             opinion_ranking_filepath,
                             unigram_filepath,
-                            phrase_filepath,
+                            filter_phrase_filepath,
                             absa_config)
 
     build_grouping_word2vec(annotation_sdf,

@@ -1,9 +1,6 @@
-from collections import Counter
-from sys import platform
 from typing import Optional, Dict, List
 from utils.config_util import read_config_to_dict
-from utils.general_util import split_filepath, save_pdf
-from utils.resource_util import zip_repo
+from utils.general_util import split_filepath, save_pdf, get_repo_dir
 from pyspark import SparkConf
 from pyspark.sql import SparkSession, Window, Column
 from pyspark.sql import DataFrame
@@ -11,6 +8,9 @@ from pyspark.sql.types import StringType
 import pyspark.sql.functions as F
 from pathlib import Path
 from pprint import pformat
+from collections import Counter
+from subprocess import call
+from sys import platform
 import pandas as pd
 import logging
 import shutil
@@ -160,3 +160,21 @@ def udf_get_top_common_values(values_col, topn=3):
         else:
             return json.dumps(dict(Counter(values_col).most_common(topn)), ensure_ascii=False)
     return F.udf(get_top_common_values, StringType())(values_col)
+
+
+def zip_repo(repo_zip_dir: str) -> str:
+    cwd = os.getcwd()
+    repo_dir = get_repo_dir()
+    repo_name = Path(repo_dir).stem
+    os.chdir(repo_dir)
+    repo_zip_filepath = os.path.join(repo_zip_dir, f"{repo_name}.zip")
+    zip_command = ["zip", "-r", repo_zip_filepath, "."]
+    repo_ignore = ["-x",
+                   f"logs/*",
+                   f"test/*",
+                   f"tmp/*",
+                   f"notebooks/*",
+                   f".*"]
+    call(zip_command + repo_ignore)
+    os.chdir(cwd)
+    return repo_zip_filepath

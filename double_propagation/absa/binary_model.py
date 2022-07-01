@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
-from ml.binary_mlp import BinaryModel
-from ml.ml_utils import get_train_val_test
+from machine_learning.binary_mlp import BinaryModel
+from machine_learning.ml_utils import get_train_val_test
 from utils.general_util import setup_logger, save_pdf, load_json_file, make_dir
 from utils.resource_util import get_model_filepath
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf

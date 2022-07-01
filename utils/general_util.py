@@ -1,6 +1,5 @@
-from datetime import datetime
-from utils.resource_util import get_repo_dir
 from typing import List, Tuple, Optional, Dict, Any
+from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import logging
@@ -82,3 +81,7 @@ def setup_logger(logs_dir: Optional[str] = None):
     handler.setLevel(logging.INFO)
     handler.setFormatter(handler_formatter)
     logger.addHandler(handler)
+
+
+def get_repo_dir() -> str:
+    return str(Path(__file__).parent.parent)

@@ -1,7 +1,6 @@
-from pathlib import Path
-from subprocess import call
-import os
 from typing import List
+from utils.general_util import load_json_file
+import os
 
 MODELS_HOME = os.environ["MODELS_HOME"]
 
@@ -20,28 +19,6 @@ def get_data_filepath(*parts: str) -> str:
     for part in parts:
         path = os.path.join(path, part)
     return path
-
-
-def get_repo_dir() -> str:
-    return str(Path(__file__).parent.parent)
-
-
-def zip_repo(repo_zip_dir: str) -> str:
-    cwd = os.getcwd()
-    repo_dir = get_repo_dir()
-    repo_name = Path(repo_dir).stem
-    os.chdir(repo_dir)
-    repo_zip_filepath = os.path.join(repo_zip_dir, f"{repo_name}.zip")
-    zip_command = ["zip", "-r", repo_zip_filepath, "."]
-    repo_ignore = ["-x",
-                   f"logs/*",
-                   f"test/*",
-                   f"tmp/*",
-                   f"notebooks/*",
-                   f".*"]
-    call(zip_command + repo_ignore)
-    os.chdir(cwd)
-    return repo_zip_filepath
 
 
 def get_spacy_model_path(lang: str, package: str) -> str:
@@ -67,9 +44,15 @@ def load_nltk_stop_words(lang: str) -> List[str]:
         return stop_words
 
 
+def load_stop_words(filter_min_count: int = 15) -> List[str]:
+    stop_words_filepath = get_model_filepath("lexicon", "stop_words.json")
+    stop_words = load_json_file(stop_words_filepath)
+    stop_words = [k for k, v in stop_words.items() if v >= filter_min_count]
+    return stop_words
+
+
 if __name__ == "__main__":
     import stanza
-    import nltk
 
     lang = "en"
     package = "mimic"

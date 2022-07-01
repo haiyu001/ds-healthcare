@@ -1,10 +1,9 @@
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict
 from utils.general_util import save_pdf
 from utils.resource_util import get_model_filepath
 from word_vector.wv_space import ConceptNetWordVec, load_txt_vecs_to_pdf
 from double_propagation.absa.binary_model import get_sentiment_features_pdf, get_model_prediction_pdf
 import pandas as pd
-import collections
 import operator
 import random
 import json
@@ -25,24 +24,6 @@ def _get_dom_pos(text: str, word_to_pos: Dict[str, str]) -> str:
     return word_to_pos[text.lower()]
 
 
-def _get_noun_phrases_ids(pos_list: List[str], noun_phrase_max_words_count: int = 4) -> List[Tuple[int, int]]:
-    res = []
-    noun_propn_ids = [i for i, pos in enumerate(pos_list) if pos == "NOUN" or pos == "PROPN"]
-    size = len(noun_propn_ids)
-    if size >= 2:
-        start = end = noun_propn_ids[0]
-        i = 1
-        while i <= size:
-            if i != size and noun_propn_ids[i] == noun_propn_ids[i - 1] + 1:
-                end = noun_propn_ids[i]
-            else:
-                if 2 <= end - start + 1 <= noun_phrase_max_words_count:
-                    res.append((start, end + 1))
-                start = end = noun_propn_ids[i] if i < size else -1
-            i += 1
-    return res
-
-
 def load_word_to_dom_lemma_and_pos(unigram_filepath: str) -> Tuple[Dict[str, str], Dict[str, str]]:
     unigram_pdf = pd.read_csv(unigram_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     unigram_pdf["top_three_lemma"] = unigram_pdf["top_three_lemma"].apply(json.loads)
@@ -52,48 +33,6 @@ def load_word_to_dom_lemma_and_pos(unigram_filepath: str) -> Tuple[Dict[str, str
     word_to_dom_lemma = dict(zip(unigram_pdf["word"], unigram_pdf["lemma"]))
     word_to_dom_pos = dict(zip(unigram_pdf["word"], unigram_pdf["pos"]))
     return word_to_dom_lemma, word_to_dom_pos
-
-
-def get_noun_phrases_pdf(phrase_filepath: str, noun_phrase_words_max_count: int = 4) -> pd.DataFrame:
-    phrase_pdf = pd.read_csv(phrase_filepath, encoding="utf-8", keep_default_na=False, na_values="")
-    phrase_pdf["phrase_words"] = phrase_pdf["phrase_words"].apply(json.loads)
-    phrase_pdf["phrase_poses"] = phrase_pdf["phrase_poses"].apply(json.loads)
-    phrase_pdf["phrase_lemmas"] = phrase_pdf["phrase_lemmas"].apply(json.loads)
-    phrase_pdf["phrase_deps"] = phrase_pdf["phrase_deps"].apply(json.loads)
-    noun_phrase_to_count = collections.defaultdict(int)
-    noun_phrase_to_word_list = collections.defaultdict(list)
-    noun_phrase_to_lemma_list = collections.defaultdict(list)
-    noun_phrase_to_dep_list = collections.defaultdict(list)
-    for _, row in phrase_pdf.iterrows():
-        phrase_words, phrase_poses, phrase_lemmas, phrase_deps, phrase_count = \
-            row["phrase_words"], row["phrase_poses"], row["phrase_lemmas"], row["phrase_deps"], row["count"]
-        for start, end in _get_noun_phrases_ids(phrase_poses, noun_phrase_words_max_count):
-            if end - start > 1:
-                noun_phrase = tuple([i.strip().lower() for i in phrase_words[start: end]])
-                noun_phrase_to_count[noun_phrase] += phrase_count
-                noun_phrase_to_word_list[noun_phrase].append(tuple([i.strip() for i in phrase_words[start: end]]))
-                noun_phrase_to_lemma_list[noun_phrase].append(tuple(phrase_lemmas[start: end]))
-                noun_phrase_to_dep_list[noun_phrase].append(tuple(phrase_deps[start: end]))
-    noun_phrase_to_words = {phrase: collections.Counter(word_list).most_common(1)[0][0]
-                            for phrase, word_list in noun_phrase_to_word_list.items()}
-    noun_phrase_to_word_lemmas = {phrase: collections.Counter(lemma_list).most_common(1)[0][0]
-                                  for phrase, lemma_list in noun_phrase_to_lemma_list.items()}
-    noun_phrase_to_word_deps = {phrase: collections.Counter(dep_list).most_common(1)[0][0]
-                                for phrase, dep_list in noun_phrase_to_dep_list.items()}
-    noun_phrase_record_list = []
-    for noun_phrase in noun_phrase_to_count:
-        words, word_lemmas, word_deps = noun_phrase_to_words[noun_phrase], noun_phrase_to_word_lemmas[noun_phrase], \
-                                        noun_phrase_to_word_deps[noun_phrase]
-        if word_deps[0] == "nummod" or (word_deps[0] == "amod" and word_deps[1] != "punct"):
-            continue
-        noun_phrase_record_list.append({
-            "noun_phrase": " ".join(words),
-            "lemma": " ".join(word_lemmas),
-            "deps": word_deps,
-            "count": noun_phrase_to_count[noun_phrase],
-        })
-    noun_phrases_pdf = pd.DataFrame(noun_phrase_record_list).sort_values(by="count", ascending=False)
-    return noun_phrases_pdf
 
 
 def get_aspect_merge_pdf(aspect_candidates_filepath: str,
@@ -174,14 +113,13 @@ def merge_by_root_lemma(aspect_ranking_pdf: pd.DataFrame) -> pd.DataFrame:
 def save_aspect_ranking(aspect_candidates_filepath: str,
                         aspect_ranking_vecs_filepath: str,
                         aspect_ranking_filepath: str,
-                        phrase_filepath: str,
+                        filter_phrase_filepath: str,
                         word_to_dom_lemma: Dict[str, str],
                         word_to_dom_pos: Dict[str, str],
                         aspect_filter_min_count: int,
                         aspect_opinion_num_samples: int,
-                        noun_phrase_min_count: int,
-                        noun_phrase_max_words_count: int):
-    noun_phrases_pdf = get_noun_phrases_pdf(phrase_filepath, noun_phrase_max_words_count)
+                        noun_phrase_min_count: int):
+    noun_phrases_pdf = pd.read_csv(filter_phrase_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     noun_phrases_pdf = noun_phrases_pdf[noun_phrases_pdf["count"] >= noun_phrase_min_count]
     noun_phrase_lemma_to_noun_phrase = dict(zip(noun_phrases_pdf["lemma"], noun_phrases_pdf["noun_phrase"]))
 

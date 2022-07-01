@@ -7,7 +7,7 @@ from annotation.components.canonicalizer_bigram import get_bigram_canonicalizati
     get_bigram_canonicalization, build_canonicalization_wv_corpus
 from annotation.components.canonicalizer_spell import get_spell_canonicalization_candidates, get_spell_canonicalization
 from annotation.components.extractor import extract_unigram, extract_ngram, extract_phrase, extract_entity, \
-    extract_umls_concept
+    extract_umls_concept, filter_phrase, filter_unigram
 from utils.config_util import read_config_to_dict
 from word_vector.wv_model import build_word2vec
 from utils.resource_util import get_data_filepath
@@ -62,9 +62,9 @@ def build_extraction_and_canonicalization_candidates(canonicalization_annotation
                  f"build bigram & spell canonicalization candidates\n{'*' * 150}\n")
     unigram_sdf = extract_unigram(canonicalization_annotation_sdf, canonicalization_unigram_filepath)
     bigram_sdf = extract_ngram(canonicalization_annotation_sdf, canonicalization_bigram_filepath,
-                               n=2, ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
+                               n=2, ngram_extraction_min_count=annotation_config["ngram_filter_min_count"])
     extract_ngram(canonicalization_annotation_sdf, canonicalization_trigram_filepath,
-                  n=3, ngram_filter_min_count=annotation_config["ngram_filter_min_count"])
+                  n=3, ngram_extraction_min_count=annotation_config["ngram_filter_min_count"])
     get_bigram_canonicalization_candidates(unigram_sdf,
                                            bigram_sdf,
                                            bigram_canonicalization_candidates_filepath)
@@ -141,11 +141,22 @@ def build_extraction(annotation_sdf: DataFrame,
                      annotation_config: Dict[str, Any]):
     logging.info(f"\n{'*' * 150}\n* extract unigram, bigram, trigram, phrase, entity and umls_concept\n{'*' * 150}\n")
     extract_unigram(annotation_sdf, unigram_filepath)
-    extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_filter_min_count"])
-    extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_filter_min_count"])
-    extract_phrase(annotation_sdf, phrase_filepath, annotation_config["phrase_filter_min_count"])
-    extract_entity(annotation_sdf, entity_filepath, annotation_config["entity_filter_min_count"])
-    extract_umls_concept(annotation_sdf, umls_concept_filepath, annotation_config["umls_concept_filter_min_count"])
+    extract_ngram(annotation_sdf, bigram_filepath, 2, annotation_config["ngram_extraction_min_count"])
+    extract_ngram(annotation_sdf, trigram_filepath, 3, annotation_config["ngram_extraction_min_count"])
+    extract_phrase(annotation_sdf, phrase_filepath, annotation_config["phrase_extraction_min_count"])
+    extract_entity(annotation_sdf, entity_filepath, annotation_config["entity_extraction_min_count"])
+    extract_umls_concept(annotation_sdf, umls_concept_filepath, annotation_config["umls_concept_extraction_min_count"])
+
+
+def filter_extraction(unigram_filepath: str,
+                      phrase_filepath: str,
+                      filter_unigram_filepath: str,
+                      filter_phrase_filepath: str,
+                      annotation_config: Dict[str, Any]):
+    logging.info(f"\n{'*' * 150}\n* filter unigram, phrase\n{'*' * 150}\n")
+    filter_phrase(phrase_filepath, filter_phrase_filepath, annotation_config["noun_phrase_words_max_count"])
+    filter_unigram(unigram_filepath, filter_unigram_filepath,
+                   annotation_config["unigram_filter_min_count"], annotation_config["stop_words_filter_min_count"])
 
 
 def main(spark: SparkSession, nlp_model_config_filepath: str, annotation_config_filepath: str, ):
@@ -187,6 +198,8 @@ def main(spark: SparkSession, nlp_model_config_filepath: str, annotation_config_
     phrase_filepath = os.path.join(extraction_dir, annotation_config["phrase_filename"])
     entity_filepath = os.path.join(extraction_dir, annotation_config["entity_filename"])
     umls_concept_filepath = os.path.join(extraction_dir, annotation_config["umls_concept_filename"])
+    filter_unigram_filepath = os.path.join(extraction_dir, annotation_config["filter_unigram_filename"])
+    filter_phrase_filepath = os.path.join(extraction_dir, annotation_config["filter_phrase_filename"])
     input_filepath = annotation_config["input_filepath"]
     input_dir = annotation_config["input_dir"]
 
@@ -261,6 +274,13 @@ def main(spark: SparkSession, nlp_model_config_filepath: str, annotation_config_
                      entity_filepath,
                      umls_concept_filepath,
                      annotation_config)
+
+    # filter phrase
+    filter_extraction(unigram_filepath,
+                      phrase_filepath,
+                      filter_unigram_filepath,
+                      filter_phrase_filepath,
+                      annotation_config)
 
 
 if __name__ == "__main__":
