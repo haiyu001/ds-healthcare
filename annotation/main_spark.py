@@ -1,5 +1,5 @@
 from annotation.annotation_utils.annotator_util import get_canonicalization_nlp_model_config, get_nlp_model_config
-from annotation.annotation_utils.annotator_spark_util import pudf_annotate
+from annotation.components.annotator import pudf_annotate
 from utils.config_util import read_config_to_dict
 from utils.general_util import setup_logger, get_repo_dir
 from utils.resource_util import get_data_filepath

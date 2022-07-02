@@ -61,7 +61,7 @@ def read_nlp_model_config(config_filepath: str) -> Dict[str, Any]:
         normalizer_config=optional_section_configs["Normalizer"],
         stanza_pipeline_config=optional_section_configs["StanzaPipeline"],
         spacy_pipeline_config=optional_section_configs["SpacyPipeline"],
-        custom_pipes_config=None if not custom_pipes_config else custom_pipes_config,)
+        custom_pipes_config=None if not custom_pipes_config else custom_pipes_config, )
     return nlp_model_config
 
 

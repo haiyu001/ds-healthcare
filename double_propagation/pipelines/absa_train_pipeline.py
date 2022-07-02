@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from annotation.annotation_utils.annotator_spark_util import load_annotation
+from annotation.components.annotator import load_annotation
 from double_propagation.absa.training import extract_candidates
 from double_propagation.absa.grouping import build_grouping_wv_corpus, get_aspect_grouping_vecs, \
     get_opinion_grouping_vecs
@@ -74,7 +74,8 @@ def build_grouping_word2vec(annotation_sdf: DataFrame,
                              absa_grouping_wv_corpus_filepath,
                              absa_config["lang"],
                              absa_config["spacy_package"],
-                             absa_config["wv_corpus_match_lowercase"])
+                             absa_config["wv_corpus_match_lowercase"],
+                             absa_config["num_partitions"])
 
     build_word2vec(absa_config["wv_size"],
                    use_char_ngram=False,

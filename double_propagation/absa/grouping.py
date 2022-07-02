@@ -5,7 +5,6 @@ from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
 from utils.general_util import save_pdf, dump_json_file
 from word_vector.wv_corpus import build_wv_corpus_by_annotation
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf
-from word_vector.wv_model import build_word2vec
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 from scipy.spatial.distance import pdist
 import matplotlib.pyplot as plt
@@ -35,16 +34,17 @@ def build_grouping_wv_corpus(annotation_sdf: DataFrame,
                              wv_corpus_filepath: str,
                              lang: str,
                              spacy_package: str,
-                             match_lowercase: bool):
+                             match_lowercase: bool,
+                             num_partitions: int):
     logging.info(f"\n{'=' * 100}\nbuild word vector corpus\n{'=' * 100}\n")
     ngram_match_dict = get_aspect_match_dict(aspect_ranking_filepath, match_lowercase)
     build_wv_corpus_by_annotation(annotation_sdf=annotation_sdf,
                                   lang=lang,
                                   spacy_package=spacy_package,
-                                  wv_corpus_filepath=wv_corpus_filepath,
+                                  corpus_filepath=wv_corpus_filepath,
                                   ngram_match_dict=ngram_match_dict,
                                   match_lowercase=match_lowercase,
-                                  num_partitions=4)
+                                  num_partitions=num_partitions)
 
 
 def get_aspect_grouping_vecs(aspect_ranking_filepath: str,

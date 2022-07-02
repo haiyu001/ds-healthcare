@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from annotation.annotation_utils.annotator_spark_util import load_annotation
+from annotation.components.annotator import load_annotation
 from double_propagation.absa.triplet_inference import extract_triplet, extract_triplet_stats
 from utils.config_util import read_config_to_dict
 from utils.general_util import setup_logger

@@ -2,10 +2,15 @@ from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
+import pickle
 import logging
 import json
 import csv
 import os
+
+
+def get_repo_dir() -> str:
+    return str(Path(__file__).parent.parent)
 
 
 def make_dir(dir: str) -> str:
@@ -62,6 +67,17 @@ def dump_json_file(json_dict: Dict[Any, Any], output_filepath: str):
         json.dump(json_dict, output, ensure_ascii=False, indent=4)
 
 
+def load_pickle_file(pickle_file_path):
+    with open(pickle_file_path, "rb") as input:
+        item = pickle.load(input)
+    return item
+
+
+def dump_pickle_file(item, pickle_file_path: str):
+    with open(pickle_file_path, "wb") as input:
+        pickle.dump(item, input)
+
+
 def setup_logger(logs_dir: Optional[str] = None):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -81,7 +97,3 @@ def setup_logger(logs_dir: Optional[str] = None):
     handler.setLevel(logging.INFO)
     handler.setFormatter(handler_formatter)
     logger.addHandler(handler)
-
-
-def get_repo_dir() -> str:
-    return str(Path(__file__).parent.parent)

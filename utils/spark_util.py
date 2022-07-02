@@ -168,7 +168,7 @@ def zip_repo(repo_zip_dir: str) -> str:
     repo_name = Path(repo_dir).stem
     os.chdir(repo_dir)
     repo_zip_filepath = os.path.join(repo_zip_dir, f"{repo_name}.zip")
-    zip_command = ["zip", "-r", repo_zip_filepath, "."]
+    zip_command = ["zip", "-FSr", repo_zip_filepath, "."]
     repo_ignore = ["-x",
                    f"logs/*",
                    f"test/*",

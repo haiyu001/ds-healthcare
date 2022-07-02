@@ -53,17 +53,18 @@ def build_canonicalization_wv_corpus(canonicalization_annotation_sdf: DataFrame,
                                      wv_corpus_filepath: str,
                                      lang: str,
                                      spacy_package: str,
-                                     match_lowercase: True):
+                                     match_lowercase: True,
+                                     num_partitions: int):
     logging.info(f"\n{'=' * 100}\nbuild word vector corpus\n{'=' * 100}\n")
     ngram_match_dict = get_bigram_canonicalization_candidates_match_dict(
         bigram_canonicalization_candidates_filepath, match_lowercase)
     build_wv_corpus_by_annotation(annotation_sdf=canonicalization_annotation_sdf,
                                   lang=lang,
                                   spacy_package=spacy_package,
-                                  wv_corpus_filepath=wv_corpus_filepath,
+                                  corpus_filepath=wv_corpus_filepath,
                                   ngram_match_dict=ngram_match_dict,
                                   match_lowercase=match_lowercase,
-                                  num_partitions=4)
+                                  num_partitions=num_partitions)
 
 
 def get_bigram_canonicalization_candidates(unigram_sdf: DataFrame,

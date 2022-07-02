@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, Iterator
 from annotation.tokenization.base_tokenizer import SpacyBaseTokenizer, StanzaBaseTokenizer
 from annotation.annotation_utils.annotator_util import load_blank_nlp, DEFAULT_SPACY_PACKAGE
 from annotation.pipes.stanza_pipeline import get_stanza_load_list
@@ -6,10 +6,15 @@ from annotation.tokenization.normalizer import Normalizer
 from annotation.tokenization.preprocessor import Preprocessor
 from annotation.tokenization.tokenizer import MetadataTokenizer
 from annotation.pipes.factories import *
+from pyspark.sql import Column, functions as F, SparkSession, DataFrame
+from pyspark.sql.types import StringType
 from spacy.tokens import Doc
+import pandas as pd
 import json
 import warnings
 import spacy
+
+from utils.general_util import get_filepaths_recursively
 
 
 def _get_umls_concepts(doc):
@@ -218,3 +223,27 @@ def doc_to_json_str(doc: Doc) -> str:
     doc_dict = doc_to_dict(doc)
     doc_json_str = json.dumps(doc_dict, ensure_ascii=False)
     return doc_json_str
+
+
+def pudf_annotate(text_iter: Column, nlp_model_config: Dict[str, Any]) -> Column:
+    def annotate(text_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
+        nlp = get_nlp_model(**nlp_model_config)
+        for text in text_iter:
+            doc = text.apply(nlp)
+            doc_json_str = doc.apply(doc_to_json_str)
+            yield doc_json_str
+
+    return F.pandas_udf(annotate, StringType())(text_iter)
+
+
+def load_annotation(spark: SparkSession,
+                    annotation_dir: str,
+                    drop_non_english: bool = True,
+                    num_partitions: Optional[int] = None) -> DataFrame:
+    annotation_filepaths = get_filepaths_recursively(annotation_dir, ["json", "txt"])
+    annotation_sdf = spark.read.json(annotation_filepaths)
+    if drop_non_english:
+        annotation_sdf = annotation_sdf.filter(annotation_sdf["_"]["language"]["lang"] == "en")
+    if num_partitions is not None:
+        annotation_sdf = annotation_sdf.repartion(num_partitions)
+    return annotation_sdf
