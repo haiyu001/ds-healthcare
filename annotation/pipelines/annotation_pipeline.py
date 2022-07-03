@@ -208,73 +208,73 @@ def main(spark: SparkSession, nlp_model_config_filepath: str, annotation_config_
     canonicalization_nlp_model_config = get_canonicalization_nlp_model_config(nlp_model_config_filepath)
     nlp_model_config = get_nlp_model_config(nlp_model_config_filepath, canonicalization_filepath)
 
-    # # load input data
-    # input_sdf = load_input(spark,
-    #                        input_filepath,
-    #                        input_dir,
-    #                        annotation_config)
-    #
-    # # build canonicalization annotation
-    # build_annotation(input_sdf,
-    #                  canonicalization_dir,
-    #                  annotation_config["canonicalization_annotation_folder"],
-    #                  canonicalization_nlp_model_config)
-    #
-    # # load canonicalization annotation
-    # canonicalization_annotation_sdf = load_annotation(spark,
-    #                                                   canonicalization_annotation_dir,
-    #                                                   annotation_config["drop_non_english"])
-    #
-    # # extract canonicalization unigram, bigram and trigram and build bigram & spell canonicalization candidates
-    # build_extraction_and_canonicalization_candidates(canonicalization_annotation_sdf,
-    #                                                  canonicalization_unigram_filepath,
-    #                                                  canonicalization_bigram_filepath,
-    #                                                  canonicalization_trigram_filepath,
-    #                                                  bigram_canonicalization_candidates_filepath,
-    #                                                  spell_canonicalization_candidates_filepath,
-    #                                                  annotation_config)
-    #
-    # # build canonicalization word vector
-    # build_canonicalization_word2vec(canonicalization_annotation_sdf,
-    #                                 bigram_canonicalization_candidates_filepath,
-    #                                 wv_corpus_filepath,
-    #                                 wv_model_filepath,
-    #                                 canonicalization_nlp_model_config,
-    #                                 annotation_config)
-    #
-    # # build bigram, spell, prefix, hyphen and ampersand canonicalization
-    # build_canonicalization(spark,
-    #                        canonicalization_unigram_filepath,
-    #                        canonicalization_bigram_filepath,
-    #                        canonicalization_trigram_filepath,
-    #                        bigram_canonicalization_candidates_filepath,
-    #                        spell_canonicalization_candidates_filepath,
-    #                        bigram_canonicalization_filepath,
-    #                        spell_canonicalization_filepath,
-    #                        canonicalization_filepath,
-    #                        wv_model_filepath,
-    #                        annotation_config)
-    #
-    # # build annotation with normalizer
-    # build_annotation(input_sdf,
-    #                  domain_dir,
-    #                  annotation_config["annotation_folder"],
-    #                  nlp_model_config)
-    #
-    # # load annotation
-    # annotation_sdf = load_annotation(spark,
-    #                                  annotation_dir,
-    #                                  annotation_config["drop_non_english"])
-    #
-    # # extract unigram, bigram, trigram, phrase, entity and umls_concept
-    # build_extraction(annotation_sdf,
-    #                  unigram_filepath,
-    #                  bigram_filepath,
-    #                  trigram_filepath,
-    #                  phrase_filepath,
-    #                  entity_filepath,
-    #                  umls_concept_filepath,
-    #                  annotation_config)
+    # load input data
+    input_sdf = load_input(spark,
+                           input_filepath,
+                           input_dir,
+                           annotation_config)
+
+    # build canonicalization annotation
+    build_annotation(input_sdf,
+                     canonicalization_dir,
+                     annotation_config["canonicalization_annotation_folder"],
+                     canonicalization_nlp_model_config)
+
+    # load canonicalization annotation
+    canonicalization_annotation_sdf = load_annotation(spark,
+                                                      canonicalization_annotation_dir,
+                                                      annotation_config["drop_non_english"])
+
+    # extract canonicalization unigram, bigram and trigram and build bigram & spell canonicalization candidates
+    build_extraction_and_canonicalization_candidates(canonicalization_annotation_sdf,
+                                                     canonicalization_unigram_filepath,
+                                                     canonicalization_bigram_filepath,
+                                                     canonicalization_trigram_filepath,
+                                                     bigram_canonicalization_candidates_filepath,
+                                                     spell_canonicalization_candidates_filepath,
+                                                     annotation_config)
+
+    # build canonicalization word vector
+    build_canonicalization_word2vec(canonicalization_annotation_sdf,
+                                    bigram_canonicalization_candidates_filepath,
+                                    wv_corpus_filepath,
+                                    wv_model_filepath,
+                                    canonicalization_nlp_model_config,
+                                    annotation_config)
+
+    # build bigram, spell, prefix, hyphen and ampersand canonicalization
+    build_canonicalization(spark,
+                           canonicalization_unigram_filepath,
+                           canonicalization_bigram_filepath,
+                           canonicalization_trigram_filepath,
+                           bigram_canonicalization_candidates_filepath,
+                           spell_canonicalization_candidates_filepath,
+                           bigram_canonicalization_filepath,
+                           spell_canonicalization_filepath,
+                           canonicalization_filepath,
+                           wv_model_filepath,
+                           annotation_config)
+
+    # build annotation with normalizer
+    build_annotation(input_sdf,
+                     domain_dir,
+                     annotation_config["annotation_folder"],
+                     nlp_model_config)
+
+    # load annotation
+    annotation_sdf = load_annotation(spark,
+                                     annotation_dir,
+                                     annotation_config["drop_non_english"])
+
+    # extract unigram, bigram, trigram, phrase, entity and umls_concept
+    build_extraction(annotation_sdf,
+                     unigram_filepath,
+                     bigram_filepath,
+                     trigram_filepath,
+                     phrase_filepath,
+                     entity_filepath,
+                     umls_concept_filepath,
+                     annotation_config)
 
     # filter phrase
     filter_extraction(unigram_filepath,

@@ -122,10 +122,10 @@ def main(spark: SparkSession, absa_config_filepath: str):
 
     annotation_sdf = load_annotation(spark, annotation_dir, absa_config["drop_non_english"])
 
-    # extract_aspect_and_opinion(annotation_sdf,
-    #                            aspect_candidates_filepath,
-    #                            opinion_candidates_filepath,
-    #                            absa_config)
+    extract_aspect_and_opinion(annotation_sdf,
+                               aspect_candidates_filepath,
+                               opinion_candidates_filepath,
+                               absa_config)
 
     rank_aspect_and_opinion(aspect_candidates_filepath,
                             opinion_candidates_filepath,

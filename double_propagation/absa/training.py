@@ -6,7 +6,7 @@ from double_propagation.absa.enumerations import Polarity, RuleType
 from double_propagation.absa.extraction_rules import rule_O_O, rule_O_X_O, rule_O_A, rule_O_X_A, rule_A_A, rule_A_O, \
     rule_A_X_O, rule_A_X_A
 from double_propagation.absa.data_types import RelationTerm, Relation, AspectTerm, candidates_schema
-from double_propagation.absa_utils.extractor_util import load_absa_stop_words, load_absa_seed_opinions, norm_pos, \
+from double_propagation.absa_utils.training_util import load_absa_stop_words, load_absa_seed_opinions, norm_pos, \
     VALID_OPINION_REX, VALID_ASPECT_REX, get_sentence_sentiment
 import pandas as pd
 from pyspark.sql import DataFrame

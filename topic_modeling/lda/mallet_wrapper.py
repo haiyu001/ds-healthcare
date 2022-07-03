@@ -55,6 +55,34 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
             prefix = os.path.join(tempfile.gettempdir(), rand_prefix)
         self.prefix = prefix
 
+    def __getitem__(self,
+                    bow: Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]],
+                    iterations: int = 100) -> Union[List[Tuple[int, float]], List[List[Tuple[int, float]]]]:
+        """
+        Get vector for document(s).
+        :param bow: list of (int, int) if document OR list of list of (int, int) if corpus in BoW format
+        :param iterations: number of iterations that will be used for inferring
+        :return: list of (int, float) - LDA vector for document as sequence of (topic_id, topic_probability) OR
+                 list of list of (int, float) - LDA vectors for corpus in same format
+        """
+        is_corpus, corpus = utils.is_corpus(bow)
+        if not is_corpus:
+            # query is a single document => make a corpus out of it
+            bow = [bow]
+
+        self.convert_input(bow, infer=True)
+        cmd = \
+            self.mallet_path + " infer-topics --input %s --inferencer %s " \
+                               "--output-doc-topics %s --num-iterations %s --doc-topics-threshold %s --random-seed %s"
+        cmd = cmd % (
+            self.get_corpusmallet_filepath() + ".infer", self.get_inferencer_filepath(),
+            self.get_doctopics_filepath() + ".infer", iterations, self.topic_threshold, str(self.random_seed)
+        )
+        logging.info("inferring topics with MALLET LDA '%s'", cmd)
+        check_output(args=cmd, shell=True)
+        result = list(self.read_doctopics(self.get_doctopics_filepath() + ".infer"))
+        return result if is_corpus else result[0]
+
     def get_inferencer_filepath(self) -> str:
         """Get path to inferencer.mallet file."""
         return self.prefix + "inferencer.mallet"
@@ -129,34 +157,6 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         self.word_topics = self.load_word_topics()
         self.wordtopics = self.word_topics
 
-    def __getitem__(self,
-                    bow: Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]],
-                    iterations: int = 100) -> Union[List[Tuple[int, float]], List[List[Tuple[int, float]]]]:
-        """
-        Get vector for document(s).
-        :param bow: list of (int, int) if document OR list of list of (int, int) if corpus in BoW format
-        :param iterations: number of iterations that will be used for inferring
-        :return: list of (int, float) - LDA vector for document as sequence of (topic_id, topic_probability) OR
-                 list of list of (int, float) - LDA vectors for corpus in same format
-        """
-        is_corpus, corpus = utils.is_corpus(bow)
-        if not is_corpus:
-            # query is a single document => make a corpus out of it
-            bow = [bow]
-
-        self.convert_input(bow, infer=True)
-        cmd = \
-            self.mallet_path + " infer-topics --input %s --inferencer %s " \
-                               "--output-doc-topics %s --num-iterations %s --doc-topics-threshold %s --random-seed %s"
-        cmd = cmd % (
-            self.get_corpusmallet_filepath() + ".infer", self.get_inferencer_filepath(),
-            self.get_doctopics_filepath() + ".infer", iterations, self.topic_threshold, str(self.random_seed)
-        )
-        logging.info("inferring topics with MALLET LDA '%s'", cmd)
-        check_output(args=cmd, shell=True)
-        result = list(self.read_doctopics(self.get_doctopics_filepath() + ".infer"))
-        return result if is_corpus else result[0]
-
     def load_word_topics(self) -> np.ndarray:
         """Load words X topics matrix from `get_state_filepath` file."""
         logging.info("loading assigned topics from %s", self.get_state_filepath())
@@ -184,6 +184,22 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         """Get topics X words matrix."""
         topics = self.word_topics
         return topics / topics.sum(axis=1)[:, None]
+
+    def show_topic(self, topicid: int, topn: int = 10) -> List[Tuple[str, float]]:
+        """
+        Get `num_words` most probable words for the given `topicid`.
+        :param topicid: id of topic
+        :param topn: top number of topics that you"ll receive.
+        :return: list of (str, float) -
+                 sequence of probable words, as a list of `(word, word_probability)` for `topicid` topic.
+        """
+        if self.word_topics is None:
+            logging.warning("Run train or load_word_topics before showing topics.")
+        topic = self.word_topics[topicid]
+        topic = topic / topic.sum()  # normalize to probability dist
+        bestn = matutils.argsort(topic, topn, reverse=True)
+        beststr = [(self.id2word[idx], topic[idx]) for idx in bestn]
+        return beststr
 
     def show_topics(self, num_topics: int = 10, num_words: int = 10, log: bool = False, formatted: bool = True) -> \
             Union[List[str], List[Tuple[float, int]]]:
@@ -215,22 +231,6 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
             if log:
                 logging.info("topic #%i (%.3f): %s", i, self.alpha[i], topic)
         return shown
-
-    def show_topic(self, topicid: int, topn: int = 10) -> List[Tuple[str, float]]:
-        """
-        Get `num_words` most probable words for the given `topicid`.
-        :param topicid: id of topic
-        :param topn: top number of topics that you"ll receive.
-        :return: list of (str, float) -
-                 sequence of probable words, as a list of `(word, word_probability)` for `topicid` topic.
-        """
-        if self.word_topics is None:
-            logging.warning("Run train or load_word_topics before showing topics.")
-        topic = self.word_topics[topicid]
-        topic = topic / topic.sum()  # normalize to probability dist
-        bestn = matutils.argsort(topic, topn, reverse=True)
-        beststr = [(self.id2word[idx], topic[idx]) for idx in bestn]
-        return beststr
 
     def read_doctopics(self, fname: str, eps: float = 1e-6, renorm: bool = True) -> List[Tuple[int, float]]:
         """

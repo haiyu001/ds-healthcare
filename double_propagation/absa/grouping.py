@@ -1,6 +1,6 @@
 from typing import Dict
 from double_propagation.absa.enumerations import Polarity
-from double_propagation.absa_utils.extractor_util import load_absa_seed_opinions
+from double_propagation.absa_utils.training_util import load_absa_seed_opinions
 from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
 from utils.general_util import save_pdf, dump_json_file
 from word_vector.wv_corpus import build_wv_corpus_by_annotation
