@@ -1,12 +1,13 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from annotation.components.annotator import load_annotation
 from annotation.annotation_utils.corpus_util import is_valid_token, pudf_get_corpus_line
 from utils.config_util import read_config_to_dict
-from utils.general_util import make_dir, dump_json_file, get_repo_dir, dump_pickle_file
+from utils.general_util import make_dir, dump_json_file, get_repo_dir, dump_pickle_file, load_pickle_file
 from utils.resource_util import get_data_filepath
 from utils.spark_util import get_spark_session, get_spark_master_config, write_sdf_to_file, add_repo_pyfile
 from pyspark.sql import DataFrame, Column
 from pyspark.sql.types import StringType
+from scipy.sparse import csc_matrix
 from gensim import corpora, matutils
 import pyspark.sql.functions as F
 import pandas as pd
@@ -108,8 +109,8 @@ def build_lda_corpus_by_annotation(annotation_sdf: DataFrame,
 
 
 def build_mallet_corpus(corpus_filepath: str,
-                        mallet_id2word_filepath: str,
                         mallet_docs_filepath: str,
+                        mallet_id2word_filepath: str,
                         mallet_corpus_filepath: str,
                         mallet_corpus_csc_filepath: str,
                         mallet_vocab_filepath: str):
@@ -126,6 +127,18 @@ def build_mallet_corpus(corpus_filepath: str,
     dump_json_file(mellet_vocab, mallet_vocab_filepath)
 
 
+def load_mallet_corpus(mallet_docs_filepath: str,
+                       mallet_id2word_filepath: str,
+                       mallet_corpus_filepath: str,
+                       mallet_corpus_csc_filepath: str) -> \
+        Tuple[List[List[str]], corpora.Dictionary, List[List[Tuple[int, int]]], csc_matrix]:
+    mallet_docs = load_pickle_file(mallet_docs_filepath)
+    mallet_id2word = corpora.Dictionary.load(mallet_id2word_filepath)
+    mallet_corpus = load_pickle_file(mallet_corpus_filepath)
+    mallet_corpus_csc = scipy.sparse.load_npz(mallet_corpus_csc_filepath)
+    return mallet_docs, mallet_id2word, mallet_corpus, mallet_corpus_csc
+
+
 if __name__ == "__main__":
     lda_config_filepath = os.path.join(get_repo_dir(), "topic_modeling/pipelines/conf/lda_template.cfg")
     lda_config = read_config_to_dict(lda_config_filepath)
@@ -140,8 +153,8 @@ if __name__ == "__main__":
     corpus_word_to_lemma_filepath = os.path.join(corpus_dir, lda_config["corpus_word_to_lemma_filename"])
     corpus_noun_phrase_match_filepath = os.path.join(corpus_dir, lda_config["corpus_noun_phrase_match_filename"])
     corpus_filepath = os.path.join(corpus_dir, lda_config["corpus_filename"])
-    mallet_id2word_filepath = os.path.join(corpus_dir, lda_config["mallet_id2word_filename"])
     mallet_docs_filepath = os.path.join(corpus_dir, lda_config["mallet_docs_filename"])
+    mallet_id2word_filepath = os.path.join(corpus_dir, lda_config["mallet_id2word_filename"])
     mallet_corpus_filepath = os.path.join(corpus_dir, lda_config["mallet_corpus_filename"])
     mallet_corpus_csc_filepath = os.path.join(corpus_dir, lda_config["mallet_corpus_csc_filename"])
     mallet_vocab_filepath = os.path.join(corpus_dir, lda_config["mallet_vocab_filename"])
@@ -173,8 +186,15 @@ if __name__ == "__main__":
                                    lda_config["metadata_fields_to_keep"])
 
     build_mallet_corpus(corpus_filepath,
-                        mallet_id2word_filepath,
                         mallet_docs_filepath,
+                        mallet_id2word_filepath,
                         mallet_corpus_filepath,
                         mallet_corpus_csc_filepath,
                         mallet_vocab_filepath)
+
+    mallet_docs, mallet_id2word, mallet_corpus, mallet_corpus_csc = load_mallet_corpus(mallet_docs_filepath,
+                                                                                       mallet_id2word_filepath,
+                                                                                       mallet_corpus_filepath,
+                                                                                       mallet_corpus_csc_filepath)
+
+
