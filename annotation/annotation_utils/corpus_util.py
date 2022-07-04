@@ -14,13 +14,12 @@ import pandas as pd
 def pudf_get_corpus_line(text_iter: Column,
                          lang: str,
                          spacy_package: str,
-                         ngram_match_dict: Optional[Dict[str, str]] = None,
-                         match_lowercase: bool = True) -> Column:
+                         ngram_match_dict: Optional[Dict[str, str]] = None) -> Column:
     def get_corpus_line(text_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
         nlp = load_blank_nlp(lang, spacy_package, whitespace_tokenizer=True)
         ngram_matcher = None
         if ngram_match_dict is not None:
-            ngram_matcher = get_ngram_matcher(nlp, list(ngram_match_dict.keys()), match_lowercase)
+            ngram_matcher = get_ngram_matcher(nlp, list(ngram_match_dict.keys()))
         for text in text_iter:
             doc = text.apply(nlp)
             if ngram_matcher is not None:
@@ -59,9 +58,8 @@ def match_ngram(doc: Doc, ngram_matcher):
     return doc
 
 
-def get_ngram_matcher(nlp: Language, ngrams: List[str], match_lowercase: bool = True):
+def get_ngram_matcher(nlp: Language, ngrams: List[str]):
     ngram_matcher = PhraseMatcher(nlp.vocab)
-    ngrams = [ngram.lower() for ngram in ngrams] if match_lowercase else ngrams
     ngrams_docs = list(nlp.tokenizer.pipe(ngrams))
     ngram_matcher.add("ngram_match", ngrams_docs)
     return ngram_matcher

@@ -19,12 +19,9 @@ def udf_get_doc_text_by_token_lemmas(tokens: Column, word_to_lemma: Dict[str, st
         doc_token_lemmas = []
         for token in doc_tokens:
             token_text = token.text
-            if to_lower:
-                token_text = token_text.lower()
             if token_text in word_to_lemma:
-                token_lemma = word_to_lemma[token_text].strip(string.punctuation)
-                if is_valid_token(token_lemma):
-                    doc_token_lemmas.append(token_lemma)
+                token_lemma = word_to_lemma[token_text].lower() if to_lower else word_to_lemma[token_text]
+                doc_token_lemmas.append(token_lemma)
         return " ".join(doc_token_lemmas)
 
     return F.udf(get_doc_lemmas, StringType())(tokens)
@@ -52,6 +49,8 @@ def get_corpus_word_to_lemma(filter_unigram_filepath: str,
     filter_unigram_pdf["top_three_pos"] = filter_unigram_pdf["top_three_pos"].apply(json.loads)
     filter_unigram_pdf = filter_unigram_pdf[filter_unigram_pdf["top_three_pos"].apply(
         lambda x: any(i in corpus_word_pos_candidates for i in x))]
+    filter_unigram_pdf["lemma"] = \
+        filter_unigram_pdf[filter_unigram_pdf["lemma"].str.strip(string.punctuation)]
     filter_unigram_pdf = filter_unigram_pdf.groupby("lemma").agg({"word": pd.Series.tolist, "count": sum}).reset_index()
     filter_unigram_pdf = filter_unigram_pdf.sort_values(by="count", ascending=False)
     filter_unigram_pdf = filter_unigram_pdf.head(corpus_vocab_size)
@@ -65,12 +64,15 @@ def get_corpus_word_to_lemma(filter_unigram_filepath: str,
     return corpus_word_to_lemma
 
 
-def get_corpus_noun_phrase_match(filter_phrase_filepath: str,
-                                 corpus_noun_phrase_match_filepath: str,
-                                 corpus_phrase_filter_min_count: int) -> Dict[str, str]:
+def get_corpus_noun_phrase_match_dict(filter_phrase_filepath: str,
+                                      corpus_noun_phrase_match_filepath: str,
+                                      corpus_phrase_filter_min_count: int,
+                                      match_lowercase: bool = True) -> Dict[str, str]:
     filer_phrase_df = pd.read_csv(filter_phrase_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     filer_phrase_df = filer_phrase_df[filer_phrase_df["count"] >= corpus_phrase_filter_min_count]
-    phrase_lemmas = filer_phrase_df["lemma"].str.lower().tolist()
+    if match_lowercase:
+        filer_phrase_df["lemma"] = filer_phrase_df["lemma"].str.lower()
+    phrase_lemmas = filer_phrase_df["lemma"].tolist()
     noun_phrase_match_dict = {phrase_lemma: "_".join(phrase_lemma.split()) for phrase_lemma in phrase_lemmas}
     dump_json_file(noun_phrase_match_dict, corpus_noun_phrase_match_filepath)
     return noun_phrase_match_dict
@@ -96,9 +98,9 @@ def build_lda_corpus_by_annotation(annotation_sdf: DataFrame,
                                    metadata_fields_to_keep: Optional[str] = None):
     corpus_sdf = annotation_sdf.select(
         F.col("_").metadata.alias("metadata"),
-        udf_get_doc_text_by_token_lemmas(F.col("tokens"), word_to_lemma, match_lowercase).alias("text"))
-    corpus_sdf = corpus_sdf.withColumn("corpus_line", pudf_get_corpus_line(F.col("text"), lang, spacy_package,
-                                                                           ngram_match_dict, match_lowercase))
+        udf_get_doc_text_by_token_lemmas(F.col("tokens"), word_to_lemma).alias("text"), match_lowercase)
+    corpus_sdf = corpus_sdf.withColumn("corpus_line",
+                                       pudf_get_corpus_line(F.col("text"), lang, spacy_package, ngram_match_dict))
     corpus_sdf = corpus_sdf.select(udf_get_corpus_line_with_metadata(F.col("metadata"),
                                                                      F.col("corpus_line"),
                                                                      metadata_fields_to_keep))

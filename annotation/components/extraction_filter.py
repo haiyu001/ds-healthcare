@@ -45,7 +45,7 @@ def filter_unigram(unigram_filepath: str,
 
     unigram_pdf = unigram_pdf[unigram_pdf["count"] >= unigram_filter_min_count]
     unigram_pdf = unigram_pdf[unigram_pdf["pos"].isin(["NOUN", "PROPN", "ADJ", "ADV", "VERB"])]
-    unigram_pdf["check"] = unigram_pdf["word"].str.strip(string.punctuation)
+    unigram_pdf["check"] = unigram_pdf["word"].str.lower().str.strip(string.punctuation)
     unigram_pdf = unigram_pdf[unigram_pdf["check"].str.match(r"^[a-z0-9][a-z0-9&_-]+$")]
     unigram_pdf = unigram_pdf[unigram_pdf["check"].apply(lambda x: is_valid_token(x))]
     unigram_pdf = unigram_pdf[~(unigram_pdf["check"].isin(stop_words))]

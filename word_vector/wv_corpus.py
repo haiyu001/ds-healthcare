@@ -33,6 +33,5 @@ def build_wv_corpus_by_annotation(annotation_sdf: DataFrame,
     corpus_sdf = text_sdf.select(pudf_get_corpus_line(F.col("text"),
                                                       lang,
                                                       spacy_package,
-                                                      ngram_match_dict,
-                                                      match_lowercase))
+                                                      ngram_match_dict))
     write_sdf_to_file(corpus_sdf, corpus_filepath, num_partitions)

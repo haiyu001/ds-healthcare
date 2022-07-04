@@ -1,6 +1,6 @@
 from typing import Dict, Any, Tuple, Optional
 from annotation.components.annotator import load_annotation
-from topic_modeling.lda.corpus import get_corpus_word_to_lemma, get_corpus_noun_phrase_match, \
+from topic_modeling.lda.corpus import get_corpus_word_to_lemma, get_corpus_noun_phrase_match_dict, \
     build_lda_corpus_by_annotation, save_mallet_corpus
 from utils.config_util import read_config_to_dict
 from utils.general_util import setup_logger, make_dir
@@ -22,9 +22,10 @@ def build_corpus_creation_input(filter_unigram_filepath: str,
                                              corpus_word_to_lemma_filepath,
                                              lda_config["corpus_vocab_size"],
                                              lda_config["corpus_word_pos_candidates"])
-    noun_phrase_match_dict = get_corpus_noun_phrase_match(filter_phrase_filepath,
-                                                          corpus_noun_phrase_match_filepath,
-                                                          lda_config["corpus_phrase_filter_min_count"])
+    noun_phrase_match_dict = get_corpus_noun_phrase_match_dict(filter_phrase_filepath,
+                                                               corpus_noun_phrase_match_filepath,
+                                                               lda_config["corpus_phrase_filter_min_count"],
+                                                               lda_config["corpus_match_lowercase"])
     return word_to_lemma, noun_phrase_match_dict
 
 
