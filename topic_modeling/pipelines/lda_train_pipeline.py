@@ -39,6 +39,7 @@ def train_mallet_lda_models(mallet_docs_filepath: str,
                                f"nun_topics-{num_topics}_lda"
                 model_dir = make_dir(os.path.join(models_dir, model_folder))
                 mallet_model_filename = f"mallet_{iterations}-{optimize_interval}-{topic_alpha}-{num_topics}_lda"
+
                 mallet_model_filepath = os.path.join(model_dir, mallet_model_filename)
                 if not os.path.exists(mallet_model_filepath):
                     train_mallet_lda_model(mallet_docs,
@@ -53,7 +54,7 @@ def train_mallet_lda_models(mallet_docs_filepath: str,
                                            models_coherence_filepath)
 
                 lda_vis_html_filepath = f"{mallet_model_filepath}_vis.html"
-                if build_lda_vis and not os.path.exists(lda_vis_html_filepath):
+                if not os.path.exists(lda_vis_html_filepath) and build_lda_vis:
                     save_lda_vis(mallet_model_filepath,
                                  lda_vis_html_filepath,
                                  mallet_corpus_csc,
