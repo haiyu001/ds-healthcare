@@ -8,9 +8,6 @@ from io import TextIOWrapper
 from itertools import chain
 import numpy as np
 import logging
-import tempfile
-import random
-import os
 
 
 class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
@@ -18,20 +15,20 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
                  mallet_path: str,
                  corpus: List[List[Tuple[int, int]]],
                  id2word: Dictionary,
-                 num_topics: int = 100,
-                 alpha: float = 50.0,
                  workers: int = 8,
-                 optimize_interval: int = 0,
                  iterations: int = 1000,
+                 optimize_interval: int = 0,
+                 num_topics: int = 100,
+                 topic_alpha: float = 0.5,
+                 prefix: Optional[str] = None,
                  topic_threshold: float = 0.0,
-                 random_seed: int = 0,
-                 prefix: Optional[str] = None):
+                 random_seed: int = 0):
         """
         :param mallet_path: path to the mallet binary, e.g. `/home/username/mallet-2.0.8/bin/mallet`
         :param corpus: Collection of texts in BoW format
         :param id2word: Mapping between tokens ids and words from corpus
         :param num_topics: number of topics
-        :param alpha: alpha parameter of LDA
+        :param alpha_sum: alpha parameter of LDA
         :param workers: number of threads that will be used for training
         :param optimize_interval: optimize hyperparameters every `optimize_interval` iterations
         :param iterations: number of training iterations
@@ -40,20 +37,20 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         :param prefix: prefix for produced temporary files
         """
         self.mallet_path = mallet_path
-        self.corpus = corpus
         self.id2word = id2word
         self.vocab_size = 1 + max(self.id2word.keys())
-        self.num_topics = num_topics
-        self.alpha = alpha
         self.workers = workers
-        self.optimize_interval = optimize_interval
         self.iterations = iterations
+        self.optimize_interval = optimize_interval
+        self.num_topics = num_topics
+        self.topic_alpha = topic_alpha
+        self.alpha = topic_alpha * num_topics
         self.topic_threshold = topic_threshold
         self.random_seed = random_seed
-        if prefix is None:
-            rand_prefix = hex(random.randint(0, 0xffffff))[2:] + "_"
-            prefix = os.path.join(tempfile.gettempdir(), rand_prefix)
         self.prefix = prefix
+        self.num_terms = max(self.id2word.keys()) + 1
+        if corpus is not None:
+            self.train(corpus)
 
     def get_state_filepath(self) -> str:
         """Get path to temporary file."""
@@ -260,6 +257,10 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
                     if total_weight:
                         doc = [(id_, float(weight) / total_weight) for id_, weight in doc]
                 yield doc
+
+    def load_document_topics(self) -> List[Tuple[int, float]]:
+        """Shortcut for `LdaMallet.read_doctopics`."""
+        return self.read_doctopics(self.get_doctopics_filepath())
 
     @classmethod
     def load(cls, *args, **kwargs):

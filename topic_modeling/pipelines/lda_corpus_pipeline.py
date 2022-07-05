@@ -76,24 +76,13 @@ def main(spark: SparkSession, lda_config_filepath: str):
     mallet_corpus_csc_filepath = os.path.join(corpus_dir, lda_config["mallet_corpus_csc_filename"])
     mallet_vocab_filepath = os.path.join(corpus_dir, lda_config["mallet_vocab_filename"])
 
+    annotation_sdf = load_annotation(spark, annotation_dir, lda_config["drop_non_english"])
+
     word_to_lemma, noun_phrase_match_dict = build_corpus_creation_input(filter_unigram_filepath,
                                                                         corpus_word_to_lemma_filepath,
                                                                         filter_phrase_filepath,
                                                                         corpus_noun_phrase_match_filepath,
                                                                         lda_config)
-
-    annotation_sdf = load_annotation(spark, annotation_dir, lda_config["drop_non_english"])
-
-    build_lda_corpus_by_annotation(annotation_sdf,
-                                   lda_config["lang"],
-                                   lda_config["spacy_package"],
-                                   corpus_filepath,
-                                   word_to_lemma,
-                                   noun_phrase_match_dict,
-                                   lda_config["corpus_match_lowercase"],
-                                   lda_config["num_partitions"],
-                                   lda_config["metadata_fields_to_keep"])
-
     build_mallet_corpus(annotation_sdf,
                         word_to_lemma,
                         noun_phrase_match_dict,

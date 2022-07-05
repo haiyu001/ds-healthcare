@@ -42,14 +42,17 @@ def split_filepath(filepath: str) -> Tuple[str]:
 def save_pdf(pdf: pd.DataFrame,
              save_filepath: str,
              rename_columns: Optional[Dict] = None,
+             csv_header: bool = True,
              csv_index: bool = False,
              csv_index_label: Optional[str] = None,
-             csv_quoting: int = csv.QUOTE_MINIMAL):
+             csv_quoting: int = csv.QUOTE_MINIMAL,
+             csv_mode: str = "w"):
     if rename_columns is not None:
         pdf.columns = [rename_columns.get(i, i) for i in pdf.columns]
     file_format = Path(save_filepath).suffix[1:] if save_filepath else None
     if file_format == "csv":
-        pdf.to_csv(save_filepath, index=csv_index, index_label=csv_index_label, quoting=csv_quoting)
+        pdf.to_csv(save_filepath, header=csv_header, index=csv_index,
+                   index_label=csv_index_label, quoting=csv_quoting, mode=csv_mode)
     elif file_format == "json":
         pdf.to_json(save_filepath, orient="records", lines=True, force_ascii=False)
     elif file_format is not None:

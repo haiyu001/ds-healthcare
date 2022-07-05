@@ -1,5 +1,5 @@
 from typing import Dict, Optional, List, Tuple
-from annotation.annotation_utils.corpus_util import is_valid_token, pudf_get_corpus_line
+from annotation.annotation_utils.corpus_util import pudf_get_corpus_line
 from utils.general_util import dump_json_file, dump_pickle_file, load_pickle_file
 from utils.spark_util import write_sdf_to_file
 from pyspark.sql import DataFrame, Column
@@ -49,8 +49,7 @@ def get_corpus_word_to_lemma(filter_unigram_filepath: str,
     filter_unigram_pdf["top_three_pos"] = filter_unigram_pdf["top_three_pos"].apply(json.loads)
     filter_unigram_pdf = filter_unigram_pdf[filter_unigram_pdf["top_three_pos"].apply(
         lambda x: any(i in corpus_word_pos_candidates for i in x))]
-    filter_unigram_pdf["lemma"] = \
-        filter_unigram_pdf[filter_unigram_pdf["lemma"].str.strip(string.punctuation)]
+    filter_unigram_pdf["lemma"] = filter_unigram_pdf["lemma"].str.strip(string.punctuation)
     filter_unigram_pdf = filter_unigram_pdf.groupby("lemma").agg({"word": pd.Series.tolist, "count": sum}).reset_index()
     filter_unigram_pdf = filter_unigram_pdf.sort_values(by="count", ascending=False)
     filter_unigram_pdf = filter_unigram_pdf.head(corpus_vocab_size)
@@ -98,7 +97,7 @@ def build_lda_corpus_by_annotation(annotation_sdf: DataFrame,
                                    metadata_fields_to_keep: Optional[str] = None):
     corpus_sdf = annotation_sdf.select(
         F.col("_").metadata.alias("metadata"),
-        udf_get_doc_text_by_token_lemmas(F.col("tokens"), word_to_lemma).alias("text"), match_lowercase)
+        udf_get_doc_text_by_token_lemmas(F.col("tokens"), word_to_lemma, match_lowercase).alias("text"))
     corpus_sdf = corpus_sdf.withColumn("corpus_line",
                                        pudf_get_corpus_line(F.col("text"), lang, spacy_package, ngram_match_dict))
     corpus_sdf = corpus_sdf.select(udf_get_corpus_line_with_metadata(F.col("metadata"),
