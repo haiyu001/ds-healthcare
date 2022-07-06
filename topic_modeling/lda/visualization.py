@@ -116,9 +116,11 @@ def save_lda_vis_stats(lda_vis_dict: Dict[str, Any],
     save_pdf(lda_vis_pdf, lda_vis_topics_filepath)
 
 
-def save_lda_vis(mallet_model_filepath: str,
+def save_lda_vis(mallet_corpus_csc: csc_matrix,
+                 mallet_model_filepath: str,
                  lda_vis_html_filepath: str,
-                 mallet_corpus_csc: csc_matrix,
+                 lda_vis_lambdas_filepath: str,
+                 lda_vis_topics_filepath: str,
                  num_terms_to_display: int = 30,
                  lambda_step: float = 0.01,
                  sort_topics: bool = True,
@@ -148,8 +150,6 @@ def save_lda_vis(mallet_model_filepath: str,
                                     merge_id_to_y_coor)
     pyLDAvis.save_html(lda_vis_data, lda_vis_html_filepath)
 
-    lda_vis_lambdas_filepath = f"{lda_vis_html_filepath.rsplit('.', 1)[0]}_lambdas.csv"
-    lda_vis_topics_filepath = f"{lda_vis_html_filepath.rsplit('.', 1)[0]}_topics.csv"
     save_lda_vis_stats(lda_vis_data.to_dict(),
                        merge_id_to_topics,
                        lda_vis_lambdas_filepath,

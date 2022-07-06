@@ -263,15 +263,22 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         return self.read_doctopics(self.get_doctopics_filepath())
 
     @classmethod
-    def load(cls, *args, **kwargs):
+    def load(cls, model_filepath: str) -> LdaModel:
         """
         Load a previously saved LdaMallet class. Handles backwards compatibility from
         older LdaMallet versions which did not use random_seed parameter.
         """
-        model = super().load(*args, **kwargs)
+        model = super().load(model_filepath)
         if not hasattr(model, "random_seed"):
             model.random_seed = 0
         return model
+
+    @classmethod
+    def update_prefix(cls, model_filepath: str, prefix: str):
+        model = cls.load(model_filepath)
+        if model.prefix != prefix:
+            model.prefix = prefix
+        model.save(model_filepath)
 
 
 def malletmodel2ldamodel(mallet_model: LdaMallet, gamma_threshold: float = 0.001, iterations: int = 50) -> LdaModel:
