@@ -77,12 +77,12 @@ def get_corpus_noun_phrase_match_dict(filter_phrase_filepath: str,
     return noun_phrase_match_dict
 
 
-def load_docs_from_corpus(corpus_filepath: str) -> List[List[str]]:
+def load_docs_from_corpus(corpus_filepath: str, corpus_doc_id_col: str) -> List[Tuple[str, List[str]]]:
     docs = []
     with open(corpus_filepath, "r") as input:
         for line in input:
             line_data = json.loads(line)
-            docs.append(line_data["corpus_line"].split())
+            docs.append((line_data[corpus_doc_id_col], line_data["corpus_line"].split()))
     return docs
 
 
@@ -106,16 +106,19 @@ def build_lda_corpus_by_annotation(annotation_sdf: DataFrame,
     write_sdf_to_file(corpus_sdf, corpus_filepath, num_partitions)
 
 
-def save_mallet_corpus(corpus_filepath: str,
+def save_mallet_corpus(corpus_doc_id_col: str,
+                       corpus_filepath: str,
                        mallet_docs_filepath: str,
                        mallet_id2word_filepath: str,
                        mallet_corpus_filepath: str,
                        mallet_corpus_csc_filepath: str,
                        mallet_vocab_filepath: str):
-    mallet_docs = load_docs_from_corpus(corpus_filepath)
+    mallet_docs_with_id = load_docs_from_corpus(corpus_filepath, corpus_doc_id_col)
+    mallet_docs = [doc for doc_id, doc in mallet_docs_with_id]
     mallet_id2word = corpora.Dictionary(mallet_docs)
-    mallet_corpus = [mallet_id2word.doc2bow(doc) for doc in mallet_docs]  # list of list of (vocab_id, count)
-    mallet_corpus_csc = matutils.corpus2csc(mallet_corpus)
+    # mallet_corpus: List[Tuple["doc_id", List[Tuple["term_vocab_id", "term_count"]]]]
+    mallet_corpus = [(doc_id, mallet_id2word.doc2bow(doc)) for doc_id, doc in mallet_docs_with_id]
+    mallet_corpus_csc = matutils.corpus2csc([bow for doc_id, bow in mallet_corpus])
     mallet_vocab = {mallet_id2word.get(i): i for i in mallet_id2word}
 
     dump_pickle_file(mallet_docs, mallet_docs_filepath)
@@ -133,7 +136,7 @@ def load_mallet_corpus(mallet_docs_filepath: str,
                        mallet_id2word_filepath: str,
                        mallet_corpus_filepath: str,
                        mallet_corpus_csc_filepath: str) -> \
-        Tuple[List[List[str]], corpora.Dictionary, List[List[Tuple[int, int]]], csc_matrix]:
+        Tuple[List[List[str]], corpora.Dictionary, List[Tuple[str, List[Tuple[int, int]]]], csc_matrix]:
     mallet_docs = load_pickle_file(mallet_docs_filepath)
     mallet_id2word = corpora.Dictionary.load(mallet_id2word_filepath)
     mallet_corpus = load_pickle_file(mallet_corpus_filepath)

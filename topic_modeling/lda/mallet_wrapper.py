@@ -13,7 +13,7 @@ import logging
 class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
     def __init__(self,
                  mallet_path: str,
-                 corpus: List[List[Tuple[int, int]]],
+                 corpus: List[Tuple[str, List[Tuple[int, int]]]],
                  id2word: Dictionary,
                  workers: int = 8,
                  iterations: int = 1000,
@@ -25,7 +25,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
                  random_seed: int = 0):
         """
         :param mallet_path: path to the mallet binary, e.g. `/home/username/mallet-2.0.8/bin/mallet`
-        :param corpus: Collection of texts in BoW format
+        :param corpus: Collection of doc id and texts in BoW format
         :param id2word: Mapping between tokens ids and words from corpus
         :param num_topics: number of topics
         :param alpha_sum: alpha parameter of LDA
@@ -105,12 +105,12 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         result = list(self.read_doctopics(self.get_doctopics_filepath() + ".infer"))
         return result if is_corpus else result[0]
 
-    def corpus2mallet(self, corpus: List[List[Tuple[int, int]]], file_like: TextIOWrapper):
+    def corpus2mallet(self, corpus: List[Tuple[str, List[Tuple[int, int]]]], file_like: TextIOWrapper):
         """
         Convert `corpus` to Mallet format and write it to `file_like` descriptor.
         Mallet Format : document id[SPACE]label (not used)[SPACE]whitespace delimited utf8-encoded tokens[NEWLINE]
         """
-        for doc_id, doc in enumerate(corpus):
+        for doc_id, doc in corpus:
             tokens = chain.from_iterable([self.id2word[tokenid]] * int(cnt) for tokenid, cnt in doc)
             file_like.write(utils.to_utf8(f"{doc_id} 0 {' '.join(tokens)}\n"))
 
@@ -134,7 +134,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         logging.info("converting temporary corpus to MALLET format with %s", cmd)
         check_output(args=cmd, shell=True)
 
-    def train(self, corpus: List[List[Tuple[int, int]]]):
+    def train(self, corpus: List[Tuple[str, List[Tuple[int, int]]]]):
         """Train Mallet LDA."""
         self.convert_input(corpus, infer=False)
         cmd = self.mallet_path + \

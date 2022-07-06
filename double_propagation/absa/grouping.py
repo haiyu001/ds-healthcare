@@ -2,12 +2,11 @@ from typing import Dict
 from double_propagation.absa.enumerations import Polarity
 from double_propagation.absa_utils.training_util import load_absa_seed_opinions
 from double_propagation.absa_utils.grouping_util import get_hierarchies_in_csv
+from machine_learning.hierarchical_clustering import get_linkage_matrix
 from utils.general_util import save_pdf, dump_json_file
 from word_vector.wv_corpus import build_wv_corpus_by_annotation
 from word_vector.wv_space import WordVec, load_txt_vecs_to_pdf
-from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
-from scipy.spatial.distance import pdist
-import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import fcluster
 from collections import Counter, OrderedDict
 from pyspark.sql import DataFrame
 import collections
@@ -72,13 +71,12 @@ def save_aspect_grouping(aspect_ranking_filepath: str,
     aspect_ranking_pdf = aspect_ranking_pdf.set_index("vec_text")
 
     aspect_ranking_vecs_pdf = load_txt_vecs_to_pdf(aspect_grouping_vecs_filepath, l2_norm=False)
-    condensed_distance_matrix = pdist(aspect_ranking_vecs_pdf.values, metric="cosine")
-    Z = linkage(condensed_distance_matrix, method="ward", metric="cosine")
 
-    plt.figure(figsize=(25, 15))
-    plt.title("aspect grouping")
-    dendrogram(Z)
-    plt.savefig(aspect_grouping_dendrogram_filepath)
+    Z = get_linkage_matrix(aspect_ranking_vecs_pdf.values,
+                           dendrogram_title="aspect grouping",
+                           dendrogram_filepath=aspect_grouping_dendrogram_filepath,
+                           metric="cosine",
+                           linkage_method="ward")
 
     btm_labels = fcluster(Z, t=aspect_grouping_btm_threshold, criterion="distance")
     aspect_ranking_pdf["btm"] = pd.Series(btm_labels, aspect_ranking_pdf.index)
@@ -159,13 +157,12 @@ def save_opinion_grouping(aspect_ranking_filepath: str,
     seed_opinions = load_absa_seed_opinions().keys()
 
     opinion_grouping_vecs_pdf = load_txt_vecs_to_pdf(opinion_grouping_vecs_filepath)
-    condensed_distance_matrix = pdist(opinion_grouping_vecs_pdf.values, metric="cosine")
-    Z = linkage(condensed_distance_matrix, method="ward", metric="cosine")
 
-    plt.figure(figsize=(25, 15))
-    plt.title("opinion grouping")
-    dendrogram(Z)
-    plt.savefig(opinion_grouping_dendrogram_filepath)
+    Z = get_linkage_matrix(opinion_grouping_vecs_pdf.values,
+                           dendrogram_title="opinion grouping",
+                           dendrogram_filepath=opinion_grouping_dendrogram_filepath,
+                           metric="cosine",
+                           linkage_method="ward")
 
     categories = fcluster(Z, t=grouping_threshold, criterion="distance")
     opinions = opinion_grouping_vecs_pdf.index.tolist()

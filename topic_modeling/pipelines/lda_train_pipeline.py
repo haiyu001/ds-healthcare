@@ -27,6 +27,7 @@ def train_mallet_lda_models(mallet_docs_filepath: str,
     optimize_interval_candidates = [int(i) for i in lda_config["optimize_interval_candidates"].split(",")]
     topic_alpha_candidates = [float(i) for i in lda_config["topic_alpha_candidates"].split(",")]
     num_topics_candidates = [int(i) for i in lda_config["num_topics_candidates"].split(",")]
+
     workers, iterations = lda_config["workers"], lda_config["iterations"]
     for optimize_interval in optimize_interval_candidates:
         for topic_alpha in topic_alpha_candidates:

@@ -50,7 +50,8 @@ def build_mallet_corpus(annotation_sdf: DataFrame,
                                    lda_config["num_partitions"],
                                    lda_config["metadata_fields_to_keep"])
 
-    save_mallet_corpus(corpus_filepath,
+    save_mallet_corpus(lda_config["corpus_doc_id_col"],
+                       corpus_filepath,
                        mallet_docs_filepath,
                        mallet_id2word_filepath,
                        mallet_corpus_filepath,
