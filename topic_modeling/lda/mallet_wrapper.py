@@ -28,7 +28,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         :param corpus: Collection of doc id and texts in BoW format
         :param id2word: Mapping between tokens ids and words from corpus
         :param num_topics: number of topics
-        :param alpha_sum: alpha parameter of LDA
+        :param topic_alpha: alpha parameter of LDA
         :param workers: number of threads that will be used for training
         :param optimize_interval: optimize hyperparameters every `optimize_interval` iterations
         :param iterations: number of training iterations
@@ -92,15 +92,16 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
             bow = [bow]
 
         self.convert_input(bow, infer=True)  # will create corpusmallet infer file - "corpus.mallet.infer"
-        cmd = self.mallet_path + " infer-topics --input %s --inferencer %s " \
-                                 "--output-doc-topics %s --num-iterations %s --doc-topics-threshold %s --random-seed %s"
-        cmd = cmd % (self.get_corpusmallet_filepath() + ".infer",
-                     self.get_inferencer_filepath(),
-                     self.get_doctopics_filepath() + ".infer",
-                     iterations,
-                     self.topic_threshold,
-                     str(self.random_seed))
-        logging.info("inferring topics with MALLET LDA '%s'", cmd)
+
+        cmd = f"{self.mallet_path} infer-topics " \
+              f"--input {self.get_corpusmallet_filepath() + '.infer'} " \
+              f"--inferencer {self.get_inferencer_filepath()} " \
+              f"--output-doc-topics {self.get_doctopics_filepath() + '.infer'} " \
+              f"--num-iterations {iterations} " \
+              f"--doc-topics-threshold {self.topic_threshold} " \
+              f"--random-seed {self.random_seed}"
+
+        logging.info(f"inferring topics with MALLET LDA '{cmd}'")
         check_output(args=cmd, shell=True)
         result = list(self.read_doctopics(self.get_doctopics_filepath() + ".infer"))
         return result if is_corpus else result[0]
@@ -114,41 +115,48 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
             tokens = chain.from_iterable([self.id2word[tokenid]] * int(cnt) for tokenid, cnt in doc)
             file_like.write(utils.to_utf8(f"{doc_id} 0 {' '.join(tokens)}\n"))
 
-    def convert_input(self, corpus: List[List[Tuple[int, int]]], infer: bool = False, serialize_corpus: bool = True):
+    def convert_input(self,
+                      corpus: List[Tuple[str, List[Tuple[int, int]]]],
+                      infer: bool = False,
+                      serialize_corpus: bool = True):
         """Convert corpus to Mallet format and save it to a temporary text file."""
         if serialize_corpus:
-            logging.info("serializing temporary corpus to %s", self.get_corpustxt_filepath())
+            logging.info(f"serializing temporary corpus to {self.get_corpustxt_filepath()}")
             with utils.open(self.get_corpustxt_filepath(), "wb") as fout:
                 self.corpus2mallet(corpus, fout)
         # convert the text file above into MALLET"s internal format
-        cmd = self.mallet_path + \
-              " import-file --preserve-case --keep-sequence " \
-              "--remove-stopwords --token-regex \"\\S+\" --input %s --output %s"
+        cmd = f"{self.mallet_path} import-file " \
+              f"--preserve-case " \
+              f"--keep-sequence " \
+              f"--remove-stopwords " \
+              f"--token-regex \"\\S+\" " \
+              f"--input {self.get_corpustxt_filepath()} " \
+              f"--output {self.get_corpusmallet_filepath()}"
         if infer:
-            cmd += " --use-pipe-from " + self.get_corpusmallet_filepath()
-            cmd = cmd % (self.get_corpustxt_filepath(),
-                         self.get_corpusmallet_filepath() + ".infer")
-        else:
-            cmd = cmd % (self.get_corpustxt_filepath(),
-                         self.get_corpusmallet_filepath())
-        logging.info("converting temporary corpus to MALLET format with %s", cmd)
+            cmd += f".infer "
+            cmd += f"--use-pipe-from {self.get_corpusmallet_filepath()}"
+
+        logging.info(f"converting temporary corpus to MALLET format with '{cmd}'")
         check_output(args=cmd, shell=True)
 
     def train(self, corpus: List[Tuple[str, List[Tuple[int, int]]]]):
         """Train Mallet LDA."""
         self.convert_input(corpus, infer=False)
-        cmd = self.mallet_path + \
-              " train-topics --input %s --num-topics %s --alpha %s --optimize-interval %s " \
-              "--num-threads %s --output-state %s --output-doc-topics %s --output-topic-keys %s " \
-              "--num-iterations %s --inferencer-filename %s --doc-topics-threshold %s --random-seed %s"
+        cmd = f"{self.mallet_path} train-topics " \
+              f"--input {self.get_corpusmallet_filepath()} " \
+              f"--num-topics {self.num_topics} " \
+              f"--alpha {self.alpha} " \
+              f"--optimize-interval {self.optimize_interval} " \
+              f"--num-threads {self.workers} " \
+              f"--output-state {self.get_state_filepath()} " \
+              f"--output-doc-topics {self.get_doctopics_filepath()} " \
+              f"--output-topic-keys {self.get_topickeys_filepath()} " \
+              f"--num-iterations {self.iterations} " \
+              f"--inferencer-filename {self.get_inferencer_filepath()} " \
+              f"--doc-topics-threshold {self.topic_threshold} " \
+              f"--random-seed {self.random_seed} "
 
-        cmd = cmd % (
-            self.get_corpusmallet_filepath(), self.num_topics, self.alpha, self.optimize_interval,
-            self.workers, self.get_state_filepath(), self.get_doctopics_filepath(), self.get_topickeys_filepath(),
-            self.iterations,
-            self.get_inferencer_filepath(), self.topic_threshold, str(self.random_seed)
-        )
-        logging.info("training MALLET LDA with %s", cmd)
+        logging.info(f"training MALLET LDA with '{cmd}'")
         check_output(args=cmd, shell=True)
         self.word_topics = self.load_word_topics()
         # NOTE - we are still keeping the wordtopics variable to not break backward compatibility.
@@ -158,7 +166,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
 
     def load_word_topics(self) -> np.ndarray:
         """Load topics X words matrix from `get_state_filepath` file."""
-        logging.info("loading assigned topics from %s", self.get_state_filepath())
+        logging.info(f"loading assigned topics from {self.get_state_filepath()}")
         word_topics = np.zeros((self.num_topics, self.num_terms), dtype=np.float64)
         if hasattr(self.id2word, "token2id"):
             word2id = self.id2word.token2id
@@ -200,16 +208,15 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         beststr = [(self.id2word[idx], topic[idx]) for idx in bestn]
         return beststr
 
-    def show_topics(self, num_topics: int = 10, num_words: int = 10, log: bool = False, formatted: bool = True) -> \
-            Union[List[str], List[Tuple[float, int]]]:
+    def show_topics(self, num_topics: int = 10, num_words: int = 10, formatted: bool = True) -> \
+            Union[List[Tuple[int, str]], List[Tuple[int, List[Tuple[str, float]]]]]:
         """
         Get the `num_words` most probable words for `num_topics` number of topics.
         :param num_topics: number of topics to return, set `-1` to get all topics
-        :param iterations: number of words
-        :param log: if `True` - write topic with logging too, used for debug proposes
+        :param num_words: number of words
         :param formatted: If `True` - return the topics as a list of strings, otherwise as lists of (weight, word) pairs
-        :return: list of str - Topics as a list of strings (if formatted=True) OR
-                 list of (float, str) - Topics as list of (weight, word) pairs (if formatted=False)
+        :return: list of tuple (topic_id, topic_formatted_str) (if formatted=True) OR
+                 list of tuple (topic id, list of tuple (weight, word)) (if formatted=False)
         """
         if num_topics < 0 or num_topics >= self.num_topics:
             num_topics = self.num_topics
@@ -227,11 +234,12 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
             else:
                 topic = self.show_topic(i, topn=num_words)
             shown.append((i, topic))
-            if log:
-                logging.info("topic #%i (%.3f): %s", i, self.alpha[i], topic)
         return shown
 
-    def read_doctopics(self, doctopics_filepath: str, eps: float = 1e-6, renorm: bool = True) -> List[Tuple[int, float]]:
+    def read_doctopics(self,
+                       doctopics_filepath: str,
+                       eps: float = 1e-6,
+                       renorm: bool = True) -> List[Tuple[int, float]]:
         """
         Get document topic vectors from MALLET"s "doc-topics" format, as sparse gensim vectors.
         :param doctopics_filepath: path to input file with document topics
@@ -250,7 +258,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
                 elif len(parts) == self.num_topics:
                     doc = [(id_, float(weight)) for id_, weight in enumerate(parts) if abs(float(weight)) > eps]
                 else:
-                    raise RuntimeError("invalid doc topics format at line %i in %s" % (lineno + 1, doctopics_filepath))
+                    raise RuntimeError(f"invalid doc topics format at line {lineno + 1} in {doctopics_filepath}")
                 if renorm:
                     # explicitly normalize weights to sum up to 1.0, just to be sure...
                     total_weight = float(sum(weight for _, weight in doc))
@@ -263,12 +271,12 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         return self.read_doctopics(self.get_doctopics_filepath())
 
     @classmethod
-    def load(cls, model_filepath: str) -> LdaModel:
+    def load(cls, *args, **kwargs) -> LdaModel:
         """
         Load a previously saved LdaMallet class. Handles backwards compatibility from
         older LdaMallet versions which did not use random_seed parameter.
         """
-        model = super().load(model_filepath)
+        model = super().load(*args, **kwargs)
         if not hasattr(model, "random_seed"):
             model.random_seed = 0
         return model

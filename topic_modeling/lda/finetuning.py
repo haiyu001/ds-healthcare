@@ -69,7 +69,11 @@ def topic_grouping(lda_vis_topics_filepath: str,
                    topic_top_n_terms: int = 30):
     lda_vis_topics_pdf = pd.read_csv(lda_vis_topics_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     lda_vis_topics_pdf["Terms"] = lda_vis_topics_pdf["Terms"].apply(json.loads)
+    lda_vis_topics_pdf = lda_vis_topics_pdf.rename(columns={"vis_topics": "vis_topic_id", "Freq": "freq"})
     topic_coordinates = lda_vis_topics_pdf[["X", "Y"]].values
+    lda_vis_topics_pdf["terms"] = lda_vis_topics_pdf["Terms"].apply(
+        lambda x: " ".join(
+            [t["Term"] for t in sorted(x, key=lambda i: i["lambda_0.6"], reverse=True)][:topic_top_n_terms]))
 
     Z = get_linkage_matrix(topic_coordinates,
                            dendrogram_title="topic grouping",
@@ -86,10 +90,6 @@ def topic_grouping(lda_vis_topics_filepath: str,
                  f"{'=' * 100}\n")
 
     lda_vis_topics_pdf["category"] = [f"Category_{i}" for i in labels]
-    lda_vis_topics_pdf["topic_terms"] = lda_vis_topics_pdf["Terms"].apply(
-        lambda x: " ".join(
-            [t["Term"] for t in sorted(x, key=lambda i: i["lambda_0.6"], reverse=True)][:topic_top_n_terms]))
-    lda_vis_topics_pdf = lda_vis_topics_pdf.rename(columns={"vis_topics": "topic_id"})
-    topic_grouping_pdf = lda_vis_topics_pdf[["category", "topic_id", "topic_terms"]] \
-        .sort_values(by=["category", "topic_id"])
+    topic_grouping_pdf = lda_vis_topics_pdf[["category", "vis_topic_id", "org_topics", "freq", "terms"]] \
+        .sort_values(by=["category", "vis_topic_id"])
     save_pdf(topic_grouping_pdf, topic_grouping_filepath)

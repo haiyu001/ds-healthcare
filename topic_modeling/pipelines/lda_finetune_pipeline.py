@@ -5,10 +5,17 @@ from topic_modeling.lda_utils.train_util import get_model_folder_name, get_model
 from utils.config_util import read_config_to_dict
 from utils.general_util import make_dir, setup_logger, split_filepath
 from utils.resource_util import get_data_filepath
+import shutil
 import argparse
 import logging
 import scipy
 import os
+
+
+def clean_finetune_model_dir(finetune_model_dir: str):
+    if os.path.exists(finetune_model_dir):
+        shutil.rmtree(finetune_model_dir)
+    make_dir(finetune_model_dir)
 
 
 def build_topic_merging(topic_merging_dendrogram_filepath: str,
@@ -82,12 +89,14 @@ def main(lda_config_filepath: str):
     topic_modeling_dir = os.path.join(domain_dir, lda_config["topic_modeling_folder"])
     corpus_dir = os.path.join(topic_modeling_dir, lda_config["corpus_folder"])
     models_dir = make_dir(os.path.join(topic_modeling_dir, lda_config["models_folder"]))
-    finetune_model_dir = make_dir(os.path.join(topic_modeling_dir, lda_config["finetune_model_folder"]))
+    finetune_model_dir = os.path.join(topic_modeling_dir, lda_config["finetune_model_folder"])
     mallet_corpus_csc_filepath = os.path.join(corpus_dir, lda_config["mallet_corpus_csc_filename"])
     topic_merging_dendrogram_filepath = \
         os.path.join(finetune_model_dir, lda_config["topic_merging_dendrogram_filename"])
     topic_grouping_dendrogram_filepath = \
         os.path.join(finetune_model_dir, lda_config["topic_grouping_dendrogram_filename"])
+
+    clean_finetune_model_dir(finetune_model_dir)
 
     mallet_model_filepath, topic_merging_filepath = build_topic_merging(topic_merging_dendrogram_filepath,
                                                                         models_dir,
