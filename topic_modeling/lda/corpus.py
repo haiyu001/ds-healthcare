@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Any
 from annotation.annotation_utils.corpus_util import pudf_get_corpus_line
 from utils.general_util import dump_json_file, dump_pickle_file, load_pickle_file
 from utils.spark_util import write_sdf_to_file
@@ -136,13 +136,21 @@ def save_mallet_corpus(corpus_doc_id_col: str,
         dump_json_file(mallet_vocab, mallet_vocab_filepath)
 
 
-def load_mallet_corpus(mallet_docs_filepath: str,
-                       mallet_id2word_filepath: str,
-                       mallet_corpus_filepath: str,
-                       mallet_corpus_csc_filepath: str) -> \
-        Tuple[List[List[str]], corpora.Dictionary, List[Tuple[str, List[Tuple[int, int]]]], csc_matrix]:
-    mallet_docs = load_pickle_file(mallet_docs_filepath)
-    mallet_id2word = corpora.Dictionary.load(mallet_id2word_filepath)
-    mallet_corpus = load_pickle_file(mallet_corpus_filepath)
-    mallet_corpus_csc = scipy.sparse.load_npz(mallet_corpus_csc_filepath)
-    return mallet_docs, mallet_id2word, mallet_corpus, mallet_corpus_csc
+def load_mallet_corpus(mallet_docs_filepath: Optional[str] = None,
+                       mallet_id2word_filepath: Optional[str] = None,
+                       mallet_corpus_filepath: Optional[str] = None,
+                       mallet_corpus_csc_filepath: Optional[str] = None) -> Tuple[Any, ...]:
+    res = []
+    if mallet_docs_filepath:
+        mallet_docs: List[List[str]] = load_pickle_file(mallet_docs_filepath)
+        res.append(mallet_docs)
+    if mallet_id2word_filepath:
+        mallet_id2word: corpora.Dictionary = corpora.Dictionary.load(mallet_id2word_filepath)
+        res.append(mallet_id2word)
+    if mallet_corpus_filepath:
+        mallet_corpus: List[Tuple[str, List[Tuple[int, int]]]] = load_pickle_file(mallet_corpus_filepath)
+        res.append(mallet_corpus)
+    if mallet_corpus_csc_filepath:
+        mallet_corpus_csc: csc_matrix = scipy.sparse.load_npz(mallet_corpus_csc_filepath)
+        res.append(mallet_corpus_csc)
+    return tuple(res)

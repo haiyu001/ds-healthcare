@@ -103,6 +103,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
 
         logging.info(f"inferring topics with MALLET LDA '{cmd}'")
         check_output(args=cmd, shell=True)
+
         result = list(self.read_doctopics(self.get_doctopics_filepath() + ".infer"))
         return result if is_corpus else result[0]
 
@@ -120,9 +121,10 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
                       infer: bool = False,
                       serialize_corpus: bool = True):
         """Convert corpus to Mallet format and save it to a temporary text file."""
+        corpustxt_filepath = self.get_corpustxt_filepath() + ".infer" if infer else self.get_corpustxt_filepath()
         if serialize_corpus:
-            logging.info(f"serializing temporary corpus to {self.get_corpustxt_filepath()}")
-            with utils.open(self.get_corpustxt_filepath(), "wb") as fout:
+            logging.info(f"serializing temporary corpus to {corpustxt_filepath}")
+            with utils.open(corpustxt_filepath, "wb") as fout:
                 self.corpus2mallet(corpus, fout)
         # convert the text file above into MALLET"s internal format
         cmd = f"{self.mallet_path} import-file " \
@@ -130,7 +132,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
               f"--keep-sequence " \
               f"--remove-stopwords " \
               f"--token-regex \"\\S+\" " \
-              f"--input {self.get_corpustxt_filepath()} " \
+              f"--input {corpustxt_filepath} " \
               f"--output {self.get_corpusmallet_filepath()}"
         if infer:
             cmd += f".infer "
@@ -246,6 +248,9 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         """
         with utils.open(doctopics_filepath, "rb") as input:
             for lineno, line in enumerate(input):
+                if lineno == 0 and line.startswith(b"#doc "):
+                    continue  # skip the header line if it exists
+
                 parts = line.split()[2:]  # skip "doc" and "source" columns
                 if len(parts) == self.num_topics:
                     doc = [(topic_id, float(weight)) for topic_id, weight in enumerate(parts)]

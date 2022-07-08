@@ -2,7 +2,7 @@ from typing import Dict, Any
 from topic_modeling.lda.corpus import load_mallet_corpus
 from topic_modeling.lda.training import train_mallet_lda_model, update_models_coherence_file
 from topic_modeling.lda.visualization import save_lda_vis
-from topic_modeling.lda_utils.train_util import get_model_folder_name, get_model_filename
+from topic_modeling.lda_utils.pipeline_util import get_model_folder_name, get_model_filename
 from utils.config_util import read_config_to_dict
 from utils.general_util import make_dir, setup_logger
 from utils.resource_util import get_data_filepath

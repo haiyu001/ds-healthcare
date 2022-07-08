@@ -2,8 +2,8 @@ from typing import Dict, Any
 from topic_modeling.lda.finetuning import topic_merging, load_topic_merging_data, topic_grouping
 from topic_modeling.lda.mallet_wrapper import LdaMallet
 from topic_modeling.lda.visualization import save_lda_vis
-from topic_modeling.lda_utils.train_util import get_model_folder_name, get_model_filename, \
-    get_prefix_by_mallet_model_filepath
+from topic_modeling.lda_utils.pipeline_util import get_model_folder_name, get_model_filename, \
+    get_prefix_by_mallet_model_filepath, get_finetune_model_filepath
 from utils.config_util import read_config_to_dict
 from utils.general_util import make_dir, setup_logger, split_filepath
 from utils.resource_util import get_data_filepath
@@ -35,8 +35,12 @@ def setup_finetune_model_dir(candidate_models_dir: str,
     dest_model_dir = os.path.join(finetune_model_dir, model_folder_name)
     shutil.copytree(src_model_dir, dest_model_dir)
 
-    mallet_model_filename = get_model_filename(iterations, optimize_interval, topic_alpha, num_topics)
-    finetune_model_filepath = os.path.join(dest_model_dir, mallet_model_filename)
+    finetune_model_filepath = get_finetune_model_filepath(finetune_model_dir,
+                                                          iterations,
+                                                          optimize_interval,
+                                                          topic_alpha,
+                                                          num_topics)
+
     finetune_model_prefix = get_prefix_by_mallet_model_filepath(finetune_model_filepath)
     LdaMallet.update_prefix(finetune_model_filepath, finetune_model_prefix)
     return finetune_model_filepath
