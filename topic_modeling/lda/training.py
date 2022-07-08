@@ -1,5 +1,5 @@
 from typing import Tuple, List
-from topic_modeling.lda_utils.train_util import get_mallet_filepath
+from topic_modeling.lda_utils.train_util import get_mallet_filepath, get_prefix_by_mallet_model_filepath
 from topic_modeling.lda.mallet_wrapper import LdaMallet
 from gensim.corpora import Dictionary
 from gensim.models import CoherenceModel
@@ -55,9 +55,7 @@ def train_mallet_lda_model(mallet_id2word: corpora.Dictionary,
                  f"num_topics: {num_topics}\n"
                  f"{'=' * 100}\n")
 
-    model_dir = os.path.dirname(mallet_model_filepath)
-    mallet_model_filename = os.path.basename(mallet_model_filepath)
-    prefix = os.path.join(model_dir, "tmp_" + mallet_model_filename + "_")
+    prefix = get_prefix_by_mallet_model_filepath(mallet_model_filepath)
 
     mallet_model = LdaMallet(get_mallet_filepath(),
                              mallet_corpus,

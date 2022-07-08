@@ -1,7 +1,9 @@
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 from topic_modeling.lda.finetuning import topic_merging, load_topic_merging_data, topic_grouping
+from topic_modeling.lda.mallet_wrapper import LdaMallet
 from topic_modeling.lda.visualization import save_lda_vis
-from topic_modeling.lda_utils.train_util import get_model_folder_name, get_model_filename
+from topic_modeling.lda_utils.train_util import get_model_folder_name, get_model_filename, \
+    get_prefix_by_mallet_model_filepath
 from utils.config_util import read_config_to_dict
 from utils.general_util import make_dir, setup_logger, split_filepath
 from utils.resource_util import get_data_filepath
@@ -12,37 +14,50 @@ import scipy
 import os
 
 
-def clean_finetune_model_dir(finetune_model_dir: str):
+def setup_finetune_model_dir(candidate_models_dir: str,
+                             finetune_model_dir: str,
+                             lda_config: Dict[str, Any]) -> str:
     if os.path.exists(finetune_model_dir):
         shutil.rmtree(finetune_model_dir)
     make_dir(finetune_model_dir)
 
-
-def build_topic_merging(topic_merging_dendrogram_filepath: str,
-                        models_dir: str,
-                        finetune_model_dir: str,
-                        lda_config: Dict[str, Any]) -> Tuple[str, str]:
-    logging.info(f"\n{'*' * 150}\n* build topics merging\n{'*' * 150}\n")
     iterations = lda_config["iterations"]
     optimize_interval = lda_config["optimize_interval"]
     topic_alpha = lda_config["topic_alpha"]
     num_topics = lda_config["num_topics"]
 
-    model_folder_name = get_model_folder_name(iterations, optimize_interval, topic_alpha, num_topics)
-    model_dir = os.path.join(models_dir, model_folder_name)
-    mallet_model_filename = get_model_filename(iterations, optimize_interval, topic_alpha, num_topics)
-    mallet_model_filepath = os.path.join(model_dir, mallet_model_filename)
+    logging.info(f"\n{'*' * 150}\n* setup finetune model directory for parameters: "
+                 f"iterations({iterations}) optimize_interval({optimize_interval}) "
+                 f"topic_alpha({topic_alpha}) num_topics({num_topics})\n{'*' * 150}\n")
 
-    topic_merging_filepath = topic_merging(mallet_model_filepath,
+    model_folder_name = get_model_folder_name(iterations, optimize_interval, topic_alpha, num_topics)
+    src_model_dir = os.path.join(candidate_models_dir, model_folder_name)
+    dest_model_dir = os.path.join(finetune_model_dir, model_folder_name)
+    shutil.copytree(src_model_dir, dest_model_dir)
+
+    mallet_model_filename = get_model_filename(iterations, optimize_interval, topic_alpha, num_topics)
+    finetune_model_filepath = os.path.join(dest_model_dir, mallet_model_filename)
+    finetune_model_prefix = get_prefix_by_mallet_model_filepath(finetune_model_filepath)
+    LdaMallet.update_prefix(finetune_model_filepath, finetune_model_prefix)
+    return finetune_model_filepath
+
+
+def build_topic_merging(topic_merging_dendrogram_filepath: str,
+                        finetune_model_filepath: str,
+                        finetune_model_dir: str,
+                        lda_config: Dict[str, Any]) -> str:
+    logging.info(f"\n{'*' * 150}\n* build topics merging\n{'*' * 150}\n")
+
+    topic_merging_filepath = topic_merging(finetune_model_filepath,
                                            lda_config["lda_vis_topics_filename_suffix"],
                                            finetune_model_dir,
                                            topic_merging_dendrogram_filepath,
                                            lda_config["topic_merging_threshold"])
-    return mallet_model_filepath, topic_merging_filepath
+    return topic_merging_filepath
 
 
 def build_topic_merging_vis(topic_merging_filepath: str,
-                            mallet_model_filepath: str,
+                            finetune_model_filepath: str,
                             mallet_corpus_csc_filepath: str,
                             lda_config: [str, Any]) -> str:
     logging.info(f"\n{'*' * 150}\n* build topics merging visualization\n{'*' * 150}\n")
@@ -59,7 +74,7 @@ def build_topic_merging_vis(topic_merging_filepath: str,
         os.path.join(file_dir, f"{file_name}_{lda_config['lda_vis_topics_filename_suffix']}")
 
     save_lda_vis(mallet_corpus_csc,
-                 mallet_model_filepath,
+                 finetune_model_filepath,
                  topic_merging_lda_vis_html_filepath,
                  topic_merging_lda_vis_lambdas_filepath,
                  topic_merging_lda_vis_topics_filepath,
@@ -88,7 +103,7 @@ def main(lda_config_filepath: str):
     domain_dir = get_data_filepath(lda_config["domain"])
     topic_modeling_dir = os.path.join(domain_dir, lda_config["topic_modeling_folder"])
     corpus_dir = os.path.join(topic_modeling_dir, lda_config["corpus_folder"])
-    models_dir = make_dir(os.path.join(topic_modeling_dir, lda_config["models_folder"]))
+    candidate_models_dir = make_dir(os.path.join(topic_modeling_dir, lda_config["candidate_models_folder"]))
     finetune_model_dir = os.path.join(topic_modeling_dir, lda_config["finetune_model_folder"])
     mallet_corpus_csc_filepath = os.path.join(corpus_dir, lda_config["mallet_corpus_csc_filename"])
     topic_merging_dendrogram_filepath = \
@@ -96,15 +111,17 @@ def main(lda_config_filepath: str):
     topic_grouping_dendrogram_filepath = \
         os.path.join(finetune_model_dir, lda_config["topic_grouping_dendrogram_filename"])
 
-    clean_finetune_model_dir(finetune_model_dir)
+    finetune_model_filepath = setup_finetune_model_dir(candidate_models_dir,
+                                                       finetune_model_dir,
+                                                       lda_config)
 
-    mallet_model_filepath, topic_merging_filepath = build_topic_merging(topic_merging_dendrogram_filepath,
-                                                                        models_dir,
-                                                                        finetune_model_dir,
-                                                                        lda_config)
+    topic_merging_filepath = build_topic_merging(topic_merging_dendrogram_filepath,
+                                                 finetune_model_filepath,
+                                                 finetune_model_dir,
+                                                 lda_config)
 
     topic_merging_lda_vis_topics_filepath = build_topic_merging_vis(topic_merging_filepath,
-                                                                    mallet_model_filepath,
+                                                                    finetune_model_filepath,
                                                                     mallet_corpus_csc_filepath,
                                                                     lda_config)
 

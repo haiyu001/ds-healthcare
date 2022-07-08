@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union, Iterator
 from gensim import utils, matutils
 from gensim.corpora import Dictionary
 from gensim.models import basemodel
@@ -77,7 +77,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         return self.prefix + "corpus.mallet"
 
     def __getitem__(self,
-                    bow: Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]],
+                    bow: Union[Tuple[str, List[Tuple[int, int]]], List[Tuple[str, List[Tuple[int, int]]]]],
                     iterations: int = 100) -> Union[List[Tuple[int, float]], List[List[Tuple[int, float]]]]:
         """
         Get vector for document(s).
@@ -86,9 +86,9 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
         :return: list of (int, float) - LDA vector for document as sequence of (topic_id, topic_probability) OR
                  list of list of (int, float) - LDA vectors for corpus in same format
         """
-        is_corpus, corpus = utils.is_corpus(bow)
-        if not is_corpus:
-            # query is a single document => make a corpus out of it
+        is_corpus = True
+        if isinstance(bow, tuple):
+            is_corpus = False
             bow = [bow]
 
         self.convert_input(bow, infer=True)  # will create corpusmallet infer file - "corpus.mallet.infer"
@@ -236,27 +236,19 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
             shown.append((i, topic))
         return shown
 
-    def read_doctopics(self,
-                       doctopics_filepath: str,
-                       eps: float = 1e-6,
-                       renorm: bool = True) -> List[Tuple[int, float]]:
+    def read_doctopics(self, doctopics_filepath: str, renorm: bool = True) -> Iterator[List[Tuple[int, float]]]:
         """
         Get document topic vectors from MALLET"s "doc-topics" format, as sparse gensim vectors.
         :param doctopics_filepath: path to input file with document topics
         :param eps: threshold for probabilities
         :param renorm: if `True` - explicitly re-normalize distribution
-        :return: list of (int, float) - LDA vectors for document
+        :return: list of (int, float) - list of (topic_id, topic probability)
         """
-        with utils.open(doctopics_filepath, "rb") as fin:
-            for lineno, line in enumerate(fin):
-                if lineno == 0 and line.startswith(b"#doc "):
-                    continue  # skip the header line if it exists
+        with utils.open(doctopics_filepath, "rb") as input:
+            for lineno, line in enumerate(input):
                 parts = line.split()[2:]  # skip "doc" and "source" columns
-                if len(parts) == 2 * self.num_topics:
-                    doc = [(int(id_), float(weight)) for id_, weight in zip(*[iter(parts)] * 2)
-                           if abs(float(weight)) > eps]
-                elif len(parts) == self.num_topics:
-                    doc = [(id_, float(weight)) for id_, weight in enumerate(parts) if abs(float(weight)) > eps]
+                if len(parts) == self.num_topics:
+                    doc = [(topic_id, float(weight)) for topic_id, weight in enumerate(parts)]
                 else:
                     raise RuntimeError(f"invalid doc topics format at line {lineno + 1} in {doctopics_filepath}")
                 if renorm:
@@ -266,7 +258,7 @@ class LdaMallet(utils.SaveLoad, basemodel.BaseTopicModel):
                         doc = [(id_, float(weight) / total_weight) for id_, weight in doc]
                 yield doc
 
-    def load_document_topics(self) -> List[Tuple[int, float]]:
+    def load_document_topics(self) -> Iterator[List[Tuple[int, float]]]:
         """Shortcut for `LdaMallet.read_doctopics`."""
         return self.read_doctopics(self.get_doctopics_filepath())
 

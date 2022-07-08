@@ -1,4 +1,5 @@
 from utils.resource_util import get_model_filepath
+import os
 
 
 def get_mallet_filepath() -> str:
@@ -23,4 +24,11 @@ def get_model_filename(iterations: int,
                        num_topics: int) -> str:
     model_filename = f"mallet_{iterations}-{optimize_interval}-{topic_alpha}-{num_topics}_lda"
     return model_filename
+
+
+def get_prefix_by_mallet_model_filepath(mallet_model_filepath: str) -> str:
+    model_dir = os.path.dirname(mallet_model_filepath)
+    mallet_model_filename = os.path.basename(mallet_model_filepath)
+    prefix = os.path.join(model_dir, "tmp_" + mallet_model_filename + "_")
+    return prefix
 

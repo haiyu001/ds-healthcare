@@ -15,8 +15,8 @@ def train_mallet_lda_models(mallet_docs_filepath: str,
                             mallet_id2word_filepath: str,
                             mallet_corpus_filepath: str,
                             mallet_corpus_csc_filepath: str,
-                            models_dir: str,
-                            models_coherence_filepath: str,
+                            candidate_models_dir: str,
+                            candidate_models_coherence_filepath: str,
                             lda_config: Dict[str, Any]):
     logging.info(f"\n{'*' * 150}\n* build mallet LDA models\n{'*' * 150}\n")
     mallet_docs, mallet_id2word, mallet_corpus, mallet_corpus_csc = load_mallet_corpus(mallet_docs_filepath,
@@ -33,7 +33,7 @@ def train_mallet_lda_models(mallet_docs_filepath: str,
         for topic_alpha in topic_alpha_candidates:
             for num_topics in num_topics_candidates:
                 model_folder_name = get_model_folder_name(iterations, optimize_interval, topic_alpha, num_topics)
-                model_dir = make_dir(os.path.join(models_dir, model_folder_name))
+                model_dir = make_dir(os.path.join(candidate_models_dir, model_folder_name))
                 mallet_model_filename = get_model_filename(iterations, optimize_interval, topic_alpha, num_topics)
                 mallet_model_filepath = os.path.join(model_dir, mallet_model_filename)
                 if not os.path.exists(mallet_model_filepath):
@@ -50,7 +50,7 @@ def train_mallet_lda_models(mallet_docs_filepath: str,
                                                  mallet_docs,
                                                  mallet_id2word,
                                                  workers,
-                                                 models_coherence_filepath)
+                                                 candidate_models_coherence_filepath)
 
                 lda_vis_html_filepath = f"{mallet_model_filepath}_{lda_config['lda_vis_html_filename_suffix']}"
                 lda_vis_lambdas_filepath = f"{mallet_model_filepath}_{lda_config['lda_vis_lambdas_filename_suffix']}"
@@ -72,19 +72,20 @@ def main(lda_config_filepath: str):
     domain_dir = get_data_filepath(lda_config["domain"])
     topic_modeling_dir = os.path.join(domain_dir, lda_config["topic_modeling_folder"])
     corpus_dir = os.path.join(topic_modeling_dir, lda_config["corpus_folder"])
-    models_dir = make_dir(os.path.join(topic_modeling_dir, lda_config["models_folder"]))
+    candidate_models_dir = make_dir(os.path.join(topic_modeling_dir, lda_config["candidate_models_folder"]))
     mallet_docs_filepath = os.path.join(corpus_dir, lda_config["mallet_docs_filename"])
     mallet_id2word_filepath = os.path.join(corpus_dir, lda_config["mallet_id2word_filename"])
     mallet_corpus_filepath = os.path.join(corpus_dir, lda_config["mallet_corpus_filename"])
     mallet_corpus_csc_filepath = os.path.join(corpus_dir, lda_config["mallet_corpus_csc_filename"])
-    models_coherence_filepath = os.path.join(models_dir, lda_config["models_coherence_filename"])
+    candidate_models_coherence_filepath = \
+        os.path.join(candidate_models_dir, lda_config["candidate_models_coherence_filename"])
 
     train_mallet_lda_models(mallet_docs_filepath,
                             mallet_id2word_filepath,
                             mallet_corpus_filepath,
                             mallet_corpus_csc_filepath,
-                            models_dir,
-                            models_coherence_filepath,
+                            candidate_models_dir,
+                            candidate_models_coherence_filepath,
                             lda_config)
 
 

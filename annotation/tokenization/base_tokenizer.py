@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Iterator, Iterable
 from utils.resource_util import get_stanza_model_dir
 from abc import ABC, abstractmethod
 from spacy import Language
@@ -114,6 +114,6 @@ class StanzaBaseTokenizer(BaseTokenizer):
             text_sents.append(False)
         return text_words, text_spaces, text_sents
 
-    def pipe(self, texts):
+    def pipe(self, texts: Iterable[str]) -> Iterator[str]:
         for text in texts:
             yield self.tokenize(text)

@@ -1,9 +1,9 @@
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any
 from annotation.components.annotator import load_annotation
 from topic_modeling.lda.corpus import get_corpus_word_to_lemma, get_corpus_noun_phrase_match_dict, \
     build_lda_corpus_by_annotation, save_mallet_corpus
 from utils.config_util import read_config_to_dict
-from utils.general_util import setup_logger, make_dir
+from utils.general_util import setup_logger, make_dir, load_json_file
 from utils.resource_util import get_data_filepath
 from utils.spark_util import get_spark_session, add_repo_pyfile, get_spark_master_config
 from pyspark.sql import SparkSession, DataFrame
@@ -16,22 +16,21 @@ def build_corpus_creation_input(filter_unigram_filepath: str,
                                 corpus_word_to_lemma_filepath: str,
                                 filter_phrase_filepath: str,
                                 corpus_noun_phrase_match_filepath: str,
-                                lda_config: Dict[str, Any]) -> Tuple[Dict[str, str], Dict[str, str]]:
+                                lda_config: Dict[str, Any]):
     logging.info(f"\n{'*' * 150}\n* build corpus creation input data\n{'*' * 150}\n")
-    word_to_lemma = get_corpus_word_to_lemma(filter_unigram_filepath,
-                                             corpus_word_to_lemma_filepath,
-                                             lda_config["corpus_vocab_size"],
-                                             lda_config["corpus_word_pos_candidates"])
-    noun_phrase_match_dict = get_corpus_noun_phrase_match_dict(filter_phrase_filepath,
-                                                               corpus_noun_phrase_match_filepath,
-                                                               lda_config["corpus_phrase_filter_min_count"],
-                                                               lda_config["corpus_match_lowercase"])
-    return word_to_lemma, noun_phrase_match_dict
+    get_corpus_word_to_lemma(filter_unigram_filepath,
+                             corpus_word_to_lemma_filepath,
+                             lda_config["corpus_vocab_size"],
+                             lda_config["corpus_word_pos_candidates"])
+    get_corpus_noun_phrase_match_dict(filter_phrase_filepath,
+                                      corpus_noun_phrase_match_filepath,
+                                      lda_config["corpus_phrase_filter_min_count"],
+                                      lda_config["corpus_match_lowercase"])
 
 
 def build_mallet_corpus(annotation_sdf: DataFrame,
-                        word_to_lemma: Dict[str, str],
-                        noun_phrase_match_dict: Optional[Dict[str, str]],
+                        word_to_lemma_filepath: str,
+                        noun_phrase_match_dict_filepath: str,
                         corpus_filepath: str,
                         mallet_docs_filepath: str,
                         mallet_id2word_filepath: str,
@@ -40,6 +39,10 @@ def build_mallet_corpus(annotation_sdf: DataFrame,
                         mallet_vocab_filepath: str,
                         lda_config: Dict[str, Any]):
     logging.info(f"\n{'*' * 150}\n* build mallet corpus\n{'*' * 150}\n")
+
+    word_to_lemma = load_json_file(word_to_lemma_filepath)
+    noun_phrase_match_dict = load_json_file(noun_phrase_match_dict_filepath)
+
     build_lda_corpus_by_annotation(annotation_sdf,
                                    lda_config["lang"],
                                    lda_config["spacy_package"],
@@ -79,14 +82,15 @@ def main(spark: SparkSession, lda_config_filepath: str):
 
     annotation_sdf = load_annotation(spark, annotation_dir, lda_config["drop_non_english"])
 
-    word_to_lemma, noun_phrase_match_dict = build_corpus_creation_input(filter_unigram_filepath,
-                                                                        corpus_word_to_lemma_filepath,
-                                                                        filter_phrase_filepath,
-                                                                        corpus_noun_phrase_match_filepath,
-                                                                        lda_config)
+    build_corpus_creation_input(filter_unigram_filepath,
+                                corpus_word_to_lemma_filepath,
+                                filter_phrase_filepath,
+                                corpus_noun_phrase_match_filepath,
+                                lda_config)
+
     build_mallet_corpus(annotation_sdf,
-                        word_to_lemma,
-                        noun_phrase_match_dict,
+                        corpus_word_to_lemma_filepath,
+                        corpus_noun_phrase_match_filepath,
                         corpus_filepath,
                         mallet_docs_filepath,
                         mallet_id2word_filepath,

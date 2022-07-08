@@ -43,7 +43,7 @@ def udf_get_corpus_line_with_metadata(metadata: Column,
 def get_corpus_word_to_lemma(filter_unigram_filepath: str,
                              corpus_word_to_lemma_filepath: str,
                              corpus_vocab_size: int = 10000,
-                             corpus_word_pos_candidates: str = "NOUN,PROPN,ADJ,ADV,VERB") -> Dict[str, str]:
+                             corpus_word_pos_candidates: str = "NOUN,PROPN,ADJ,ADV,VERB"):
     corpus_word_pos_candidates = [i.strip() for i in corpus_word_pos_candidates.split(",")]
     filter_unigram_pdf = pd.read_csv(filter_unigram_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     filter_unigram_pdf["top_three_pos"] = filter_unigram_pdf["top_three_pos"].apply(json.loads)
@@ -60,13 +60,12 @@ def get_corpus_word_to_lemma(filter_unigram_filepath: str,
         for word in words:
             corpus_word_to_lemma[word] = lemma
     dump_json_file(corpus_word_to_lemma, corpus_word_to_lemma_filepath)
-    return corpus_word_to_lemma
 
 
 def get_corpus_noun_phrase_match_dict(filter_phrase_filepath: str,
                                       corpus_noun_phrase_match_filepath: str,
                                       corpus_phrase_filter_min_count: int,
-                                      match_lowercase: bool = True) -> Dict[str, str]:
+                                      match_lowercase: bool = True):
     filer_phrase_df = pd.read_csv(filter_phrase_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     filer_phrase_df = filer_phrase_df[filer_phrase_df["count"] >= corpus_phrase_filter_min_count]
     if match_lowercase:
@@ -74,7 +73,6 @@ def get_corpus_noun_phrase_match_dict(filter_phrase_filepath: str,
     phrase_lemmas = filer_phrase_df["lemma"].tolist()
     noun_phrase_match_dict = {phrase_lemma: "_".join(phrase_lemma.split()) for phrase_lemma in phrase_lemmas}
     dump_json_file(noun_phrase_match_dict, corpus_noun_phrase_match_filepath)
-    return noun_phrase_match_dict
 
 
 def load_docs_from_corpus(corpus_filepath: str, corpus_doc_id_col: str) -> List[Tuple[str, List[str]]]:
@@ -108,11 +106,11 @@ def build_lda_corpus_by_annotation(annotation_sdf: DataFrame,
 
 def save_mallet_corpus(corpus_doc_id_col: str,
                        corpus_filepath: str,
-                       mallet_docs_filepath: str,
-                       mallet_id2word_filepath: str,
-                       mallet_corpus_filepath: str,
-                       mallet_corpus_csc_filepath: str,
-                       mallet_vocab_filepath: str):
+                       mallet_docs_filepath: Optional[str] = None,
+                       mallet_id2word_filepath: Optional[str] = None,
+                       mallet_corpus_filepath: Optional[str] = None,
+                       mallet_corpus_csc_filepath: Optional[str] = None,
+                       mallet_vocab_filepath: Optional[str] = None):
     mallet_docs_with_id = load_docs_from_corpus(corpus_filepath, corpus_doc_id_col)
     mallet_docs = [doc for doc_id, doc in mallet_docs_with_id]
     mallet_id2word = corpora.Dictionary(mallet_docs)
@@ -121,15 +119,21 @@ def save_mallet_corpus(corpus_doc_id_col: str,
     mallet_corpus_csc = matutils.corpus2csc([bow for doc_id, bow in mallet_corpus])
     mallet_vocab = {mallet_id2word.get(i): i for i in mallet_id2word}
 
-    dump_pickle_file(mallet_docs, mallet_docs_filepath)
-    mallet_id2word.save(mallet_id2word_filepath)
-    dump_pickle_file(mallet_corpus, mallet_corpus_filepath)
-    scipy.sparse.save_npz(mallet_corpus_csc_filepath, mallet_corpus_csc)
-    dump_json_file(mallet_vocab, mallet_vocab_filepath)
     logging.info(f"\n{'=' * 100}\n"
                  f"corpus number of docs:  {len(mallet_docs)}\n"
                  f"corpus vocabulary size: {len(mallet_vocab)}\n"
                  f"{'=' * 100}\n")
+
+    if mallet_docs_filepath:
+        dump_pickle_file(mallet_docs, mallet_docs_filepath)
+    if mallet_docs_filepath and mallet_id2word_filepath:
+        mallet_id2word.save(mallet_id2word_filepath)
+    if mallet_corpus_filepath:
+        dump_pickle_file(mallet_corpus, mallet_corpus_filepath)
+    if mallet_corpus_csc_filepath:
+        scipy.sparse.save_npz(mallet_corpus_csc_filepath, mallet_corpus_csc)
+    if mallet_vocab_filepath:
+        dump_json_file(mallet_vocab, mallet_vocab_filepath)
 
 
 def load_mallet_corpus(mallet_docs_filepath: str,

@@ -8,6 +8,18 @@ import json
 import os
 
 
+def set_topic_name_by_terms(data_pdf: pd.DataFrame, terms_col="terms") -> pd.DataFrame:
+    topic_names = []
+    for i, row in data_pdf.iterrows():
+        terms = row[terms_col].split()
+        for term in terms:
+            if term.title() not in topic_names:
+                topic_names.append(term.title())
+                data_pdf.at[i, "topic_name"] = term.title()
+                break
+    return data_pdf
+
+
 def load_topic_merging_data(topic_merging_filepath: str) \
         -> Tuple[Dict[int, List[int]], Dict[int, float], Dict[int, float]]:
     topic_merging_pdf = pd.read_csv(topic_merging_filepath, encoding="utf-8", keep_default_na=False, na_values="")
@@ -90,6 +102,7 @@ def topic_grouping(lda_vis_topics_filepath: str,
                  f"{'=' * 100}\n")
 
     lda_vis_topics_pdf["category"] = [f"Category_{i}" for i in labels]
-    topic_grouping_pdf = lda_vis_topics_pdf[["category", "vis_topic_id", "org_topics", "freq", "terms"]] \
+    lda_vis_topics_pdf = set_topic_name_by_terms(lda_vis_topics_pdf, terms_col="terms")
+    topic_grouping_pdf = lda_vis_topics_pdf[["category", "vis_topic_id", "org_topics", "freq", "topic_name", "terms"]] \
         .sort_values(by=["category", "vis_topic_id"])
     save_pdf(topic_grouping_pdf, topic_grouping_filepath)
