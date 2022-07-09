@@ -1,8 +1,9 @@
 from typing import Tuple, Dict, List
-from scipy.cluster.hierarchy import fcluster
 from machine_learning.hierarchical_clustering import get_linkage_matrix
-from utils.general_util import save_pdf
+from utils.general_util import save_pdf, dump_json_file
+from scipy.cluster.hierarchy import fcluster
 import pandas as pd
+import collections
 import logging
 import json
 import os
@@ -77,6 +78,7 @@ def topic_merging(mallet_model_filepath: str,
 def topic_grouping(lda_vis_topics_filepath: str,
                    topic_grouping_filepath: str,
                    topic_grouping_dendrogram_filepath: str,
+                   vis_topic_id_to_org_topics_filepath: str,
                    topic_grouping_threshold: float,
                    topic_top_n_terms: int = 30):
     lda_vis_topics_pdf = pd.read_csv(lda_vis_topics_filepath, encoding="utf-8", keep_default_na=False, na_values="")
@@ -106,3 +108,12 @@ def topic_grouping(lda_vis_topics_filepath: str,
     topic_grouping_pdf = lda_vis_topics_pdf[["category", "vis_topic_id", "org_topics", "freq", "topic_name", "terms"]] \
         .sort_values(by=["category", "vis_topic_id"])
     save_pdf(topic_grouping_pdf, topic_grouping_filepath)
+
+    org_topics = topic_grouping_pdf["org_topics"].apply(json.loads).apply(tuple)
+    vis_topic_id = topic_grouping_pdf["vis_topic_id"]
+    vis_topic_id_to_org_topics = dict(zip(vis_topic_id, org_topics))
+    vis_topic_id_to_org_topics = collections.OrderedDict(sorted(vis_topic_id_to_org_topics.items()))
+    dump_json_file(vis_topic_id_to_org_topics, vis_topic_id_to_org_topics_filepath)
+
+
+

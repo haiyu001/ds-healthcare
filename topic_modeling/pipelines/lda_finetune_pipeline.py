@@ -91,6 +91,7 @@ def build_topic_merging_vis(topic_merging_filepath: str,
 
 def build_topic_grouping(topic_merging_lda_vis_topics_filepath: str,
                          topic_grouping_dendrogram_filepath: str,
+                         vis_topic_id_to_org_topics_filepath: str,
                          topic_merging_filepath: str,
                          lda_config: Dict[str, Any]):
     logging.info(f"\n{'*' * 150}\n* build topics grouping\n{'*' * 150}\n")
@@ -99,6 +100,7 @@ def build_topic_grouping(topic_merging_lda_vis_topics_filepath: str,
     topic_grouping(topic_merging_lda_vis_topics_filepath,
                    topic_grouping_filepath,
                    topic_grouping_dendrogram_filepath,
+                   vis_topic_id_to_org_topics_filepath,
                    lda_config["topic_grouping_threshold"])
 
 
@@ -114,6 +116,8 @@ def main(lda_config_filepath: str):
         os.path.join(finetune_model_dir, lda_config["topic_merging_dendrogram_filename"])
     topic_grouping_dendrogram_filepath = \
         os.path.join(finetune_model_dir, lda_config["topic_grouping_dendrogram_filename"])
+    vis_topic_id_to_org_topics_filepath = \
+        os.path.join(finetune_model_dir, lda_config["vis_topic_id_to_org_topics_filename"])
 
     finetune_model_filepath = setup_finetune_model_dir(candidate_models_dir,
                                                        finetune_model_dir,
@@ -131,6 +135,7 @@ def main(lda_config_filepath: str):
 
     build_topic_grouping(topic_merging_lda_vis_topics_filepath,
                          topic_grouping_dendrogram_filepath,
+                         vis_topic_id_to_org_topics_filepath,
                          topic_merging_filepath,
                          lda_config)
 

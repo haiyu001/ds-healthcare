@@ -299,7 +299,7 @@ def extract_triplet(annotation_sdf: DataFrame,
     write_sdf_to_dir(inference_sdf, save_folder_dir, save_folder_name, file_format="txt")
 
 
-def _extract_aspect_stats(aspect_opinions_sdf: DataFrame,
+def extract_aspect_stats(aspect_opinions_sdf: DataFrame,
                          aspect_stats_filepath: str):
     aspect_stats_sdf = aspect_opinions_sdf.groupby(["aspect", "polarity"]).agg(
         F.count(F.col("aspect_variation")).alias("polarity_count"),
@@ -326,7 +326,7 @@ def _extract_aspect_stats(aspect_opinions_sdf: DataFrame,
     write_sdf_to_file(aspect_stats_sdf, aspect_stats_filepath)
 
 
-def _extract_opinion_stats(aspect_opinions_sdf: DataFrame,
+def extract_opinion_stats(aspect_opinions_sdf: DataFrame,
                           opinion_stats_filepath: str,
                           opinion_filepath: str):
     opinion_dict = load_json_file(opinion_filepath)
@@ -361,5 +361,5 @@ def extract_triplet_stats(spark: SparkSession,
         pudf_score_to_polarity(F.col("triplets").aspect.sentiment_score).alias("polarity"),
         F.col("triplets").opinions.alias("opinions"))
     aspect_opinions_sdf.cache()
-    _extract_aspect_stats(aspect_opinions_sdf, aspect_stats_filepath)
-    _extract_opinion_stats(aspect_opinions_sdf, opinion_stats_filepath, opinion_filepath)
+    extract_aspect_stats(aspect_opinions_sdf, aspect_stats_filepath)
+    extract_opinion_stats(aspect_opinions_sdf, opinion_stats_filepath, opinion_filepath)

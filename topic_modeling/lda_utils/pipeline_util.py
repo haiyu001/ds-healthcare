@@ -43,3 +43,8 @@ def get_finetune_model_filepath(finetune_model_dir: str,
     mallet_model_filename = get_model_filename(iterations, optimize_interval, topic_alpha, num_topics)
     finetune_model_filepath = os.path.join(dest_model_dir, mallet_model_filename)
     return finetune_model_filepath
+
+
+def get_doc_topics_infer_filepath(finetune_model_filepath: str):
+    return get_prefix_by_mallet_model_filepath(finetune_model_filepath) + "doctopics.txt.infer"
+
