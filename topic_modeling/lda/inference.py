@@ -61,6 +61,3 @@ def extract_topics_stats(spark: SparkSession,
     lda_stats_pdf = lda_stats_pdf.rename(columns={0: "count"})
     lda_stats_pdf["percent"] = round((lda_stats_pdf["count"] / num_docs) * 100, 2)
     save_pdf(lda_stats_pdf, lda_stats_filepath, csv_index=True, csv_index_label="topic_id")
-
-
-

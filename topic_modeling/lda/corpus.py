@@ -1,6 +1,7 @@
 from typing import Dict, Optional, List, Tuple, Any
 from annotation.annotation_utils.corpus_util import pudf_get_corpus_line
-from utils.general_util import dump_json_file, dump_pickle_file, load_pickle_file
+from double_propagation.absa_utils.triplet_inference_util import load_aspect_hierarchy
+from utils.general_util import dump_json_file, dump_pickle_file, load_pickle_file, load_json_file
 from utils.spark_util import write_sdf_to_file
 from pyspark.sql import DataFrame, Column
 from pyspark.sql.types import StringType
@@ -14,17 +15,19 @@ import string
 import logging
 
 
-def udf_get_doc_text_by_token_lemmas(tokens: Column, word_to_lemma: Dict[str, str], to_lower: bool = True) -> Column:
-    def get_doc_lemmas(doc_tokens):
-        doc_token_lemmas = []
+def udf_get_doc_text_by_word_match(tokens: Column, word_match: Dict[str, str], to_lower: bool = True) -> Column:
+    def get_doc_text_by_word_match(doc_tokens):
+        doc_token_matches = []
         for token in doc_tokens:
             token_text = token.text
-            if token_text in word_to_lemma:
-                token_lemma = word_to_lemma[token_text].lower() if to_lower else word_to_lemma[token_text]
-                doc_token_lemmas.append(token_lemma)
-        return " ".join(doc_token_lemmas)
+            if to_lower:
+                token_text = token_text.lower()
+            if token_text in word_match:
+                token_match = word_match[token_text]
+                doc_token_matches.append(token_match)
+        return " ".join(doc_token_matches)
 
-    return F.udf(get_doc_lemmas, StringType())(tokens)
+    return F.udf(get_doc_text_by_word_match, StringType())(tokens)
 
 
 def udf_get_corpus_line_with_metadata(metadata: Column,
@@ -40,26 +43,26 @@ def udf_get_corpus_line_with_metadata(metadata: Column,
     return F.udf(get_corpus_line_with_metadata, StringType())(metadata, corpus_line)
 
 
-def get_corpus_word_to_lemma(filter_unigram_filepath: str,
-                             corpus_word_to_lemma_filepath: str,
-                             corpus_vocab_size: int = 10000,
-                             corpus_word_pos_candidates: str = "NOUN,PROPN,ADJ,ADV,VERB"):
-    corpus_word_pos_candidates = [i.strip() for i in corpus_word_pos_candidates.split(",")]
+def get_corpus_word_match(filter_unigram_filepath: str,
+                          corpus_word_match_filepath: str,
+                          corpus_vocab_size: int = 10000,
+                          corpus_word_type_candidates: str = "NOUN,PROPN,ADJ,ADV,VERB"):
+    corpus_word_type_candidates = [i.strip() for i in corpus_word_type_candidates.split(",")]
     filter_unigram_pdf = pd.read_csv(filter_unigram_filepath, encoding="utf-8", keep_default_na=False, na_values="")
     filter_unigram_pdf["top_three_pos"] = filter_unigram_pdf["top_three_pos"].apply(json.loads)
     filter_unigram_pdf = filter_unigram_pdf[filter_unigram_pdf["top_three_pos"].apply(
-        lambda x: any(i in corpus_word_pos_candidates for i in x))]
+        lambda x: any(i in corpus_word_type_candidates for i in x))]
     filter_unigram_pdf["lemma"] = filter_unigram_pdf["lemma"].str.strip(string.punctuation)
     filter_unigram_pdf = filter_unigram_pdf.groupby("lemma").agg({"word": pd.Series.tolist, "count": sum}).reset_index()
     filter_unigram_pdf = filter_unigram_pdf.sort_values(by="count", ascending=False)
     filter_unigram_pdf = filter_unigram_pdf.head(corpus_vocab_size)
 
-    corpus_word_to_lemma = dict()
+    corpus_word_match = dict()
     for _, row in filter_unigram_pdf.iterrows():
         lemma, words = row["lemma"], row["word"]
         for word in words:
-            corpus_word_to_lemma[word] = lemma
-    dump_json_file(corpus_word_to_lemma, corpus_word_to_lemma_filepath)
+            corpus_word_match[word] = lemma
+    dump_json_file(corpus_word_match, corpus_word_match_filepath)
 
 
 def get_corpus_noun_phrase_match_dict(filter_phrase_filepath: str,
@@ -72,6 +75,36 @@ def get_corpus_noun_phrase_match_dict(filter_phrase_filepath: str,
         filer_phrase_df["lemma"] = filer_phrase_df["lemma"].str.lower()
     phrase_lemmas = filer_phrase_df["lemma"].tolist()
     noun_phrase_match_dict = {phrase_lemma: "_".join(phrase_lemma.split()) for phrase_lemma in phrase_lemmas}
+    dump_json_file(noun_phrase_match_dict, corpus_noun_phrase_match_filepath)
+
+
+def get_absa_word_match(aspect_filepath: str,
+                        opinion_filepath: str,
+                        corpus_word_match_filepath: str,
+                        corpus_word_type_candidates: str = "aspect,opinion"):
+    aspects = list(load_aspect_hierarchy(aspect_filepath).keys())
+    aspect_word_match = {aspect.lower(): aspect for aspect in aspects if " " not in aspect}
+    opinions = load_json_file(opinion_filepath)
+    opinion_word_match = {opinion.lower(): opinion for opinion in opinions}
+    absa_word_match = {}
+    corpus_word_type_candidates = [i.strip() for i in corpus_word_type_candidates.split(",")]
+    for word_type in corpus_word_type_candidates:
+        if word_type == "aspect":
+            absa_word_match.update(aspect_word_match)
+        elif word_type == "opinion":
+            absa_word_match.update(opinion_word_match)
+        else:
+            raise ValueError(f"Unsupported word_type of {word_type}")
+    dump_json_file(absa_word_match, corpus_word_match_filepath)
+
+
+def get_absa_noun_phrase_match_dict(aspect_filepath: str,
+                                    corpus_noun_phrase_match_filepath: str,
+                                    match_lowercase: bool = True):
+    aspects = list(load_aspect_hierarchy(aspect_filepath).keys())
+    if match_lowercase:
+        aspects = {i.lower() for i in aspects}
+    noun_phrase_match_dict = {aspect: "_".join(aspect.split()) for aspect in aspects if " " in aspect}
     dump_json_file(noun_phrase_match_dict, corpus_noun_phrase_match_filepath)
 
 
@@ -88,14 +121,14 @@ def build_lda_corpus_by_annotation(annotation_sdf: DataFrame,
                                    lang: str,
                                    spacy_package: str,
                                    corpus_filepath: str,
-                                   word_to_lemma: Dict[str, str],
+                                   word_match: Dict[str, str],
                                    ngram_match_dict: Optional[Dict[str, str]] = None,
                                    match_lowercase: bool = True,
                                    num_partitions: Optional[int] = None,
                                    metadata_fields_to_keep: Optional[str] = None):
     corpus_sdf = annotation_sdf.select(
         F.col("_").metadata.alias("metadata"),
-        udf_get_doc_text_by_token_lemmas(F.col("tokens"), word_to_lemma, match_lowercase).alias("text"))
+        udf_get_doc_text_by_word_match(F.col("tokens"), word_match, match_lowercase).alias("text"))
     corpus_sdf = corpus_sdf.withColumn("corpus_line",
                                        pudf_get_corpus_line(F.col("text"), lang, spacy_package, ngram_match_dict))
     corpus_sdf = corpus_sdf.select(udf_get_corpus_line_with_metadata(F.col("metadata"),

@@ -8,7 +8,7 @@ import string
 
 
 def udf_get_doc_text_by_token_texts(tokens: Column, to_lower: bool = True) -> Column:
-    def get_words(tokens: List[Row]) -> str:
+    def get_doc_text_by_token_texts(tokens: List[Row]) -> str:
         doc_token_texts = []
         for token in tokens:
             token_text = token.text
@@ -19,7 +19,7 @@ def udf_get_doc_text_by_token_texts(tokens: Column, to_lower: bool = True) -> Co
                 doc_token_texts.append(token_text)
         return " ".join(doc_token_texts)
 
-    return F.udf(get_words, StringType())(tokens)
+    return F.udf(get_doc_text_by_token_texts, StringType())(tokens)
 
 
 def build_wv_corpus_by_annotation(annotation_sdf: DataFrame,

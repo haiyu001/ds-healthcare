@@ -14,7 +14,7 @@ def get_model_folder_name(iterations: int,
     model_folder_name = f"mallet_iterations-{iterations}_" \
                         f"optimize_interval-{optimize_interval}_" \
                         f"topic_alpha-{topic_alpha}_" \
-                        f"nun_topics-{num_topics}_lda"
+                        f"num_topics-{num_topics}_lda"
     return model_folder_name
 
 
@@ -48,3 +48,18 @@ def get_finetune_model_filepath(finetune_model_dir: str,
 def get_doc_topics_infer_filepath(finetune_model_filepath: str):
     return get_prefix_by_mallet_model_filepath(finetune_model_filepath) + "doctopics.txt.infer"
 
+
+if __name__ == "__main__":
+    from topic_modeling.lda.mallet_wrapper import LdaMallet
+
+    mallet_model_filepath = "/Users/haiyang/data/webmd/topic_modeling/lda_model/" \
+                            "mallet_iterations-2000_optimize_interval-40_topic_alpha-1.25_num_topics-100_lda/" \
+                            "mallet_2000-40-1.25-100_lda"
+
+    # prefix = get_prefix_by_mallet_model_filepath(mallet_model_filepath)
+    #
+    # LdaMallet.update_prefix(mallet_model_filepath, prefix)
+
+    mallet_model = LdaMallet.load(mallet_model_filepath)
+
+    print(mallet_model.prefix)

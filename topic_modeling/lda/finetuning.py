@@ -114,6 +114,3 @@ def topic_grouping(lda_vis_topics_filepath: str,
     vis_topic_id_to_org_topics = dict(zip(vis_topic_id, org_topics))
     vis_topic_id_to_org_topics = collections.OrderedDict(sorted(vis_topic_id_to_org_topics.items()))
     dump_json_file(vis_topic_id_to_org_topics, vis_topic_id_to_org_topics_filepath)
-
-
-
