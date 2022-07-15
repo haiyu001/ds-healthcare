@@ -62,9 +62,9 @@ def build_extraction_and_canonicalization_candidates(canonicalization_annotation
                  f"build bigram & spell canonicalization candidates\n{'*' * 150}\n")
     unigram_sdf = extract_unigram(canonicalization_annotation_sdf, canonicalization_unigram_filepath)
     bigram_sdf = extract_ngram(canonicalization_annotation_sdf, canonicalization_bigram_filepath,
-                               n=2, ngram_extraction_min_count=annotation_config["ngram_filter_min_count"])
+                               n=2, ngram_extraction_min_count=annotation_config["ngram_extraction_min_count"])
     extract_ngram(canonicalization_annotation_sdf, canonicalization_trigram_filepath,
-                  n=3, ngram_extraction_min_count=annotation_config["ngram_filter_min_count"])
+                  n=3, ngram_extraction_min_count=annotation_config["ngram_extraction_min_count"])
     get_bigram_canonicalization_candidates(unigram_sdf,
                                            bigram_sdf,
                                            bigram_canonicalization_candidates_filepath)
