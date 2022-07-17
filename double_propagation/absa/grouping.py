@@ -48,9 +48,11 @@ def build_grouping_wv_corpus(annotation_sdf: DataFrame,
 
 def get_aspect_grouping_vecs(aspect_ranking_filepath: str,
                              grouping_txt_vecs_filepath: str,
-                             aspect_grouping_vecs_filepath: str):
+                             aspect_grouping_vecs_filepath: str,
+                             aspect_grouping_filter_min_count: int):
     grouping_vecs = WordVec(grouping_txt_vecs_filepath, use_oov_strategy=True)
     aspect_ranking_pdf = pd.read_csv(aspect_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
+    aspect_ranking_pdf = aspect_ranking_pdf[aspect_ranking_pdf["count"] >= aspect_grouping_filter_min_count]
     aspect_words = aspect_ranking_pdf["text"].str.lower().str.split().str.join("_")
     grouping_vecs.extract_txt_vecs(aspect_words, aspect_grouping_vecs_filepath, l2_norm=False)
 
@@ -70,23 +72,25 @@ def save_aspect_grouping(aspect_ranking_filepath: str,
     aspect_ranking_pdf["vec_text"] = aspect_ranking_pdf["text"].str.lower().str.split().str.join("_")
     aspect_ranking_pdf = aspect_ranking_pdf.set_index("vec_text")
 
-    aspect_ranking_vecs_pdf = load_txt_vecs_to_pdf(aspect_grouping_vecs_filepath, l2_norm=False)
+    aspect_grouping_vecs_pdf = load_txt_vecs_to_pdf(aspect_grouping_vecs_filepath, l2_norm=False)
+    aspect_ranking_pdf = aspect_ranking_pdf[aspect_ranking_pdf.index.isin(aspect_grouping_vecs_pdf.index)]
+    print(aspect_ranking_pdf.shape)
 
-    Z = get_linkage_matrix(aspect_ranking_vecs_pdf.values,
+    Z = get_linkage_matrix(aspect_grouping_vecs_pdf.values,
                            dendrogram_title="aspect grouping",
                            dendrogram_filepath=aspect_grouping_dendrogram_filepath,
                            metric="cosine",
                            linkage_method="ward")
 
     btm_labels = fcluster(Z, t=aspect_grouping_btm_threshold, criterion="distance")
-    aspect_ranking_pdf["btm"] = pd.Series(btm_labels, aspect_ranking_pdf.index)
+    aspect_ranking_pdf["btm"] = pd.Series(btm_labels, aspect_grouping_vecs_pdf.index)
     mid_labels = fcluster(Z, t=aspect_grouping_mid_threshold, criterion="distance")
-    aspect_ranking_pdf["mid"] = pd.Series(mid_labels, aspect_ranking_pdf.index)
+    aspect_ranking_pdf["mid"] = pd.Series(mid_labels, aspect_grouping_vecs_pdf.index)
     top_labels = fcluster(Z, t=aspect_grouping_top_threshold, criterion="distance")
-    aspect_ranking_pdf["top"] = pd.Series(top_labels, aspect_ranking_pdf.index)
+    aspect_ranking_pdf["top"] = pd.Series(top_labels, aspect_grouping_vecs_pdf.index)
 
-    aspect_grouping_pdf = aspect_ranking_pdf[["top", "mid", "btm", "text", "members"]].sort_values(
-        ["top", "mid", "btm"])
+    aspect_grouping_pdf = aspect_ranking_pdf[["top", "mid", "btm", "text", "members"]]\
+        .sort_values(["top", "mid", "btm"])
     aspect_vecs = WordVec(aspect_grouping_vecs_filepath, use_oov_strategy=True)
 
     # btm group naming
@@ -137,13 +141,15 @@ def save_aspect_grouping(aspect_ranking_filepath: str,
 
 def get_opinion_grouping_vecs(opinion_ranking_filepath: str,
                               grouping_txt_vecs_filepath: str,
-                              opinion_grouping_vecs_filepath: str):
+                              opinion_grouping_vecs_filepath: str,
+                              opinion_grouping_filter_min_count: int):
     grouping_vecs = WordVec(grouping_txt_vecs_filepath, use_oov_strategy=True)
     opinion_ranking_pdf = pd.read_csv(opinion_ranking_filepath, encoding="utf-8", keep_default_na=False, na_values="")
-    extracted_opinions = opinion_ranking_pdf["text"].str.lower().tolist()
+    opinion_ranking_pdf = opinion_ranking_pdf[opinion_ranking_pdf["count"] >= opinion_grouping_filter_min_count]
+    specific_opinions = opinion_ranking_pdf["text"].str.lower().tolist()
     seed_opinions_dict = load_absa_seed_opinions()
-    seed_opinions = [i for i in seed_opinions_dict if i in grouping_vecs.vocab_set]
-    opinion_words = sorted(list(set(extracted_opinions + seed_opinions)))
+    generic_opinions = [i for i in seed_opinions_dict if i in grouping_vecs.vocab_set]
+    opinion_words = sorted(list(set(specific_opinions + generic_opinions)))
     grouping_vecs.extract_txt_vecs(opinion_words, opinion_grouping_vecs_filepath, l2_norm=False)
 
 

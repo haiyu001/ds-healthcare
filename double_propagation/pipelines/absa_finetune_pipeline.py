@@ -1,11 +1,30 @@
 from typing import Dict, Any
-from double_propagation.absa.grouping import save_aspect_grouping, save_opinion_grouping, save_aspect, save_opinion
+from double_propagation.absa.grouping import save_aspect_grouping, save_opinion_grouping, save_aspect, save_opinion, \
+    get_aspect_grouping_vecs, get_opinion_grouping_vecs
 from utils.config_util import read_config_to_dict
 from utils.general_util import setup_logger, make_dir
 from utils.resource_util import get_data_filepath
 import argparse
 import logging
 import os
+
+
+def get_aspect_opinion_grouping_vecs(absa_grouping_wv_model_filepath: str,
+                                     aspect_ranking_filepath: str,
+                                     aspect_grouping_vecs_filepath: str,
+                                     opinion_ranking_filepath: str,
+                                     opinion_grouping_vecs_filepath: str,
+                                     absa_config: Dict[str, Any]):
+    logging.info(f"\n{'*' * 150}\n* extract aspect and opinion grouping vecs \n{'*' * 150}\n")
+    get_aspect_grouping_vecs(aspect_ranking_filepath,
+                             absa_grouping_wv_model_filepath,
+                             aspect_grouping_vecs_filepath,
+                             absa_config["aspect_grouping_filter_min_count"])
+
+    get_opinion_grouping_vecs(opinion_ranking_filepath,
+                              absa_grouping_wv_model_filepath,
+                              opinion_grouping_vecs_filepath,
+                              absa_config["opinion_grouping_filter_min_count"])
 
 
 def group_aspect_and_opinion(aspect_ranking_filepath: str,
@@ -59,6 +78,8 @@ def main(absa_config_filepath: str):
     absa_dir = os.path.join(domain_dir, absa_config["absa_folder"])
     absa_aspect_dir = make_dir(os.path.join(absa_dir, "aspect"))
     absa_opinion_dir = make_dir(os.path.join(absa_dir, "opinion"))
+    absa_grouping_wv_dir = os.path.join(absa_dir, absa_config["grouping_wv_folder"])
+    absa_grouping_wv_model_filepath = os.path.join(absa_grouping_wv_dir, absa_config["grouping_wv_model_filename"])
     aspect_ranking_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_ranking_filename"])
     aspect_grouping_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_grouping_filename"])
     aspect_grouping_vecs_filepath = os.path.join(absa_aspect_dir, absa_config["aspect_grouping_vecs_filename"])
@@ -73,6 +94,13 @@ def main(absa_config_filepath: str):
     opinion_hierarchy_filepath = os.path.join(absa_dir, absa_config["opinion_hierarchy_filename"])
     aspect_filepath = os.path.join(absa_dir, absa_config["aspect_filename"])
     opinion_filepath = os.path.join(absa_dir, absa_config["opinion_filename"])
+
+    get_aspect_opinion_grouping_vecs(absa_grouping_wv_model_filepath,
+                                     aspect_ranking_filepath,
+                                     aspect_grouping_vecs_filepath,
+                                     opinion_ranking_filepath,
+                                     opinion_grouping_vecs_filepath,
+                                     absa_config)
 
     group_aspect_and_opinion(aspect_ranking_filepath,
                              aspect_grouping_filepath,
