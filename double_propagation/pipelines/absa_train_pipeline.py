@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     absa_config_filepath = parser.parse_args().absa_conf
 
-    spark = get_spark_session("annotation", {}, get_spark_master_config(absa_config_filepath), log_level="WARN")
+    spark = get_spark_session("absa training", {}, get_spark_master_config(absa_config_filepath), log_level="WARN")
     add_repo_pyfile(spark)
 
     main(spark, absa_config_filepath)

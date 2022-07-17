@@ -1,5 +1,5 @@
 from typing import Tuple, List
-from topic_modeling.lda_utils.pipeline_util import get_mallet_filepath, get_prefix_by_mallet_model_filepath
+from topic_modeling.topic_modeling_utils.lda_pipeline_util import get_mallet_filepath, get_prefix_by_mallet_model_filepath
 from topic_modeling.lda.mallet_wrapper import LdaMallet
 from gensim.corpora import Dictionary
 from gensim.models import CoherenceModel
