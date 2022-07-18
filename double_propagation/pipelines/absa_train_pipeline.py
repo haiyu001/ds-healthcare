@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from annotation.components.annotator import load_annotation
+from annotation.annotation_utils.annotation_util import load_annotation
 from double_propagation.absa.training import extract_candidates
 from double_propagation.absa.grouping import build_grouping_wv_corpus
 from word_vector.wv_model import build_word2vec

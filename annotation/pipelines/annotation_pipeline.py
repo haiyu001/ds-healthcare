@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from annotation.annotation_utils.annotator_util import get_canonicalization_nlp_model_config, get_nlp_model_config
-from annotation.components.annotator import get_nlp_model, get_nlp_model_config_str, pudf_annotate, load_annotation
+from annotation.annotation_utils.annotation_util import load_annotation
+from annotation.components.annotator import get_nlp_model, get_nlp_model_config_str, pudf_annotate
 from annotation.components.canonicalizer import get_canonicalization
 from annotation.components.canonicalizer_bigram import get_bigram_canonicalization_candidates, \
     get_bigram_canonicalization, build_canonicalization_wv_corpus

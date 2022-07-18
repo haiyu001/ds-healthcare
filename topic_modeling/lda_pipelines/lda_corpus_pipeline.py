@@ -1,7 +1,7 @@
 from typing import Dict, Any
-from annotation.components.annotator import load_annotation
-from topic_modeling.lda.corpus import get_corpus_word_match, get_corpus_noun_phrase_match_dict, \
-    build_lda_corpus_by_annotation, save_mallet_corpus, get_absa_word_match, get_absa_noun_phrase_match_dict
+from annotation.annotation_utils.annotation_util import load_annotation
+from topic_modeling.lda.corpus import build_lda_corpus_by_annotation, save_mallet_corpus, get_absa_word_match, get_absa_noun_phrase_match_dict
+from topic_modeling.topic_modeling_utils.corpus_util import get_corpus_word_match, get_corpus_noun_phrase_match_dict
 from utils.config_util import read_config_to_dict
 from utils.general_util import setup_logger, make_dir, load_json_file
 from utils.resource_util import get_data_filepath

@@ -46,7 +46,9 @@ if __name__ == "__main__":
     samples = [
         # "Thesr  autonomouscars have kind-of good battery life if not in China. uh-uh I sort-of hatje that laptop in 5yrs and cool.",
         # "I don't struggle with depression, anxiety and panic attacks in 3 month.",
-        json.dumps({"record_id": "001", "source": "dummy", "Reviews": "He had no sign of huge heart attack."}),
+        json.dumps({"record_id": "001",
+                    "source": "dummy",
+                    "content": "I don't struggle with depression, anxiety and panic attacks in 3 month. He had no sign of huge heart attack."}),
     ]
 
     docs = nlp.pipe(samples, n_process=1)
