@@ -1,4 +1,5 @@
 from utils.general_util import dump_json_file
+from utils.resource_util import load_stop_words
 import pandas as pd
 import string
 import json
@@ -18,11 +19,13 @@ def get_corpus_word_match(filter_unigram_filepath: str,
     filter_unigram_pdf = filter_unigram_pdf.sort_values(by="count", ascending=False)
     filter_unigram_pdf = filter_unigram_pdf.head(corpus_vocab_size)
 
+    stop_words = set(load_stop_words())
     corpus_word_match = dict()
     for _, row in filter_unigram_pdf.iterrows():
         lemma, words = row["lemma"], row["word"]
-        for word in words:
-            corpus_word_match[word] = lemma
+        if lemma not in stop_words:
+            for word in words:
+                corpus_word_match[word] = lemma
     dump_json_file(corpus_word_match, corpus_word_match_filepath)
 
 
